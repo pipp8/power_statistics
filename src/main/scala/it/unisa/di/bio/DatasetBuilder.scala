@@ -455,7 +455,10 @@ object DatasetBuilder {
         val stream = hdfs.open(path)
         reader = scala.io.Source.fromInputStream(stream)
       }
-      val motifLen = kValueFromSeqlen(sequenceLen)
+      // motifLen variabile in funzione della lunghezza della sequenza
+      // val motifLen = kValueFromSeqlen(sequenceLen)
+      // in alternativa motifLen costante >= del valore massimo di k utilizzato.
+      val motifLen = appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt
 
       var i = 1
       val it: Iterator[String] = reader.getLines()
@@ -589,7 +592,10 @@ object DatasetBuilder {
         reader = scala.io.Source.fromInputStream(stream)
       }
 
-      val patternLen = kValueFromSeqlen( sequenceLen)
+      // len variabile in funzione della lunghezza della sequennza
+      // val patternLen = kValueFromSeqlen( sequenceLen)
+      // in alternativa si puo' usare un valore costante per tutte le lunghezze >= del massimo valore di k utilizzato nei test
+      val patternLen = appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt
       var i = 1
       val it : Iterator[String] = reader.getLines()
       // per tutte le sequenze nel file input

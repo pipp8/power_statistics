@@ -27,7 +27,7 @@ EvalKS <- function( model, k, len, gValues)
 			ksRis <- ks.test(xv, yv)
 
 			ris[nrow(ris) + 1,] <<- list( k1, as.numeric(ksRis[1]), as.numeric(ksRis[2]))
-			cat( ".")
+			cat( sprintf("%5d /%5d\r", pair, nPairs))
 		}
 		end <- nrow(ris)
 		writeLines(' ')
@@ -50,7 +50,7 @@ nPairs <- 1000
 # len <- 100000
 
 #for( k in c(4, 6, 8, 10)) {
-for( k in c(8)) {
+for( k in c(10)) {
 
 	for( len in c(100000, 1000000, 10000000)) {
 #	for( len in c(10000000)) {
