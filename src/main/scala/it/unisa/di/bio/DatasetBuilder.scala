@@ -137,7 +137,7 @@ object DatasetBuilder {
       case y if (y.compareTo("shigella") == 0) => semiSynthetic(
               appProperties.getProperty("powerstatistics.datasetBuilder.syntheticNullModelPrefix.shigella"), args)
 
-      case z => println(s"${z} must be in: synthetic | syntheticMitocondri | syntheticShigella | Mitocondri | Shigella");
+      case z => println(s"${z} must be in: detailed | synthetic | syntheticMitocondri | syntheticShigella | Mitocondri | Shigella");
               sc.stop()
     }
 //    print(s"${savedTask.closures.length} tasks")
