@@ -30,6 +30,7 @@ public class DistanceMeasures {
         distances.put(Measures.Kulczynski2.toString().toLowerCase(), false);    // Similarity
         distances.put(Measures.Manhattan.toString().toLowerCase(), true);       // Distance
         distances.put(Measures.SquaredChord.toString().toLowerCase(), true);    // Distance
+        distances.put(Measures.Mash.toString().toLowerCase(), true);            // Distance
     }
 
 
@@ -55,7 +56,7 @@ public class DistanceMeasures {
         D2, D2s, D2star, D2z,
         Euclidean, HarmonicMean, Intersection,
         Jaccard, Jeffrey, JensenShannon,
-        Kulczynski2, Manhattan, SquaredChord
+        Kulczynski2, Manhattan, SquaredChord, Mash
     }
 
 
@@ -64,6 +65,6 @@ public class DistanceMeasures {
 //        ChiSquareDistance, D2Distance, D2zDistance, EuclideanDistance,
 //        HammingDistance, HarmonicMeanDistance, IntersectionDistance, JaccardDistance,
 //        JeffreysDistance, JensenShannonDistance, Kulczynski1Distance, Kulczynski2Distance,
-//        Kulczynski2NoPseudoDistance, ManhattanDistance, SquaredChordDistance
+//        Kulczynski2NoPseudoDistance, ManhattanDistance, SquaredChordDistance, Mash
 //    }
 }

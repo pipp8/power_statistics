@@ -86,8 +86,6 @@ public class PowerEvaluator {
         ExpParams par = null;
         String measure = "";
 
-        createNewCSVFile( alternateModel, alphaValue);
-
         int m,  kValues[] = {4, 6, 8, 10};
 
         ArrayList<ExpParams> lenList = getNullModelSeqLengths(nullModel, Paths.get( resultsPath, String.format("k=%d", kValues[0])));
@@ -157,7 +155,6 @@ public class PowerEvaluator {
                     System.out.printf("Mes: %s, alpha: %.3f, gamma: %.3f, area tot: %.3f, min: %.3f, max: %.3f, var: %.3f\n",
                             measure, alphaValue, gamma, area[i], minDst, maxDst, var);
                 } // foreach i in gamma
-                saveCSVResults(measure, nullModel.name(), alternateModel.name(), k, area);
             } // foreach k
             saveJSonResults(list, measure, par.k, nullModel.name(), alternateModel.name(), area);
             System.out.println("** Saved ***\n");
