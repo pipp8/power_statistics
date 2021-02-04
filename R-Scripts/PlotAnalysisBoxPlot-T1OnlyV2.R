@@ -40,6 +40,10 @@ for(alpha in alphaValues) {
 	
     for (file in files) {
 
+        if (grepl( "jaccard|mash", file, ignore.case = TRUE)) {
+            cat(sprintf("skipping file: %s\n", file))
+            next
+        }
         cat( sprintf("Processing: %s, Alpha: 0.%s ... ", file, alpha))
 
         exp <- fromJSON(file = paste(jsonDir, file, sep="/"))
@@ -81,7 +85,7 @@ for(alpha in alphaValues) {
 			# theme(axis.text.x = element_blank()) + # axis.ticks.x = element_blank()) +
 			# scale_colour_brewer(palette="Dark2") +
 			scale_fill_manual(values = c("#1C8F63", "#CE4907", "#6159A3", "#DD0077", "#535353")) +
-			scale_y_continuous(name = "T1 Error", limits = c(0, 0.2)) +
+			scale_y_continuous(name = "T1 Error", limits = c(0, 0.30)) +
 			geom_boxplot(lwd = 0.2, alpha = 0.9) #outlier.shape = 20, width=15
 
 	# dev.new(width = 10, height = 5)

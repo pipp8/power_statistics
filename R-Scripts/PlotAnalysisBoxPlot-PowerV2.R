@@ -41,8 +41,13 @@ for(alpha in alphaValues) {
 		ndx = 1
 	    
 	    for (file in files) {
-	
-	        cat( sprintf("Processing: %s, Alpha: 0.%s ... ", file, alpha))
+
+			if (grepl( "jaccard|mash", file, ignore.case = TRUE)) {
+				cat(sprintf("skipping file: %s\n", file))
+				next
+			}
+
+			cat( sprintf("Processing: %s, Alpha: 0.%s ... ", file, alpha))
 	
 	        exp <- fromJSON(file = paste(jsonDir, file, sep="/"))
 	        values <-exp[['values']]
@@ -69,7 +74,7 @@ for(alpha in alphaValues) {
 		dfAll$measure <- as.factor(dfAll$measure)
 		dfAll$k <- factor( dfAll$k, levels = c( 4, 6, 8, 10))
 		# dfAll$k <- as.factor(dfAll$k)
-		
+		# saveRDS( dfAll, file = sprintf("AllData-%s.RDS", am))
 		for (gv in gammaValues) {	
 		    title = sprintf("Power Statistic (Alpha =%d%%, G = %d%%, A.M. = %s)", dfAll$alpha[1]*100, gv*100, exp$header$alternateModel)
 		

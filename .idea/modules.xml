@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/PlottingScripts.iml" filepath="$PROJECT_DIR$/PlottingScripts.iml" />
       <module fileurl="file://$PROJECT_DIR$/powerstatistics.iml" filepath="$PROJECT_DIR$/powerstatistics.iml" />
     </modules>
   </component>
