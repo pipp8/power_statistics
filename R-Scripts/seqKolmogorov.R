@@ -1,7 +1,7 @@
 library(ggplot2)
 
-setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Kolmogorov")
-# setwd("/Volumes/ExFat/PowerStatistics/Kolmogorov")
+# setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Kolmogorov")
+setwd("/Volumes/Catalina/PowerStatistics/Kolmogorov")
 
 ris <- data.frame( Name = character(), D = double(), PV = double(), stringsAsFactors=FALSE)
 

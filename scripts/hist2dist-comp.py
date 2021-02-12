@@ -3,6 +3,7 @@
 import re
 import os
 import sys
+import time
 
 inputFile = sys.argv[1]
 
@@ -20,9 +21,13 @@ seqDistDir = 'seqDists'
 basename = os.path.splitext(os.path.basename(inputFile))[0]
 
 
+def OutputFileName():
+    return( "%s/%s-All.dist" % (seqDistDir, basename))
+
+
 # salva la distribuzione ed istogramma della sequenza prevSeq
 def SaveDistributions(model, pairs, len):
-    fileName1 = "%s/%s-All.dist" % (seqDistDir, basename)
+    fileName1 = OutputFileName()
     with open(fileName1, "w") as outFileDist:
         for key in sorted(seqDict.keys()):
             av = seqDict[key]
@@ -53,6 +58,16 @@ def main():
         model = m.group(3)
         nPairs = int(m.group(4))
         len = int(m.group(5))
+
+    # crea il file distribuzione solo se l'input e' piu' recente
+    mt1 = os.path.getmtime(inputFile)
+    out = OutputFileName()
+    if (os.path.exists(out)):
+        mt2 = os.path.getmtime(out)
+        if (mt2 > mt1):
+            print( "The distribution file already exists and it is more recent than the histogram file")
+            print( "%s -> %s vs\n%s -> %s" % (inputFile, time.ctime(mt1), out, time.ctime(mt2)))
+            exit(-1)
 
     with open(inputFile) as inFile:
         for line in inFile:

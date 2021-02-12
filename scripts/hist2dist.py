@@ -69,11 +69,6 @@ def main():
                 kmer = m.group(2)
                 count = int(m.group(3))
 
-            # totale generale per il calcolo della probabilita' empirica
-            totalCnt = totalCnt + count
-            totalSeqCnt = totalSeqCnt + count
-            totalLines = totalLines + 1
-
             if (seqNum != prevSeq):
                 if (writeSequenceHistogram and prevSeq != -1):
                     # salva la distribuzione e l'istogramma della sequenza precedente
@@ -85,6 +80,11 @@ def main():
                 prevSeq = seqNum
                 sys.stdout.write('\r%d / %d Complete\r' % (seqNum,nPairs*2)),
                 sys.stdout.flush()
+
+            # totale generale per il calcolo della probabilita' empirica
+            totalCnt = totalCnt + count
+            totalSeqCnt = totalSeqCnt + count
+            totalLines = totalLines + 1
 
             if kmer in sumDict:
                 sumDict[kmer] = sumDict[kmer] + int(count)

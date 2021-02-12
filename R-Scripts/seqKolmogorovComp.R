@@ -16,11 +16,12 @@ EvalKS <- function( model, k, len, gValues)
 		start <- nrow(ris) + 1
 		f1 <- sprintf("k=%d/%s/dist-k=%d_%s-%d.%d%s-All.dist",
 					  k, seqDistDir, k, model, nPairs, len, gVal)
+		df1 <- read.table(header=FALSE, f1)
+		
 		for(pair in 1:nPairs) {
 			# f2 <- sprintf("k=%d/%s/%s/%d/dist-k=%d_%s-%d.%d%s-%05d-%s.dist",
 			#			  k, seqDistDir, model, len, k, model, nPairs, len, gVal, pair, seqB)
-
-			df1 <- read.table(header=FALSE, f1)
+			
 			xv <- df1[, pair*2]
 			yv <- df1[, pair*2 + 1]
 			ksRis <- ks.test(xv, yv)
@@ -31,9 +32,7 @@ EvalKS <- function( model, k, len, gValues)
 		}
 		end <- nrow(ris)
 		writeLines(' ')
-		inFName = sub(pattern = ".*_(.*)-[0-9]*-[AB]\\..*$", replacement = "\\1", f1)
-		processed = sub(pattern = ".*-([0-9]*)-[AB]\\..*$", replacement = "\\1", f1)
-		writeLines( sprintf("%s, processed: %s pairs", inFName, processed))
+		writeLines( sprintf("processed: %d pairs from: %s", nPairs, f1))
 		writeLines( sprintf("Min(D):%f, Max(D):%f, Avg(D):%f, Var(D):%f",
 							min(ris$D[c(start:end)]), max(ris$D[c(start:end)]), mean(ris$D[c(start:end)]), var(ris$D[c(start:end)])))
 		writeLines(sprintf("Min(P):%f, Max(P):%f, Avg(P):%f, Var(P):%f",
@@ -50,7 +49,7 @@ nPairs <- 1000
 # len <- 100000
 
 #for( k in c(4, 6, 8, 10)) {
-for( k in c(4)) {
+for( k in c(4, 6, 8, 10)) {
 
 	for( len in c(200000, 2000000)) {
 
