@@ -30,4 +30,10 @@ knitr::include_graphics('imgs/Kolmogorov-k=8-len=200000.png')
 ```{r echo=FALSE, out.width='100%'}
 knitr::include_graphics('imgs/Kolmogorov-k=8-len=2000000.png')
 ```
+```{r echo=FALSE, out.width='100%'}
+knitr::include_graphics('imgs/Kolmogorov-k=10-len=200000.png')
+```
+```{r echo=FALSE, out.width='100%'}
+knitr::include_graphics('imgs/Kolmogorov-k=10-len=2000000.png')
+```
 

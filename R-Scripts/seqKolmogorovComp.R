@@ -1,7 +1,7 @@
 library(ggplot2)
 
-# setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Kolmogorov")
-setwd("/Volumes/Catalina/PowerStatistics/Kolmogorov")
+setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Kolmogorov")
+# setwd("/Volumes/Catalina/PowerStatistics/Kolmogorov")
 
 ris <- data.frame( Name = character(), D = double(), PV = double(), stringsAsFactors=FALSE)
 
@@ -14,16 +14,21 @@ EvalKS <- function( model, k, len, gValues)
 		k1 <- sprintf("%s-%d%s", model, len, gVal)
 
 		start <- nrow(ris) + 1
-		f1 <- sprintf("k=%d/%s/dist-k=%d_%s-%d.%d%s-All.dist",
+		f1 <- sprintf("k=%d/%s/dist-k=%d_%s-%d.%d%s-All.distbin",
 					  k, seqDistDir, k, model, nPairs, len, gVal)
-		df1 <- read.table(header=FALSE, f1)
+		
+		inFile <- file( f1, "rb")
+		nKeys = readBin( inFile, integer(), n = 1)
+		
+		# df1 <- read.table(header=FALSE, f1)
 		
 		for(pair in 1:nPairs) {
 			# f2 <- sprintf("k=%d/%s/%s/%d/dist-k=%d_%s-%d.%d%s-%05d-%s.dist",
-			#			  k, seqDistDir, model, len, k, model, nPairs, len, gVal, pair, seqB)
-			
-			xv <- df1[, pair*2]
-			yv <- df1[, pair*2 + 1]
+			#			  k, seqDistDir, model, len, k, model, nPairs, len, gVal, pair, seqB)	
+			# xv <- df1[, pair*2]
+			# yv <- df1[, pair*2 + 1]
+			xv <- readBin( inFile, double(), n = nKeys)
+			yv <- readBin( inFile, double(), n = nKeys)
 			ksRis <- ks.test(xv, yv)
 
 			ris[nrow(ris) + 1,] <<- list( k1, as.numeric(ksRis[1]), as.numeric(ksRis[2]))
@@ -86,24 +91,52 @@ for( k in c(4, 6, 8, 10)) {
 			saveRDS(ris, file = dfFilename)
 		}
 		
-		title = sprintf("D value Test di Kolmogorov/Smirnov (len: %d, k=%d)", len, k)
+		# pat1 <- sprintf("%d\\.+|-%d$", len, len)
+		pat1 <- 'MotifRepl-U'
+		pat2 <- 'PatTransf-U'
+		pat3 <- 'Uniform'
+		pat4 <- 'Uniform-T1'
+		pat5 <- "-20{5,6}"
+		for(row in 1:nrow(ris)) {
+			ris[row,1] <- gsub( pat1, "MR", ris[row, 1])
+			ris[row,1] <- gsub( pat2, "PT", ris[row, 1])
+			ris[row,1] <- gsub( pat3, "GeneratingNM", ris[row, 1])
+			ris[row,1] <- gsub( pat4, "ControlNM", ris[row, 1])
+			ris[row,1] <- gsub( pat5, "", ris[row, 1])
+		}
 
+		# title = sprintf("Kolmogorov-Smirnov test for len=%d, k=%d", len, k)
+		title = sprintf("k = %d", k)
+		mv = max(ris[,2])
+		if (mv >= 0.1)
+			sf = 10
+		else if (mv >= 0.01)
+			sf = 100
+		else
+			sf = 1000
+
+		fs = ceiling( mv * sf) / sf
+		cat(sprintf("fs: %f <- %f", fs, mv))
 		sp2 <-	ggplot(ris, aes(x = Name, y = D, color = Name)) +
 			ggtitle( title) + labs( x = "") +
+			labs(color = "Model") +
 			# theme(axis.text.x = element_blank()) + # axis.ticks.x = element_blank()) +
-			theme_light(base_size = 10) + theme(legend.position = "bottom") +
-			theme(axis.text.x = element_text(size = 6, angle = 45, vjust = 0.95, hjust=1)) +
+			theme_light(base_size = 10) + 
+			# theme(legend.position = "bottom") +
+			theme(legend.position = "none") + 
+			theme(axis.text.x = element_text(size = 7, angle = 45, vjust = 0.95, hjust=1)) +
 			scale_colour_brewer(palette="Dark2") +
-			scale_y_continuous(name = "D", limits = c(0, 0.05)) +
+			scale_y_continuous(name = "KS", limits = c(0, fs)) +
 			geom_boxplot(lwd = 0.2, alpha = 0.9) # width=15, outlier.shape=20
 
 		# dev.new(width = 6, height = 9)
 		outfname <- sprintf( "Kolmogorov-k=%d-len=%d.png", k, len)
-		# ggsave( outfname, device = png(), width = 9, height = 6, units = "cm", dpi = 300)
-		ggsave( outfname)
+		ggsave( outfname, device = png(), width = 9, height = 6, dpi = 300)
+		# ggsave( outfname)
 		# print( sp2)
 		# stop("break")
 		# readline(prompt="Press [enter] to continue")
 		# dev.off() #only 129kb in size
+		cat( sprintf(" done.\n"))
 	} # for each len
 } # for each k

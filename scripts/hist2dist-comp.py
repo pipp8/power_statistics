@@ -4,6 +4,7 @@ import re
 import os
 import sys
 import time
+from array import array
 
 inputFile = sys.argv[1]
 
@@ -22,21 +23,31 @@ basename = os.path.splitext(os.path.basename(inputFile))[0]
 
 
 def OutputFileName():
-    return( "%s/%s-All.dist" % (seqDistDir, basename))
+    return( "%s/%s-All.distbin" % (seqDistDir, basename))
 
 
 # salva la distribuzione ed istogramma della sequenza prevSeq
-def SaveDistributions(model, pairs, len):
+def SaveDistributions(model, pairs):
     fileName1 = OutputFileName()
     with open(fileName1, "w") as outFileDist:
-        for key in sorted(seqDict.keys()):
-            av = seqDict[key]
-            outFileDist.write("%s " % (key))
-            for seq in range(2 * pairs):
-                prob = av[seq] / float(totalSeqCnt)
-                outFileDist.write("%.10f " % (prob))
+        kmers = sorted(seqDict.keys())
+        arrLen = [1]
+        arrLen[0] = len(kmers)
+        header = array('i', arrLen )
+        header.tofile(outFileDist)
+        pv = [0]*arrLen[0]
+        for seq in range(2 * pairs):
+            ks = 0
+            for key in sorted(seqDict.keys()):
+                av = seqDict[key]
+                # outFileDist.write("%s " % (key))
+                pv[ks] = av[seq] / float(totalSeqCnt)
+                ks = ks + 1
 
-            outFileDist.write("\n")
+            # salva l'intero vettore di probabilita'
+            fa = array('d', pv)
+            fa.tofile(outFileDist)
+            #outFileDist.write("\n")
 
 
 
@@ -109,14 +120,13 @@ def main():
                 av[seqNum] = count #otherwise av[seqNum] + count ????
                 seqDict[kmer] = av
             else:
-                av =[]
-                av = [0 for i in range(2*nPairs)]
+                av = [0]*(2*nPairs)
                 av[seqNum] = count
                 seqDict[kmer] = av
 
     if (writeSequenceHistogram):
         # salva la distribuzione e l'istogramma dell'ultima sequenza
-        SaveDistributions(model, nPairs, len)
+        SaveDistributions(model, nPairs)
 
     print('')
 

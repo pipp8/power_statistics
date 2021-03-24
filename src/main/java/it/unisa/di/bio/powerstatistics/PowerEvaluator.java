@@ -5,7 +5,6 @@ import java.io.*;
 import java.nio.file.*;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Properties;
 
 
 import org.json.simple.JSONArray;
@@ -68,7 +67,7 @@ public class PowerEvaluator {
                         AnalyzeDataset4(v, Uniform);
                         break;
                     case "syntheticAllLen":     // ultimo data set distanza lineare tr ale lunghezze
-                        AnalyzeDataset5(v, Uniform);
+                        AnalyzeDataset5(v, Uniform, 11, 12); // 0, -1
                         break;
                     default:
                         AnalyzeDataset3(v, DatasetType.valueOf(args[2]));
@@ -78,7 +77,7 @@ public class PowerEvaluator {
     }
 
 
-    static void AnalyzeDataset5(double alphaValue, DatasetType nullModel) {
+    static void AnalyzeDataset5(double alphaValue, DatasetType nullModel, int firstMeasure, int lastMeasure) {
 
         String[] gValues = appProps.getAppProps().getProperty("powerstatistics.datasetBuilder.gammaProbabilities").split(",");
         double gamma, minDst, maxDst, avg, area[] = new double[gValues.length];
@@ -94,9 +93,10 @@ public class PowerEvaluator {
         System.out.printf("Distances for alternate model: %s\n", alternateModel.toString());
 
         ReadDistances ar = new ReadDistances(nullModel, alternateModel, lenList.get(0).filename, 0.); // solo per leggere la lista di misure disponibili
+        lastMeasure = lastMeasure >= 0 ? lastMeasure : ar.measureNames.length;
 
         // per tutte le misure previste dall'esperimento
-        for(int d = 0; d < ar.measureNames.length; d++) {
+        for(int d = firstMeasure; d < lastMeasure; d++) {
 
             ArrayList<PowerValue> list = new ArrayList<PowerValue>();
             m = 0;
