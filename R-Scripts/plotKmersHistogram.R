@@ -1,13 +1,13 @@
 library(ggplot2)
 
-# setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Kolmogorov")
-setwd("/Volumes/Catalina/PowerStatistics/Kolmogorov/")
+setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Kolmogorov/AnalisiAlternativeModel/")
+#setwd("/Volumes/Catalina/PowerStatistics/Kolmogorov/")
 
 k=4
 model='MotifRepl-U'
 model='PatTransf-U'
 nPairs=1000
-len=200000
+len=2000000
 
 g=0.10
 gVal <- if (g == "no g") "" else sprintf(".G=%.3f", g)
@@ -15,9 +15,9 @@ gVal <- if (g == "no g") "" else sprintf(".G=%.3f", g)
 
 
 pair <- 1
-for(model in c('MotifRepl-U', 'PatTransf-U')) {
+for(model in c('MotifRepl-U', 'PatTransf-U', 'Uniform')) {
 	
-	f1 <- sprintf("k=%d/seqDists/dist-k=%d_%s-%d.%d%s-All.distbin", k, k, model, nPairs, len, gVal)
+	f1 <- sprintf("k=%d/dist-k=%d_%s-%d.%d%s-All.distbin", k, k, model, nPairs, len, gVal)
 	inFile <- file( f1, "rb")
 	nKeys = readBin( inFile, integer(), n = 1)
 
@@ -58,5 +58,5 @@ for(model in c('MotifRepl-U', 'PatTransf-U')) {
 		# stop("break")
 		# readline(prompt="Press [enter] to continue")
 		# dev.off() #only 129kb in size
-		cat( sprintf(" done.\n"))
+		cat( sprintf("%s  done.\n", model))
 }

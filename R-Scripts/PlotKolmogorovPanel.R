@@ -11,6 +11,7 @@ ris$len <- factor(ris$len,levels=c("200,000","2,000,000"))
 
 
 # modifica i fattori di scala per ciascuna riga del pannello
+# N.B. l'etichetta del pannello deve essere alfanumerica non numerica
 scales_y <- list(
     '4' = scale_y_continuous(limits = c(0, 0.15)),
     '6' = scale_y_continuous(limits = c(0, 0.05)),
