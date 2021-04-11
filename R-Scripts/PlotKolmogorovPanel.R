@@ -1,14 +1,18 @@
 library(ggplot2)
 library(facetscales)
+library(dplyr)
+
 
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Kolmogorov")
 
 dfFilename <- 'AllKolmogorov.df'
 ris <- readRDS(file = dfFilename)
 
-# redefinisce l'ordine delle colonne della griglia
-ris$len <- factor(ris$len,levels=c("200,000","2,000,000"))
+ris <- filter( ris, ris$Name != 'C-NM')
 
+# redefinisce l'ordine delle colonne della griglia
+ris$len <- factor(ris$len, levels=c("200,000","2,000,000"))
+ris$Name <- factor( ris$Name, levels = c('NM', 'MR.G=0.010', 'MR.G=0.050', 'MR.G=0.100', 'PT.G=0.010', 'PT.G=0.050', 'PT.G=0.100'))
 
 # modifica i fattori di scala per ciascuna riga del pannello
 # N.B. l'etichetta del pannello deve essere alfanumerica non numerica

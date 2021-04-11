@@ -8,7 +8,7 @@ setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Ko
 nPairs=1000
 len=200000
 
-dfFilename = 'HammingDistance-All.df'			
+dfFilename = sprintf("HammingDistance-All.df", len)			
 
 if (file.exists(dfFilename)) {
 	cat( sprintf("Data file exists. Loading %s\n", dfFilename))			
@@ -16,64 +16,70 @@ if (file.exists(dfFilename)) {
 	df <- readRDS(file = dfFilename)
 } else {
 
-	df <- data.frame( Name = character(), Dist = double(), stringsAsFactors=FALSE)
-	
-	model = 'Uniform'
-	f1 <- sprintf("%s-%d.%d%s.fasta", model, nPairs, len, '')
-	con1 = file(f1, "r")
-	
-	for( pair in 1:nPairs) {
+	df <- data.frame( Name = character(), Dist = double(), len = numeric(), stringsAsFactors=FALSE)
+
+	for( len in c(200000, 2000000))	{
+		model = 'Uniform'
+		f1 <- sprintf("%s-%d.%d%s.fasta", model, nPairs, len, '')
+		con1 = file(f1, "r")
 		
-		s1Name = readLines(con1, n = 1)
-		s1 = readLines(con1, n = 1)
-		s2Name = readLines(con1, n = 1)
-		s2 = readLines(con1, n = 1)
-	
-		d <- StrDist(s1, s2, method = 'hamming')
-		df[pair,] <- list( model, d[1]/len)
-		
-		cat( sprintf("%5d /%5d\r", pair, nPairs))
-	}
-	close(con1)
-	cat( sprintf("%s.  done.\n", 'Uniform'))
-		
-	for( model in c('MotifRepl-U', 'PatTransf-U')) {
-		
-		for( g in c(0.01, 0.05, 0.10)) {
-	
-			gVal <- sprintf(".G=%.3f", g)
-			k1 <- sprintf("%s%s", model, gVal)
-					
-			f2 <- sprintf("%s-%d.%d%s.fasta", model, nPairs, len, gVal)
-			con2 = file(f2, "r")
-		
-			for( pair in 1:nPairs) {
-	
-				s1AMName = readLines(con2, n = 1)
-				s1AM = readLines(con2, n = 1)
-				s2AMName = readLines(con2, n = 1)
-				s2AM = readLines(con2, n = 1)
+		for( pair in 1:nPairs) {
 			
-				d <- StrDist(s1AM, s2AM, method = 'hamming')
-				df[ nrow(df) + 1,] <- list( k1, d[1]/len)
-				
-				cat( sprintf("%5d /%5d\r", pair, nPairs))
-			}
-
-			close(con2)
-			cat( sprintf("\n%s ok\n", f2))	
+			s1Name = readLines(con1, n = 1)
+			s1 = readLines(con1, n = 1)
+			s2Name = readLines(con1, n = 1)
+			s2 = readLines(con1, n = 1)
+		
+			d <- StrDist(s1, s2, method = 'hamming')
+			df[pair,] <- list( 'NM', d[1]/len, len)
+			
+			cat( sprintf("%5d /%5d\r", pair, nPairs))
 		}
-		cat( sprintf("%s.  done.\n", model))
-	}	
-
+		close(con1)
+		cat( sprintf("%s.  done.\n", 'Uniform'))
+			
+		for( model in c('MotifRepl-U', 'PatTransf-U')) {
+			
+			for( g in c(0.01, 0.05, 0.10)) {
+		
+				gVal <- sprintf(".G=%.3f", g)
+				k1 <- sprintf("%s%s", if (model == 'MotifRepl-U') 'MR' else 'PT', gVal)
+						
+				f2 <- sprintf("%s-%d.%d%s.fasta", model, nPairs, len, gVal)
+				con2 = file(f2, "r")
+			
+				for( pair in 1:nPairs) {
+		
+					s1AMName = readLines(con2, n = 1)
+					s1AM = readLines(con2, n = 1)
+					s2AMName = readLines(con2, n = 1)
+					s2AM = readLines(con2, n = 1)
+				
+					d <- StrDist(s1AM, s2AM, method = 'hamming')
+					df[ nrow(df) + 1,] <- list( k1, d[1]/len, len)
+					
+					cat( sprintf("%5d /%5d\r", pair, nPairs))
+				} # for all pairs
+	
+				close(con2)
+				cat( sprintf("\n%s ok\n", f2))	
+			} # for all gamma
+			cat( sprintf("%s.  done.\n", model))
+		} # for all models
+	} # for all lenngth
 	saveRDS( df, file = dfFilename)
 }
 
+df$Name = factor(df$Name, levels = c('NM', 'MR.G=0.010','MR.G=0.050','MR.G=0.100', 'PT.G=0.010','PT.G=0.050','PT.G=0.100'))
+
+df$len <- factor(df$len)
+levels(df$len) <- c("len = 200.000", "len = 2.000.000")
 
 sp <- ggplot( df, aes(x = Name,y = Dist, fill = Name)) + 
  	geom_boxplot( aes(color = Name), outlier.size = 0.3) +
+ 	facet_grid(rows = vars( len)) +
  	scale_y_continuous(name = "Hamming Distance", limits = c(0, 1)) +
- 	theme_bw()+ theme( axis.text.x = element_text(size = 8, angle = 45, hjust =1)) +
+ 	theme_bw()+ theme( axis.text.x = element_text(size = 10, angle = 45, hjust =1)) +
  	theme(legend.position = "none") + labs(x ="")
  	# ggtitle("Pannello risultati test di Kolmogorv-Smirnov") + labs(y= "D Value")
 
