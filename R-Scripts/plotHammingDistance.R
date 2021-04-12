@@ -73,7 +73,7 @@ if (file.exists(dfFilename)) {
 df$Name = factor(df$Name, levels = c('NM', 'MR.G=0.010','MR.G=0.050','MR.G=0.100', 'PT.G=0.010','PT.G=0.050','PT.G=0.100'))
 
 df$len <- factor(df$len)
-levels(df$len) <- c("len = 200.000", "len = 2.000.000")
+levels(df$len) <- c("n = 200,000", "n = 2,000,000")
 
 sp <- ggplot( df, aes(x = Name,y = Dist, fill = Name)) + 
  	geom_boxplot( aes(color = Name), outlier.size = 0.3) +
@@ -86,7 +86,7 @@ sp <- ggplot( df, aes(x = Name,y = Dist, fill = Name)) +
 
 # dev.new(width = 9, height = 6)
 outfname <- sprintf( "%s.png",  tools::file_path_sans_ext(dfFilename))
-ggsave( outfname, device = png(), width = 9, height = 6, dpi = 300)
+ggsave( outfname, device = png(), width = 9, height = 4, dpi = 300)
 # ggsave( outfname, device = png(), dpi = 300)
 #			print( sp2)
 # stop("break")
