@@ -77,7 +77,7 @@ levels(df$len) <- c("len = 200.000", "len = 2.000.000")
 
 sp <- ggplot( df, aes(x = Name,y = Dist, fill = Name)) + 
  	geom_boxplot( aes(color = Name), outlier.size = 0.3) +
- 	facet_grid(rows = vars( len)) +
+ 	facet_grid(cols = vars( len)) +
  	scale_y_continuous(name = "Hamming Distance", limits = c(0, 1)) +
  	theme_bw()+ theme( axis.text.x = element_text(size = 10, angle = 45, hjust =1)) +
  	theme(legend.position = "none") + labs(x ="")
