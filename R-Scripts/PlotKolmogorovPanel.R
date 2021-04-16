@@ -25,6 +25,14 @@ plot_labeller <- function(variable,value){
   }
 }
 
+# modifica i fattori di scala per ciascuna riga del pannello
+# N.B. l'etichetta del pannello deve essere alfanumerica non numerica
+scales_y <- list(
+    '4' = scale_y_continuous(limits = c(0, 0.15)),
+    '6' = scale_y_continuous(limits = c(0, 0.05)),
+    '8' = scale_y_continuous(limits = c(0, 0.01)),  
+    '10' = scale_y_continuous(limits = c(0, 0.003)))
+
 
 dfFilename <- 'AllKolmogorov.df'
 ris <- readRDS(file = dfFilename)
@@ -41,13 +49,6 @@ ris$K <- factor(ris$K)
 
 ris$Name <- factor( ris$Name, levels = c('NM', 'MR.G=0.010', 'MR.G=0.050', 'MR.G=0.100', 'PT.G=0.010', 'PT.G=0.050', 'PT.G=0.100'))
 
-# modifica i fattori di scala per ciascuna riga del pannello
-# N.B. l'etichetta del pannello deve essere alfanumerica non numerica
-scales_y <- list(
-    '4' = scale_y_continuous(limits = c(0, 0.15)),
-    '6' = scale_y_continuous(limits = c(0, 0.05)),
-    '8' = scale_y_continuous(limits = c(0, 0.01)),  
-    '10' = scale_y_continuous(limits = c(0, 0.003)))
 
 sp <- ggplot( ris, aes(x = Name,y = D, fill = Name, alpha=0.7)) + 
  	geom_boxplot( aes(color = Name), outlier.size = 0.3) +
