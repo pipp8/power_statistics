@@ -107,10 +107,12 @@ HammingPower$Name <- factor(HammingPower$Name)
 HammingPower$len <- factor(HammingPower$len)
 levels(HammingPower$len) <- c('n = 200 000', 'n = 5 000 000')
 	
-sp <- ggplot( HammingPower, aes(x = Name, y = Power, fill = Name)) + 
- 	geom_boxplot( aes(color = Name), outlier.size = 0.3) +
+sp <- ggplot( HammingPower, aes(x = Name, y = Power)) +
+# sp <- ggplot( HammingPower, aes(x = Name, y = Power, fill = Name)) + 
+ 	# geom_boxplot( aes(color = Name), outlier.size = 0.3) +
+ 	geom_point( aes(color = Name), shape = 15, size = 4) +
  	facet_grid(cols = vars( len)) +
- 	scale_y_continuous(name = "Power Statistics for Hamming Distance", limits = c(0, 1)) +
+ 	scale_y_continuous(name = "HD Power Statistics", limits = c(0, 1)) +
  	theme_bw() + theme( axis.text.x = element_text(size = 10, angle = 45, hjust =1)) +
  	theme(legend.position = "none") + labs(x = "")
  	# ggtitle("Power Statistics for Hamming Distance") + labs(y = "Power")
