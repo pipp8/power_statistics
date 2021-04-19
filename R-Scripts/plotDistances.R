@@ -7,9 +7,11 @@ setwd("~/Universita/Src/IdeaProjects/power_statistics/data/results/dataset5-1000
 
 nPairs = 1000
 lengths = c(200000, 5000000)
+lengths = seq(200000, 10000000, 200000)
 kValues = c(4, 6, 8, 10)
 
-measures = c('camberra', 'chebyshev', 'd2', 'd2z', 'manhattan')
+# measures = c('camberra', 'chebyshev', 'd2', 'd2z', 'manhattan')
+measures = c( 'canberra', 'chebyshev', 'chisquare', 'd2', 'd2s', 'd2star', 'd2z', 'euclidean', 'harmonicmean', 'intersection', 'jeffrey', 'jensenshannon', 'kulczynski2', 'manhattan', 'squaredchord') # no jaccard e mash
 mespos = c(3, 4, 6, 9, 17)
 
 dfFilename <- "AFMeasureDistances-All.df"			
@@ -37,16 +39,18 @@ if (file.exists(dfFilename)) {
 			
 			tmp <- read.csv( file = f1)
 
-			for(i in 1:length(measures)) {
+			for(mes in measures) {
 				
-				df2 <- data.frame(tmp[, mespos[i]])
+				df2 <- data.frame(get( mes, tmp))
 				names(df2) <- 'Distance'
-				df2$Measure <- measures[i]
+				df2$Measure <- mes
 				df2$Model <- 'NM'
 				df2$k <- k
 				df2$len <- len	
 			
 				df <- rbind(df, df2)
+				
+				cat( '.')
 			}
 			cat( sprintf("%s.  done.\n", 'Uniform'))
 					
@@ -60,22 +64,25 @@ if (file.exists(dfFilename)) {
 			
 					tmp <- read.csv( file = f1)
 			
-					for(i in 1:length(measures)) {
+					for(mes in measures) {
 						
-						df2 <- data.frame(tmp[, mespos[i]])
+						df2 <- data.frame(get( mes, tmp))
 						names(df2) <- 'Distance'
-						df2$Measure <- measures[i]
+						df2$Measure <- mes
 						df2$Model <- mdl
 						df2$k <- k
 						df2$len <- len	
 						
 						df <- rbind(df, df2)
+						
+						cat( '.')
 					}
 					cat( sprintf("%s ok\n", f1))	
 				} # for all gamma
-				cat( sprintf("%s.  done.\n\n", model))
 			} # for all models
+			cat( sprintf("k = %d.  done.\n", k))
 		} # for all k
+		cat( sprintf("length = %d.  done.\n\n", len))
 	} # for all lenngth
 	
 	df$Measure <- factor(df$Measure, levels = measures)
