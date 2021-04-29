@@ -12,6 +12,15 @@ alphaValues = c("010", "050", "100")
 gammaValues = c(0.01, 0.05, 0.10)	
 kValues = c(4, 6, 8, 10)
 
+# misure ordinate per famiglia
+sortedMeasures <- c('chebyshev', 'euclidean', 'manhattan',
+                    'chisquare',
+                    'canberra',
+                    'd2', 'd2s', 'd2star', 'd2z',
+                    'intersection', 'kulczynski2',
+                    'harmonicmean', 'squaredchord',
+                    'jeffrey', 'jensenshannon')
+
 dfAll <- data.frame()
 
 for(alpha in alphaValues) {
@@ -78,9 +87,9 @@ for(alpha in alphaValues) {
 } # foreach alpha
 	# dfAll 9.000 righe
 	
-	dfAll$measure <- as.factor(dfAll$measure)
+	dfAll$measure <- factor(dfAll$measure, levels = sortedMeasures)
 	dfAll$k <- factor( dfAll$k, levels = c( 4, 6, 8, 10))
-	dfAll$alfa <- factor( dfAll$alfa, levels = c( "1%", "5%", "10%"))
+	dfAll$alfa2 <- factor( dfAll$alfa, levels = c( "1%", "5%", "10%"))
 		
 	# modifica i fattori di scala per ciascuna riga del pannello
 	scales_y <- list(
@@ -88,39 +97,32 @@ for(alpha in alphaValues) {
     	`5%` = scale_y_continuous(limits = c(0, 0.20), breaks = seq(0, 0.20, 0.04)),
     	`10%` = scale_y_continuous(limits = c(0, 0.30), breaks = seq(0, 0.30, 0.06)))
 
-#	facet_bounds <- read.table(header=TRUE,
-#		text=                           
-# "alpha ymin ymax breaks
-# 0.01		0	0.10    5
-# 0.05		0	0.20    5
-# 0.10		0	0.30    5",
-# stringsAsFactors=FALSE)
 
 	cat(sprintf("Data Frame loaded. %d rows\n", nrow(dfAll)))
-		
-    # title = sprintf("T1 Error Check (alpha = %d%%)", dfAll$alpha[1]*100)
 
-	# sp2 <-	ggplot(dfAll, aes(x = measure, y = T1, fill = k)) +
-	#		ggtitle( title) + labs( x = "") +
-	#		theme_light() + theme(legend.position = "bottom") + theme(axis.text.x = element_text(angle = 45, vjust = 0.95, hjust=1)) +
-			# theme(axis.text.x = element_blank()) + # axis.ticks.x = element_blank()) +
-			# scale_colour_brewer(palette="Dark2") +
-	#		scale_fill_manual(values = c("#1C8F63", "#CE4907", "#6159A3", "#DD0077", "#535353")) +
-	#		scale_y_continuous(name = "T1 Error", limits = c(0, 0.30)) +
-	#		geom_boxplot(lwd = 0.2, alpha = 0.9) #outlier.shape = 20, width=15
+# 	stop("break")
 
-	sp <- ggplot( dfAll, aes(x = measure, y = T1, fill = k)) + 
-	 	geom_boxplot( aes(color = k), outlier.size = 0.25) +
-	 	# facet_grid(rows = vars( alpha), scales = "free") + # scale_y_continuous(name = "T1 Value", limits = c(0, 0.30)) +
-	 	facet_grid_sc(rows = vars( alfa), scales = list( y = scales_y)) +
-	 	theme_bw() + theme( axis.text.x = element_text(size = 8, angle = 45, hjust = 1)) +
-	 	labs(y = "T1 Value", x = "") # theme(legend.position = "none") 
+for( a in c( 0.01, 0.05, 0.10)) { 
+  
+  MaxT1 <- switch( sprintf("%.2f", a), "0.01" = 0.050, "0.05" = 0.150, "0.10" = 0.3) # fattore di amplificazione del valore di T1
+  cat(sprintf("%.3f - %.3f\n", a, MaxT1))
+
+	dff <- filter(dfAll, dfAll$alpha == a)
+
+	sp <- ggplot( dff, aes(x = measure, y = T1)) + 
+	 	geom_boxplot( aes(color = k, fill = k), alpha=0.7, outlier.size = 0.25) +
+	 	# facet_grid(rows = vars( alpha), scales = "free") +
+	  scale_y_continuous(name = "T1 Value", limits = c(0, MaxT1)) +
+	 	# facet_grid_sc(rows = vars( alfa2), scales = list( y = scales_y)) +
+	  geom_hline(yintercept = dff$alpha[1], linetype="dashed", color = "black") +
+	 	theme_bw() + theme( axis.text.x = element_text(size = 9, angle = 45, hjust = 1)) +
+	 	labs(x = "") # theme(legend.position = "none") 
 	 	# ggtitle("Pannello risultati T1-Check") 
 	
 	# dev.new(width = 10, height = 5)
-    outfname <- sprintf( "%s/T1Box-Panel.png", dirname)
-    ggsave( outfname, device = png(), dpi = 300) 
-    print( sp)
+    outfname <- sprintf( "%s/T1Box-alpha=%.2f.png", dirname, a)
+    ggsave( outfname, width = 9, height = 6, device = png(), dpi = 300) 
+    # print( sp)
     # readline(prompt="Press [enter] to continue")
     # dev.off() #only 129kb in size
-    
+}

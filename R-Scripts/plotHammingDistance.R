@@ -1,8 +1,8 @@
 library(DescTools)
 library(ggplot2)
+library(dplyr)
 
-
-setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Kolmogorov/AnalisiAlternativeModel/seqs")
+setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/AnalisiAlternativeModel/seqs")
 #setwd("/Volumes/Catalina/PowerStatistics/Kolmogorov/")
 
 nPairs = 1000
@@ -75,7 +75,8 @@ df$Name = factor(df$Name, levels = c('NM', 'MR.G=0.010','MR.G=0.050','MR.G=0.100
 df$len <- factor(df$len)
 levels(df$len) <- c("n = 200 000", "n = 5 000 000")
 
-sp <- ggplot( df, aes(x = Name,y = Dist, fill = Name)) + 
+dff <- filter( df, df$len == 'n = 5 000 000')
+sp <- ggplot( dff, aes(x = Name,y = Dist, fill = Name)) + 
  	geom_boxplot( aes(color = Name), outlier.size = 0.3) +
  	facet_grid(cols = vars( len)) +
  	scale_y_continuous(name = "Hamming Distance", limits = c(0, 1)) +

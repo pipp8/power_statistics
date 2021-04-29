@@ -10,9 +10,15 @@ lengths = c(200000, 5000000)
 lengths = seq(200000, 10000000, 200000)
 kValues = c(4, 6, 8, 10)
 
-# measures = c('camberra', 'chebyshev', 'd2', 'd2z', 'manhattan')
-measures = c( 'canberra', 'chebyshev', 'chisquare', 'd2', 'd2s', 'd2star', 'd2z', 'euclidean', 'harmonicmean', 'intersection', 'jeffrey', 'jensenshannon', 'kulczynski2', 'manhattan', 'squaredchord') # no jaccard e mash
-mespos = c(3, 4, 6, 9, 17)
+# measures = c( 'canberra', 'chebyshev', 'chisquare', 'd2', 'd2s', 'd2star', 'd2z', 'euclidean', 'harmonicmean', 'intersection', 'jeffrey', 'jensenshannon', 'kulczynski2', 'manhattan', 'squaredchord') # no jaccard e mash
+# misure ordinate per famiglia
+sortedMeasures <- c('chebyshev', 'euclidean', 'manhattan',
+                    'chisquare',
+                    'canberra',
+                    'd2', 'd2s', 'd2star', 'd2z',
+                    'intersection', 'kulczynski2',
+                    'harmonicmean', 'squaredchord',
+                    'jeffrey', 'jensenshannon')
 
 dfFilename <- "AFMeasureDistances-All.df"			
 
@@ -39,7 +45,7 @@ if (file.exists(dfFilename)) {
 			
 			tmp <- read.csv( file = f1)
 
-			for(mes in measures) {
+			for(mes in sortedMeasures) {
 				
 				df2 <- data.frame(get( mes, tmp))
 				names(df2) <- 'Distance'
@@ -64,7 +70,7 @@ if (file.exists(dfFilename)) {
 			
 					tmp <- read.csv( file = f1)
 			
-					for(mes in measures) {
+					for(mes in sortedMeasures) {
 						
 						df2 <- data.frame(get( mes, tmp))
 						names(df2) <- 'Distance'
@@ -85,36 +91,60 @@ if (file.exists(dfFilename)) {
 		cat( sprintf("length = %d.  done.\n\n", len))
 	} # for all lenngth
 	
-	df$Measure <- factor(df$Measure, levels = measures)
+	df$Measure <- factor(df$Measure, levels = sortedMeasures)
 	df$Model <- factor(df$Model, levels = c('NM', "MR.G=0.010", "MR.G=0.050", "MR.G=0.100", "PT.G=0.010", "PT.G=0.050", "PT.G=0.100"))
 	df$k <- factor( df$k, kValues)
 	df$len <- factor( df$len, lengths)
 	saveRDS( df, file = dfFilename)
 }
 
-levels(df$len) <- c("n = 200 000", "n = 5 000 000")
+cat('Starting plotting.\n')
 
+#for labels
+len_names <- list(
+  '2e+05' = "n = 200 000",
+  '5e+06' = "n = 5 000 000")
 
-# for(k in kValues) {
-	k <- 6
-	dff <- filter(df, df$len == 'n = 5 000 000' & df$k == 6 & ( df$Measure == 'd2z' | df$Measure == 'chebyshev'))
+k_names <- list(
+  '4' = "k = 4",
+  '6' = "k = 6",
+  '8' = "k = 8",
+  '10' = "k = 10")
+
+plot_labeller <- function(variable,value){
+  if (variable=='len') {
+    # N.B. len e' un factor
+    return(len_names[as.character(value)])
+  } else if (variable=='k') {
+    return(k_names[value])
+  } else {
+    return(as.character(value))
+  }
+}
+
+for(kv in kValues) {
+  
+#  dff <- filter(df, df$len == 5000000 & df$k == 6 & ( df$Measure == 'd2z' | df$Measure == 'chebyshev'))
+	dff <- filter(df, df$len == 5000000 & df$k == kv) # tutte le misure per uno specifico valore di k
+#	dff <- filter(df, df$len == 5000000 & df$Measure == 'canberra') # solo una misura per tutti i k
 	
 	sp <- ggplot( dff, aes(x = Model, y = Distance, fill = Model, alpha=0.7)) + 
 	 	geom_boxplot( aes(color = Model), outlier.size = 0.3) +
-	 	facet_grid(cols = vars( len), rows = vars( Measure), scales = "free") +
+	 	facet_grid(cols = vars( len), rows = vars( Measure), scales = "free", labeller = plot_labeller) +
 	 	# facet_grid_sc(cols = vars( len), rows = vars( Measure), scales = list( y = scales_y)) +
-	 	# scale_y_continuous(name = "Hamming Distance", limits = c(0, 1)) +
-	 	theme_bw() + theme( axis.text.x = element_text(size = 10, angle = 45, hjust =1)) +
-	 	theme(legend.position = "none") + labs(x ="") +
-	 	ggtitle(sprintf("Distances for k = %d", k)) + labs(y = "")
+	 	# scale_y_continuous(name = "Distance", limits = c(0, 1)) +
+	 	theme_bw() + theme( axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_blank()) +
+	 	theme(legend.position = "none") + labs(x ="") + labs(y = "") # Canberra Distances") 
+	 	# ggtitle(sprintf("Distances for k = %d", kv)) 
 	
 	
-	# dev.new(width = 9, height = 6)
-	outfname <- sprintf("%s-k=%d.png", tools::file_path_sans_ext(dfFilename), k)
-	# ggsave( outfname, device = png(), width = 9, height = 4, dpi = 300)
-	ggsave( outfname, device = png(), dpi = 300)
-	#print( sp)
+	# dev.new(width = 4, height = 12)
+	outfname <- sprintf("%s-k=%d-allMeasures.png", tools::file_path_sans_ext(dfFilename), kv)
+	# outfname <- sprintf("%s-allK.png", 'canberra')
+	ggsave( outfname, device = png(), width = 6, height = 12, dpi = 300)
+	# ggsave( outfname, device = png(), dpi = 300)
+	cat(sprintf("%s processed\n", outfname))
 	# stop("break")
 	# readline(prompt="Press [enter] to continue")
-	#			dev.off() #only 129kb in size
-#}
+	dev.off() #only 129kb in size
+}

@@ -53,7 +53,7 @@ ris$Name <- factor( ris$Name, levels = c('NM', 'MR.G=0.010', 'MR.G=0.050', 'MR.G
 sp <- ggplot( ris, aes(x = Name,y = D, fill = Name, alpha=0.7)) + 
  	geom_boxplot( aes(color = Name), outlier.size = 0.3) +
  	facet_grid_sc(rows = vars( K), cols = vars( len), scales = list( y = scales_y), labeller = plot_labeller) +
- 	theme_bw()+ theme( axis.text.x = element_text(size = 8, angle = 45, hjust =1)) +
+ 	theme_bw()+ theme( axis.text.x = element_text(size = 8, angle = 45, hjust = 1)) +
  	theme(legend.position = "none") + labs(y = "KS", x ="")
  	# ggtitle("Pannello risultati test di Kolmogorv-Smirnov") + labs(y= "D Value")
 
