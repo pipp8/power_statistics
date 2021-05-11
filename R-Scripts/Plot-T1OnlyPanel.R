@@ -4,7 +4,7 @@ library(RColorBrewer)
 library(ggplot2)
 library(facetscales)
 
-
+# script per figura n.1 main
 
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
 	
@@ -111,11 +111,12 @@ for( a in c( 0.01, 0.05, 0.10)) {
 
 	sp <- ggplot( dff, aes(x = measure, y = T1)) + 
 	 	geom_boxplot( aes(color = k, fill = k), alpha=0.7, outlier.size = 0.25) +
-	 	# facet_grid(rows = vars( alpha), scales = "free") +
-	  scale_y_continuous(name = "T1 Value", limits = c(0, MaxT1)) +
-	 	# facet_grid_sc(rows = vars( alfa2), scales = list( y = scales_y)) +
-	  geom_hline(yintercept = dff$alpha[1], linetype="dashed", color = "black") +
-	 	theme_bw() + theme( axis.text.x = element_text(size = 9, angle = 45, hjust = 1)) +
+		scale_y_continuous(name = "T1 Value", limits = c(0, MaxT1)) +
+	  	geom_hline(yintercept = dff$alpha[1], linetype="dashed", color = "black") +
+	 	theme_bw() + theme(  axis.text.x = element_text(size = 11, angle = 45, hjust = 1),  # increase al font sizes
+							 axis.text.y = element_text(size = 12),
+							 legend.title = element_text(size = 14),
+							 legend.text = element_text(size = 13)) +
 	 	labs(x = "") # theme(legend.position = "none") 
 	 	# ggtitle("Pannello risultati T1-Check") 
 	

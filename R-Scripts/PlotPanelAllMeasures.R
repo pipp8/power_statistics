@@ -15,14 +15,19 @@ sortedMeasures <- c('chebyshev', 'euclidean', 'manhattan',
                     'jeffrey', 'jensenshannon')
 
 
+plot_labeller <- function(variable,value){
+  if (variable=='gamma') {
+    # N.B. len e' un factor
+    return(sprintf("G = %.2f", value))
+  } else {
+    return(as.character(value))
+  }
+}
+
 AMs <- c("MotifReplace", "PatternTransfer")
 alphaValues = c("010", "050", "100")
 
-gammaValues = c(0.01, 0.05, 0.10)
-
 kValues = c(4, 6, 8, 10)
-
-jsonDir <- sprintf( "json-%s", alpha)
 
 dirname <- "PowerBoxPlot"
 if (!dir.exists(dirname)) {
@@ -30,6 +35,8 @@ if (!dir.exists(dirname)) {
 }
 
 seqLengths <- 50 # 200.000 - 10.000.0000 step 200.000 # numero di risultati per ciascun plot
+
+gammaValues = c(0.01, 0.05, 0.10)
 nGamma <- length(gammaValues) # cambiare in 3
 nK <- length(kValues)
 nCol <- 6
@@ -50,6 +57,7 @@ if (file.exists(dfFilename)) {
       
       for (am in AMs) {
   		
+            jsonDir <- sprintf( "json-%s", alpha)
       	    files <- list.files(jsonDir, sprintf("*%s*", am))
       	    print( sprintf("Processing %d files from: %s/%s", length(files), getwd(), jsonDir))
   
@@ -94,7 +102,8 @@ if (file.exists(dfFilename)) {
     dati$model <- factor(dati$model)
     dati$mds <- factor(dati$mds)
     dati$k <- factor( dati$k, levels = c( 4, 6, 8, 10))
-		saveRDS( dati, file = dfFilename)
+    # dati$gamma = factor( dati$gamma, levels = c( "G = 0.01", "G = 0.05", "G = 0.10"))
+    saveRDS( dati, file = dfFilename)
 }
 
 
@@ -102,36 +111,24 @@ for (am in AMs) {
   
     dff <- filter(dati, dati$alpha == 0.10 & dati$model == am) # tutte le misure per uno specifico AM e valore di alpha
 
-    sp <- ggplot( dati, aes( x = len, y = power, fill = k, alpha=0.8)) +
+    sp <- ggplot( dff, aes( x = len, y = power, fill = k, alpha=0.8)) +
           geom_point( aes( color = k), alpha = 0.8, size = 0.08) +
           scale_x_continuous(name = NULL, breaks=c(200000, 2500000, 5000000, 7500000, 10000000),
                              labels=c("", "2.5e+6", "", "7.5e+6", ""), limits = c(200000, 10000000)) +
           scale_y_continuous(name = "Power", limits = c(0, 1)) +
-          facet_grid( rows = vars( gamma), cols = vars( measure)) +
+          facet_grid( rows = vars( gamma), cols = vars( measure),  labeller = plot_labeller) +
           theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 70),
                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                        panel.spacing=unit(0.1, "lines")) +
-          guides(colour = guide_legend(override.aes = list(size=3))) +
-          ggtitle( am)
-
-		# for (gv in gammaValues) {	
-		#     title = sprintf("Power Statistic (Alpha =%d%%, G = %d%%, A.M. = %s)", dfAll$alpha[1]*100, gv*100, exp$header$alternateModel)
-		# 
-		# 	sp2 <-	ggplot(filter( dfAll, gamma == gv), aes(x = measure, y = power, fill = k)) +
-		# 			ggtitle( title) + labs( x = "") +
-		# 			# theme(axis.text.x = element_blank()) + # axis.ticks.x = element_blank()) +
-		# 			theme_light() + theme(legend.position = "bottom") + theme(axis.text.x = element_text(angle = 45, vjust = 0.95, hjust=1)) +
-		# 			# scale_colour_brewer(palette="Dark2") +
-		# 			scale_fill_manual(values = c("#1C8F63", "#CE4907", "#6159A3", "#DD0077", "#535353")) +
-		# 			scale_y_continuous(name = "Power", limits = c(0, 1)) +
-		# 			geom_boxplot(lwd = 0.2, alpha = 0.9) # width=15, outlier.shape=20
-		# 
-		# 	# dev.new(width = 10, height = 5)
+          guides(colour = guide_legend(override.aes = list(size=3)))
+          # ggtitle( am)
+    
+		# dev.new(width = 9, height = 6)
+		# print(sp)
+		# stop("break")
+    
 		outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f.png", dirname, am, dati$alpha[1])
 		ggsave( outfname, device = png(), width = 9, height = 6, units = "in", dpi = 300)
-		#     # print( sp2)
-		#     # stop("break")
-		#     # readline(prompt="Press [enter] to continue")
-		#     dev.off() #only 129kb in size
-		# } # for each gamma
+
+		# dev.off() #only 129kb in size
 }

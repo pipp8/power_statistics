@@ -90,7 +90,7 @@ for(alpha in alphaValues) {
 
 	# dev.new(width = 10, height = 5)
     outfname <- sprintf( "%s/T1Box-A=%.2f.png", dirname, dfAll$alpha[1])
-    ggsave( outfname, device = png(), width = 15, height = 10, units = "cm", dpi = 300) 
+    ggsave( outfname, device = png(), width = 9, height = 6, units = "cm", dpi = 300)
     # print( sp2)
     # readline(prompt="Press [enter] to continue")
     dev.off() #only 129kb in size
