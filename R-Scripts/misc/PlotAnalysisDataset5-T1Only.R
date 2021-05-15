@@ -2,6 +2,11 @@ library(rjson)
 library(ggplot2)
 library(dplyr)
 
+# produce un grafico a linea con la T1 error check (harmonicmean-MotifReplace-UnT1.png) per ciascuna misura
+# sulle ascisse le lunghezze delle sequenze, sulle ordinate il risultato T1 error check linee una per ogni valore di k
+# (obsoleto)
+
+
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
 
 

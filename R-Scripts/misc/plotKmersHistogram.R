@@ -1,7 +1,9 @@
 library(ggplot2)
 
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Kolmogorov/AnalisiAlternativeModel/")
-#setwd("/Volumes/Catalina/PowerStatistics/Kolmogorov/")
+
+# produce il plot a barre di due sequenze per ciascun AM
+
 
 k=4
 model='MotifRepl-U'

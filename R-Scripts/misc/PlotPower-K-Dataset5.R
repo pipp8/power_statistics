@@ -4,8 +4,6 @@ library(dplyr)
 
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
 
-# varKDataPath <- "/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset4-1000"
-
 alphaValues = c("010", "050", "100")
 # alphaValues = c("050")
 gammaValues = c(0.01, 0.05, 0.10)

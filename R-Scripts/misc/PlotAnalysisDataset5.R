@@ -2,9 +2,11 @@ library(rjson)
 library(ggplot2)
 library(dplyr)
 
-setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
+# produce un grafico a linea con la power statistics (kulczynski2-PatternTransfer-Un-G=0.01.png) per ciascuna misura per ciascun valore di gamma
+# sulle ascisse le lunghezze delle sequenze, sulle ordinate la power 4 linee una per ogni valore di k
+# (obsoleto)
 
-# varKDataPath <- "/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset4-1000"
+setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
 
 alphaValues = c("010", "050", "100")
 # alphaValues = c("050")

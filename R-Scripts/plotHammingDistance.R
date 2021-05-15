@@ -3,8 +3,11 @@ library(ggplot2)
 library(dplyr)
 
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/AnalisiAlternativeModel/seqs")
-#setwd("/Volumes/Catalina/PowerStatistics/Kolmogorov/")
 
+# produce un pannello (HammingDistance-n=5000000) la distanza di hamming
+# sulle ascisse i 2 AM x i 3 valori di gamma + uniform.
+
+#
 nPairs = 1000
 lenghts = c(200000, 5000000)
 
@@ -82,8 +85,6 @@ sp <- ggplot( dff, aes(x = Name,y = Dist, fill = Name)) +
  	scale_y_continuous(name = "Hamming Distance", limits = c(0, 1)) +
  	theme_bw()+ theme( axis.text.x = element_text(size = 10, angle = 45, hjust =1)) +
  	theme(legend.position = "none") + labs(x ="")
- 	# ggtitle("Pannello risultati test di Kolmogorv-Smirnov") + labs(y= "D Value")
-
 
 # dev.new(width = 9, height = 6)
 outfname <- sprintf( "%s.png",  tools::file_path_sans_ext(dfFilename))

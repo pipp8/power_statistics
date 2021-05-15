@@ -2,8 +2,11 @@ library(rjson)
 library(ggplot2)
 library(dplyr)
 library(RColorBrewer)
- 
- 
+
+# produce due pannelli (i.e. PanelPowerAnalysis-PatternTransfer-A=0.10.png e PanelPowerAnalysis-MotifReplace-A=0.10.png)
+# uno per AM, con un plot per ciascuna misura e per ciascun valore di gamma (misure colonne e gamma righe)
+# ciascun plot riporta il grafico a punti del valore della power per ciascuna lunghezza (ordinate) e per ciascun k
+
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
 
 sortedMeasures <- c('chebyshev', 'euclidean', 'manhattan',
@@ -108,7 +111,8 @@ if (file.exists(dfFilename)) {
 
 
 for (am in AMs) {
-  
+
+	# solo per alpha = 0.10
     dff <- filter(dati, dati$alpha == 0.10 & dati$model == am) # tutte le misure per uno specifico AM e valore di alpha
 
     sp <- ggplot( dff, aes( x = len, y = power, fill = k, alpha=0.8)) +
@@ -123,12 +127,10 @@ for (am in AMs) {
           guides(colour = guide_legend(override.aes = list(size=3)))
           # ggtitle( am)
     
-		# dev.new(width = 9, height = 6)
-		# print(sp)
-		# stop("break")
-    
-		outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f.png", dirname, am, dati$alpha[1])
-		ggsave( outfname, device = png(), width = 9, height = 6, units = "in", dpi = 300)
-
-		# dev.off() #only 129kb in size
+	# dev.new(width = 9, height = 6)
+	# print(sp)
+	# stop("break")
+	outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f.png", dirname, am, dati$alpha[1])
+	ggsave( outfname, device = png(), width = 9, height = 6, units = "in", dpi = 300)
+	# dev.off() #only 129kb in size
 }

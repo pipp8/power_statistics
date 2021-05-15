@@ -4,7 +4,8 @@ library(RColorBrewer)
 library(ggplot2)
 library(facetscales)
 
-# script per figura n.1 main
+# script per figura n.1 del main (T1Box-alpha=0.10.png)
+# produce 3 grafici con i valori del type 1 check uno per ciascun valore di alpha
 
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
 	

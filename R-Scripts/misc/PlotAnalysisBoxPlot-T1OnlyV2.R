@@ -3,6 +3,7 @@ library(ggplot2)
 library(dplyr)
 library(RColorBrewer)
 
+# produce 3 grafici (T1Box-A=0.10.png) con i valori del type 1 error uno per ciascun Alpha (obsoleto)
 
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
 

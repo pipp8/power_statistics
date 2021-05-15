@@ -4,6 +4,8 @@ library(facetscales)
 library(dplyr)
 
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/results/dataset5-1000")
+# produce un grafico con la distanza di hamming per ciascun valore di k
+# sulle ascisse i valori dei 2 AM per i 3 gamma + NM Uniform
 
 nPairs = 1000
 lengths = c(200000, 5000000)
