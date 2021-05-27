@@ -5,8 +5,10 @@ library(dplyr)
 
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
 
+# Figura 4 nel supplementary
 # produce un pannello con 6 boxplot (3 x 2) le colonne sono i 2 AM le righe i valori di gamma, 
-# i boxplot per ciascun grafico riportano i valori della power statistics per ogni misura ed ogni valore di K
+# i boxplot per ciascun grafico riportano i valori della power statistics
+# Aggregati per len per ogni misura ed ogni valore di K
 
 sortedMeasures <- c('chebyshev', 'euclidean', 'manhattan',
                     'chisquare',
@@ -121,18 +123,6 @@ sp <- ggplot(dff, aes(x = measure, y = power, fill = k, alpha = 0.7)) +
   facet_grid(rows = vars(gamma), cols = vars(model), labeller = plot_labeller) +
   theme_bw() + theme(axis.title.x = element_blank(), 
                      axis.text.x = element_text( size = rel(0.8), angle = 45, hjust = 1))
-
-# sp <- ggplot( dff, aes( x = len, y = power, fill = k, alpha=0.8)) +
-#   geom_point( aes( color = k), alpha = 0.8, size = 0.08) +
-#   scale_x_continuous(name = NULL, breaks=c(200000, 2500000, 5000000, 7500000, 10000000),
-#                      labels=c("", "2.5e+6", "", "7.5e+6", ""), limits = c(200000, 10000000)) +
-#   scale_y_continuous(name = "Power", limits = c(0, 1)) +
-#   facet_grid( rows = vars( gamma), cols = vars( measure),  labeller = plot_labeller) +
-#   theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 70),
-#                      axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-#                      panel.spacing=unit(0.1, "lines")) +
-#   guides(colour = guide_legend(override.aes = list(size=3)))
-# ggtitle( am)
 
 dev.new(width = 9, height = 6)
 # rint(sp)

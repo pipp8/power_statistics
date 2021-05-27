@@ -4,7 +4,7 @@ library(dplyr)
 
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/AnalisiAlternativeModel/seqs")
 
-# produce un pannello (HammingDistance-n=5000000) la distanza di hamming
+# produce un pannello per una distanza con (HammingDistance-n=5000000) con la distanza di hamming
 # sulle ascisse i 2 AM x i 3 valori di gamma + uniform.
 
 #
