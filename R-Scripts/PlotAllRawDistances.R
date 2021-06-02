@@ -2,6 +2,8 @@ library(DescTools)
 library(ggplot2)
 library(facetscales)
 library(dplyr)
+library(stringr)
+
 
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/results/dataset5-1000")
 
@@ -39,14 +41,31 @@ k_names <- list(
   '8' = "k = 8",
   '10' = "k = 10")
 
+# rename in a human readable format the measure names
+measure_names <- function( measure) {
+	ris <- c()
+  for( m in measure) {
+	  ris <- c(ris , str_to_title( switch( m,
+			'chisquare' = 'chi-square',
+			'd2star' = 'd2*',
+			'harmonicmean' = 'harmonic mean',
+			'squaredchord' = 'squared chord',
+			'jensenshannon' = 'jensen shannon',
+			measure)))
+  }
+	return( ris)
+}
+
 plot_labeller <- function(variable,value){
-  if (variable=='len') {
-    # N.B. len e' un factor
-    return(len_names[as.character(value)])
-  } else if (variable=='k') {
-    return(k_names[value])
-  } else {
-    return(as.character(value))
+	cat(sprintf("nome: %s, valore: %s\n", variable, as.character(value)))
+	if (variable == 'len' || variable == 'k') {
+    	return(sprintf("n = %s", formatC( as.integer(value), format = "d", big.mark = " ", digits = 0)))
+	} else if (variable == 'Measure') {
+		# N.B. Measure e' un factor
+	  # return( measure_names(as.character(value)))
+	  return( as.character(value))
+	} else {
+		return(as.character(value))
   }
 }
 

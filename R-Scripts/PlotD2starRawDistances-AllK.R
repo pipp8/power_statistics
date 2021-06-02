@@ -14,7 +14,8 @@ options(echo=FALSE)
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length( args) < 1) {
-  targetMeasures <- c('canberra', 'intersection', 'd2z', 'chisquare')
+#  targetMeasures <- c('canberra', 'intersection', 'd2z', 'chisquare', 'd2star')
+  targetMeasures <- c('d2star')
   #  cat( sprintf("Wrong number of arguments. Usage: %s targetMeasure\n", 'PlotOneMeasureRawDistances-AllK.R'))
 #  quit(save = "no")
 } else {
@@ -83,14 +84,36 @@ scales_y <- list(
 
 
 for( target in targetMeasures) {
-    dff <- filter(dati, dati$len == 5000000 & dati$Measure == target & dati$Model != 'T1' ) # solo una misura per tutti i k
+    # dfk4 <- filter(dati, dati$len == 5000000 & dati$Measure == target & dati$Model != 'T1' & (dati$k == 4 | dati$k == 10)) # solo una misura per tutti i k
+    dfk4 <- filter(dati, dati$len == 5000000 & dati$Measure == target & dati$Model != 'T1' & dati$k == 4) # solo una misura per tutti i k
+  
+    MinMR <- min(dfk4[grepl('^MR', dfk4$Model), "Distance"])
+    MaxMR <- max(dfk4[grepl('^MR', dfk4$Model), "Distance"])
+    MinPT <- mean(dfk4[grepl('^NM', dfk4$Model), "Distance"]) + 2000 # il max del NM e non il min di PT alziamo un po' MR
+    MaxPT <- max(dfk4[grepl('^PT', dfk4$Model), "Distance"])
+    scaleMR <- (MaxPT - MinPT) / (MaxMR - MinMR)
+    dfk4$Distance2 <- ifelse(grepl("^MR", dfk4$Model), (((dfk4$Distance - MinMR) *scaleMR) + MinPT), dfk4$Distance)
+    # dff[grepl('^MR', dff$Model), "Distance2"] <- dff[grepl('^MR', dff$Model), "Distance"] * scaleMR
+    
+    dfk10 <- filter(dati, dati$len == 5000000 & dati$Measure == target & dati$Model != 'T1' & dati$k == 10) # solo una misura per tutti i k
+    
+    MinMR <- min(dfk10[grepl('^MR', dfk10$Model), "Distance"])
+    MaxMR <- max(dfk10[grepl('^MR', dfk10$Model), "Distance"])
+    MinPT <- mean(dfk10[grepl('^NM', dfk10$Model), "Distance"]) + 10000
+    MaxPT <- max(dfk10[grepl('^PT', dfk10$Model), "Distance"])
+    scaleMR <- (MaxPT - MinPT) / (MaxMR - MinMR)
+    dfk10$Distance2 <- ifelse(grepl("^MR", dfk10$Model), (((dfk10$Distance - MinMR) *scaleMR) + MinPT), dfk10$Distance)
+    # dff[grepl('^MR', dff$Model), "Distance2"] <- dff[grepl('^MR', dff$Model), "Distance"] * scaleMR
+    
+    dff <- rbind(dfk4, dfk10)
 
     if (nrow(dff) < 1000) {
       cat( sprintf("Not  enough data (%d) for measure: %s\n", nrow(dff), target))
       quit(save = "no")
     }
-    sp <- ggplot( dff, aes(x = Model, y = Distance, fill = Model, alpha=0.7)) +
+    sp <- ggplot( dff, aes(x = Model, y = Distance2, fill = Model, alpha=0.7)) +
     	geom_boxplot( aes(color = Model), outlier.size = 0.3) +
+      # scale_y_continuous(sec.axis = sec_axis(~ . * 10))
     	facet_grid(cols = vars( len), rows = vars( k), scales = "free", labeller = plot_labeller) +
     	# facet_grid_sc(cols = vars( len), rows = vars( k), scales = list( y = scales_y)) +
     	theme_bw() + theme( axis.text.x = element_text(size = 10, angle = 45, hjust = 1)) + # axis.text.y = element_blank()) +
