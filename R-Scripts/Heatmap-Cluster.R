@@ -2,11 +2,31 @@ library(plyr)
 library(tidyr)
 library(dplyr)
 
-##### CARICO I DATI  
-#setwd("~/Google Drive/Il mio Drive/AAA-PROGETTI/RaffaeleGiancarlo")
+
+###### DESCRIPTION
+
+# Produces an heatmap of the delta values obtained as the difference between the average
+# of the distribution of AF values computed with NM and one of AM and PT,
+# for different combinations of n, k and gamma.
+# The output is a PNG image with name clustering.png
+
+# Note: this script must be executed after RawDistances-CSV2RDS
+
+###### OPTIONS
+
+# Sets the path of the directory containing the input dataframe
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/results/dataset5-1000")
 
-dati<-readRDS("AFMeasureDistances-All.df")
+
+# Sets the name of the file containing the input dataframe
+
+dfFilename <- "AFMeasureDistances-All.df"
+
+
+###### CODE
+
+
+dati<-readRDS(dfFilename)
 
 allMeasures <- levels(dati$Measure)
 

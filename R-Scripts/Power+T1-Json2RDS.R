@@ -2,20 +2,27 @@ library(DescTools)
 library(dplyr)
 library(rjson)
 
+
+###### DESCRIPTION
+
+# Converts the collection of JSON files containing the values about power statistics and
+# T1 Error checks in a single dataframe containing a number of records equal to:
+#   (# of sequence lenghts)x(# of values of k)x(# of AF measures)x(# of alphas)x(# of gammas)
+#
+# In this example, the number of records is:
+#   50 x 4 x 15 x 3 x 3 = 54.000
+
+
+###### OPTIONS
+
+# Sets the path of the directory containing the JSON files to convert
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
 
-# Converti i file json con i valori di Power Statistics e T1 Error Check da json in RDS
-#
-# Per i test del paper deve contenere il seguente numero di righe
-# 15 * misure
-# 50 * lunghezze (da 200.000 a 10.000.000 step 200.000)
-#  4 * valori di k
-#  3 * valori di alpha
-#  3 * valori di gamma
-# = 54.000 observations
 
-# output file name
+# Defines the name of the file containing a copy of the dataframe created by this script
 dfFilename <- "Power+T1-Results.RDS"
+
+###### CODE
 
 sortedMeasures <- c('chebyshev', 'euclidean', 'manhattan',
                     'chisquare',

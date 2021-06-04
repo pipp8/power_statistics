@@ -1,11 +1,26 @@
 library(DescTools)
 library(dplyr)
 
+###### DESCRIPTION
+
+# Converts the collection of CSV files returned by FADE in a single dataframe
+# containing a number of records equal to:
+#   (# of sequence lenghts)x(# of values of k)x(# of AF measures)x(# of Alternative and Null Models)x(# of sequence pairs)
+#
+# In this example, the number of records is:
+#   50 x 4 x 15 x 7 x 1000 = 24.000.000
+
+
+###### OPTIONS
+
+# Sets the path of the directory containing the output of FADE
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/results/dataset5-1000")
 
-# Converte tutti i file CSV prodotti da fade  in un unico dataframe con il seguente numero di righe
-# 50 lunghezze x 4 valori di k x 15 misure x (2 NM + 2 AM x 3 Gamma) x 1000 coppie = 24.000.000
+# Defines the name of the file containing a copy of the dataframe created by this script
+dfFilename <- "RawDistances-All2.RDS"			
 
+
+###### CODE
 
 ReadResults <- function( model, kVal, lenVal, g)
 {
@@ -43,7 +58,6 @@ ReadResults <- function( model, kVal, lenVal, g)
 }
 
 
-dfFilename <- "RawDistances-All2.RDS"			
 
 if (file.exists(dfFilename)) {
   cat( sprintf("Data file %s exists. Do you want to overwrite (Y/N) ?\n", dfFilename))
