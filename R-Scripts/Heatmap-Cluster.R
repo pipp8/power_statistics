@@ -7,8 +7,9 @@ library(pheatmap)
 
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/results/dataset5-1000")
 
-dati<-readRDS("AFMeasureDistances-All.df")
+dati<-readRDS("RawDistances-All.RDS")
 
+# filter only 2 length and results for T1
 dati <- filter(dati, Model != "T1" & (len == 200000 | len == 5000000))
 
 dati$k <- factor(dati$k)
@@ -16,14 +17,19 @@ dati$len <- factor(dati$len)
 
 allMeasures <- levels(dati$Measure)
 
-similarityMeasures <- c('d2', 'd2s', 'd2star', 'd2z', 'harmonicmean', 'intersection', 'jaccard', 'kulczynski2')
+tipo <- data.frame( "name" = c("canberra", "chebyshev", "d2", "d2z", "chisquare","d2s", "d2star",
+                                "euclidean","harmonicmean", "intersection", "jeffrey",
+                                "jensenshannon", "manhattan", "kulczynski2", "squaredchord"),
+                     "type" = c("Distance", "Distance", "Similarity", "Similarity", "Distance", "Similarity", "Similarity",
+                                "Distance", "Similarity", "Similarity", "Distance",
+                                "Distance", "Distance", "Similarity", "Distance"))
 
 ##### CARICO I TIPI DI AF 
-tipo<-read.csv("Measures.csv",sep=";",header = FALSE)
-segno<-rep(1,nrow(tipo))
-segno[tipo$V2=="Similarity"]<- -1
-tipo<-data.frame(tipo,segno)
-row.names(tipo)<-tipo[,1]
+# tipo<-read.csv("Measures.csv",sep=";",header = FALSE)
+sign <- rep(1,nrow(tipo))
+sign[tipo$type == "Similarity"] <- -1
+tipo <- data.frame(tipo,sign)
+row.names(tipo) <- tipo[,1]
 
 
 #creo tutte le classi sulle quali calcolare la media
@@ -98,7 +104,7 @@ for(i in NM){
   
   #IL PUNTO E' QUESTO
   
-  l<-apply(sel,1,function(e) (tipo$segno*(target-e))/target)
+  l<-apply(sel,1,function(e) (tipo$sign*(target-e))/target)
   df[[i]] <- ldply(l, data.frame)
 }
 
@@ -118,7 +124,7 @@ df.color[df.color< -0.4]<- -0.4
 
 l<-strsplit(row.names(df.color),split = "\\.")
 ann<-ldply(l,data.frame)
-n<-rep(c(1:5), Length(l))
+n<-rep(c(1:5), length(l))
 n2<-rep(1:48,each=5)
 ann<-data.frame(n,n2,ann)
 ann<-pivot_wider(ann,names_from = n,values_from = X..i..)
@@ -134,7 +140,7 @@ df.color<-df.color[order(ann$Model,ann$Length,ann$k),]
 x1 <- pheatmap(df.color,cluster_rows = FALSE, annotation_names_row = TRUE, annotation_row = ann,
                    show_rownames = FALSE, gaps_row = seq(3, nrow(df.color), by = 3),
                    fontsize = 15, angle_col = 45,
-                   color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(1000),scale = "none")
+                   color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(1000), scale = "none")
 
 filename<-'heatmap-clustering.png'
 png(filename, width = 1600, height=900)
@@ -143,13 +149,11 @@ grid::grid.draw(x1$gtable)
 dev.off()
 
 flag<-grepl("MR|PT",row.names(df.color))
-# flag<-grepl("MR|PT",row.names(df.color),fixed = TRUE)
 x2 <- pheatmap(df.color[flag,], cluster_rows = FALSE, annotation_names_row = TRUE,
-                   annotation_row=ann,show_rownames = FALSE, fontsize = 15, angle_col = 90)
-# flag<-grepl("PT",row.names(df.color),fixed = TRUE)
-# pheatmap::pheatmap(df.color[flag,],cluster_rows = FALSE,annotation_names_row=TRUE,annotation_row=ann,show_rownames = FALSE)
+                    annotation_row=ann, show_rownames = FALSE,
+                    fontsize = 15, angle_col = 90)
 
-filename<-'pippo2.png'
+filename<-'heatmap-clustering2.png'
 png(filename, width = 1600, height=900)
 grid::grid.newpage()
 grid::grid.draw(x2$gtable)

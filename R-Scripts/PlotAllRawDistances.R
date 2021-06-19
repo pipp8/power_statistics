@@ -67,24 +67,26 @@ measure_names <- function( measure) {
 	ris <- c()
   for( m in measure) {
 	  ris <- c(ris , str_to_title( switch( m,
-			'chisquare' = 'chi-square',
+			'chisquare' = 'chi\nsquare',
 			'd2star' = 'd2*',
-			'harmonicmean' = 'harmonic mean',
-			'squaredchord' = 'squared chord',
-			'jensenshannon' = 'jensen shannon',
-			measure)))
+			'harmonicmean' = 'harmonic\nmean',
+			'squaredchord' = 'squared\nchord',
+			'jensenshannon' = 'jensen\nshannon',
+			m)))
   }
 	return( ris)
 }
 
 plot_labeller <- function(variable,value){
-	cat(sprintf("nome: %s, valore: %s\n", variable, as.character(value)))
+	# cat(sprintf("nome: %s, valore: %s\n", variable, as.character(value)))
 	if (variable == 'len' || variable == 'k') {
     	return(sprintf("n = %s", formatC( as.integer(value), format = "d", big.mark = " ", digits = 0)))
 	} else if (variable == 'Measure') {
 		# N.B. Measure e' un factor
-	  # return( measure_names(as.character(value)))
-	  return( as.character(value))
+	  tr <- measure_names(as.character(value))
+	  # cat(sprintf("pre: %s\npost: %s\n", as.character(value), tr))
+	  return( tr)
+	  # return( as.character(value))
 	} else {
 		return(as.character(value))
   }
@@ -103,7 +105,8 @@ for(kv in unique(dati$k)) {
 	 	facet_grid(cols = vars( len), rows = vars( Measure), scales = "free", labeller = plot_labeller) +
 	 	# facet_grid_sc(cols = vars( len), rows = vars( Measure), scales = list( y = scales_y)) +
 	 	# scale_y_continuous(name = "Distance", limits = c(0, 1)) +
-	 	theme_bw() + theme( axis.text.x = element_text(size = 10, angle = 45, hjust = 1), axis.text.y = element_blank()) +
+	 	theme_bw() + theme( axis.text.x = element_text(size = 9, angle = 45, hjust = 1), axis.text.y = element_blank()) +
+	  theme(strip.text = element_text(size=8)) + # face="bold", lineheight=5.0)) +
 	 	theme(legend.position = "none") + labs(x ="") + labs(y = "") # Canberra Distances") 
 	 	# ggtitle(sprintf("Distances for k = %d", kv)) 
 	

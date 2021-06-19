@@ -15,7 +15,7 @@ args <- commandArgs(trailingOnly = TRUE)
 
 if (length( args) < 1) {
   targetMeasures <- c('canberra', 'intersection', 'd2z', 'chisquare')
-  #  cat( sprintf("Wrong number of arguments. Usage: %s targetMeasure\n", 'PlotOneMeasureRawDistances-AllK.R'))
+  #  cat( sprintf("Wrong number of arguments. Usage: %s targetMeasure\n", 'PlotOneRescaledRawDistances-AllK.R'))
 #  quit(save = "no")
 } else {
   targetMeasures <- args

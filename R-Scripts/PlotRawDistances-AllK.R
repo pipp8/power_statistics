@@ -16,7 +16,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length( args) < 1) {
   targetMeasures <- c('canberra', 'intersection', 'd2z', 'chisquare', 'd2star')
   # targetMeasures <- c('d2star')
-  #  cat( sprintf("Wrong number of arguments. Usage: %s targetMeasure\n", 'PlotOneMeasureRawDistances-AllK.R'))
+  #  cat( sprintf("Wrong number of arguments. Usage: %s targetMeasure\n", 'PlotOneRescaledRawDistances-AllK.R'))
 #  quit(save = "no")
 } else {
   targetMeasures <- args
@@ -67,7 +67,7 @@ measure_names <- function( measure) {
 
 
 plot_labeller <- function(variable,value){
-  cat(sprintf("variable: <%s>, value: <%s>\n", variable, as.character(value)))
+  # cat(sprintf("variable: <%s>, value: <%s>\n", variable, as.character(value)))
   if (variable == 'len') {
     # N.B. len e' un factor
     return(len_names[as.character(value)])
