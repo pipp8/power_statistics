@@ -3,11 +3,35 @@ library(ggplot2)
 library(dplyr)
 library(RColorBrewer)
 
-# produce due pannelli (i.e. PanelPowerAnalysis-PatternTransfer-A=0.10.png e PanelPowerAnalysis-MotifReplace-A=0.10.png)
-# uno per AM, con un plot per ciascuna misura e per ciascun valore di gamma (misure colonne e gamma righe)
-# ciascun plot riporta il grafico a punti del valore della power per ciascuna lunghezza (ordinate) e per ciascun k
+
+
+###### DESCRIPTION
+
+# Produces two panels reporting the power trend, respectively for the PT and MR alternative models.
+# In each panel, for each AF and gamma is reported the power level obtained across different
+# values of n. It is also colored according to the value of k.
+# The output is a set PNG images with name PanelPowerAnalysis-<AM>-A=0.10.png
+# where <AM> reflects the alternative model being considered
+
+# Note: this script must be executed after Power+T1-Json2RDS.R
+
+
+###### OPTIONS
+
+# Sets the path of the directory containing the input dataframe
 
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
+
+# Sets the name of the file containing the input dataframe
+
+dfFilename <- "Power+T1-Results.RDS"
+
+# Sets the output path for the images to be generated
+
+dirname <- "PowerBoxPlot"
+
+
+###### CODE
 
 sortedMeasures <- c('chebyshev', 'euclidean', 'manhattan',
                     'chisquare',
@@ -27,13 +51,10 @@ plot_labeller <- function(variable,value){
   }
 }
 
-# output dirname
-dirname <- "PowerBoxPlot"
 if (!dir.exists(dirname)) {
   dir.create(dirname)
 }
 
-dfFilename <- "Power+T1-Results.RDS"
 
 if (!file.exists(dfFilename)) {
     cat( sprintf("Input Dataframe (%s) does not exist. Exiting\n", dfFilename))

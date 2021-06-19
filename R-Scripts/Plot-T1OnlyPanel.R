@@ -4,18 +4,38 @@ library(RColorBrewer)
 library(ggplot2)
 library(facetscales)
 
-# script per figura n.1 del main (T1Box-alpha=0.10.png)
-# produce 3 grafici con i valori del type 1 check uno per ciascun valore di alpha
+
+
+###### DESCRIPTION
+
+# Produces three different charts, reporting the results of the Type I check for
+# each considered values of alpha (i.e., 0.01, 0.05, 0.1). 
+# The output is a set PNG images with name T1Box-alpha=<x>.png
+# where <x> reflects the actual value of alpha
+
+# Note: this script must be executed after Power+T1-Json2RDS.R
+
+###### OPTIONS
+
+# Sets the path of the directory containing the input dataframe
 
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
 	
 
+# Sets the output path for the images to be generated
+
 dirname <- "T1BoxPlot"
+
+# Sets the name of the file containing the input dataframe
+
+dfFilename <- "Power+T1-Results.RDS"
+
+###### CODE
+
 if (!dir.exists(dirname)) {
 	dir.create(dirname)
 }
 
-dfFilename <- "Power+T1-Results.RDS"
 
 if (!file.exists(dfFilename)) {
   cat( sprintf("Input Dataframe (%s) does not exist. Exiting\n", dfFilename))
