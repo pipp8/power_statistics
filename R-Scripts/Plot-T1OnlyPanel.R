@@ -54,7 +54,7 @@ for( a in c( 0.01, 0.05, 0.10)) {
 	
 	# dev.new(width = 10, height = 5)
     outfname <- sprintf( "%s/T1Box-alpha=%.2f.png", dirname, a)
-    ggsave( outfname, width = 9, height = 6, device = png(), dpi = 300) 
+    ggsave( outfname, width = 9, height = 4, device = png(), dpi = 300) 
     # print( sp)
     # dev.off() #only 129kb in size
 }
