@@ -14,10 +14,9 @@ options(echo=FALSE)
 args <- commandArgs(trailingOnly = TRUE)
 
 if (length( args) < 1) {
-  targetMeasures <- c('canberra', 'intersection', 'd2z', 'chisquare', 'd2star')
-  # targetMeasures <- c('d2star')
+  targetMeasures <- c('intersection', 'd2z', 'chisquare', 'd2star')
   #  cat( sprintf("Wrong number of arguments. Usage: %s targetMeasure\n", 'PlotRescaledRawDistances-AllK.R'))
-#  quit(save = "no")
+  #  quit(save = "no")
 } else {
   targetMeasures <- args
 }

@@ -100,6 +100,7 @@ for(alpha in alphaValues) {
     } # for each file
   } # foreach AM
 } # foreach alpha
+# dati$measure <- factor(dati$measure, levels = sortedMeasures)
 dati$measure <- factor(dati$measure, levels = sortedMeasures)
 dati$model <- factor(dati$model)
 dati$mds <- factor(dati$mds)

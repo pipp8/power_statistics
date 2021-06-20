@@ -33,15 +33,6 @@ dirname <- "PowerBoxPlot"
 
 ###### CODE
 
-sortedMeasures <- c('chebyshev', 'euclidean', 'manhattan',
-                    'chisquare',
-                    'canberra',
-                    'd2', 'd2s', 'd2star', 'd2z',
-                    'intersection', 'kulczynski2',
-                    'harmonicmean', 'squaredchord',
-                    'jeffrey', 'jensenshannon')
-# mydf$task <- factor(mydf$task, levels = c("up", "down", "left", "right", "front", "back"))
-
 # rename in a human readable format the measure names
 measure_names <- function( measure) {
   ris <- c()
