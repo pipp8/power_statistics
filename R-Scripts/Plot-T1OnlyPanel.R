@@ -54,6 +54,22 @@ scales_y <- list(
 
 cat(sprintf("Data Frame loaded. %d rows\n", nrow(dfAll)))
 
+# rename in a human readable format the measure names
+measure_names <- function( measure) {
+  ris <- c()
+  for( m in measure) {
+    ris <- c(ris , str_to_title( switch( m,
+                                         'chisquare' = 'chi square',
+                                         'd2star' = 'd2*',
+                                         'harmonicmean' = 'harmonic mean',
+                                         'squaredchord' = 'squared chord',
+                                         'jensenshannon' = 'jensen shannon',
+                                         m)))
+  }
+  return( ris)
+}
+
+
 for( a in c( 0.01, 0.05, 0.10)) { 
   
   MaxT1 <- switch( sprintf("%.2f", a), "0.01" = 0.050, "0.05" = 0.150, "0.10" = 0.3) # fattore di amplificazione del valore di T1
@@ -61,7 +77,10 @@ for( a in c( 0.01, 0.05, 0.10)) {
 
   dff <- filter(dfAll, dfAll$alpha == a & dfAll$gamma == 0.10 & as.character(dfAll$model) == 'Motif Replace') # T1 Error Check does not depend on gamma and Alternate Model
 
-	sp <- ggplot( dff, aes(x = measure, y = T1)) + 
+  dff$measure2 <- dff$measure
+  levels(dff$measure2) <- measure_names(levels(dff$measure))
+  
+	sp <- ggplot( dff, aes(x = measure2, y = T1)) + 
 	 	geom_boxplot( aes(color = k, fill = k), alpha=0.7, outlier.size = 0.25) +
 		scale_y_continuous(name = "T1 Value", limits = c(0, MaxT1)) +
 	  	geom_hline(yintercept = a, linetype="dashed", color = "black") +

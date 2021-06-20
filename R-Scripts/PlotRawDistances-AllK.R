@@ -16,7 +16,7 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length( args) < 1) {
   targetMeasures <- c('canberra', 'intersection', 'd2z', 'chisquare', 'd2star')
   # targetMeasures <- c('d2star')
-  #  cat( sprintf("Wrong number of arguments. Usage: %s targetMeasure\n", 'PlotOneRescaledRawDistances-AllK.R'))
+  #  cat( sprintf("Wrong number of arguments. Usage: %s targetMeasure\n", 'PlotRescaledRawDistances-AllK.R'))
 #  quit(save = "no")
 } else {
   targetMeasures <- args
@@ -56,7 +56,7 @@ k_names <- list(
 # rename in a human readable format the measure names
 measure_names <- function( measure) {
     ris <- str_to_title( switch( measure,
-                 'chisquare' = 'chi-square',
+                 'chisquare' = 'chi square',
                  'd2star' = 'd2*',
                  'harmonicmean' = 'harmonic mean',
                  'squaredchord' = 'squared chord',
@@ -128,7 +128,7 @@ for( target in targetMeasures) {
     	facet_grid(cols = vars( len), rows = vars( AM + k), scales = "free", labeller = plot_labeller) +
     	# facet_grid_sc(cols = vars( len), rows = vars( k), scales = list( y = scales_y)) +
     	theme_bw() + theme( axis.text.x = element_text(size = 10, angle = 45, hjust = 1)) + # axis.text.y = element_blank()) +
-    	theme(legend.position = "none") + labs(x ="") + labs(y = sprintf("%s Distances", measure_names(target)))
+    	theme(legend.position = "none") + labs(x = "") + labs(y = sprintf("%s Distances", measure_names(target)))
     	# ggtitle(sprintf("Distances for k = %d", kv))
     
     

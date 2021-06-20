@@ -107,12 +107,12 @@ for(kv in unique(dati$k)) {
 	 	# scale_y_continuous(name = "Distance", limits = c(0, 1)) +
 	 	theme_bw() + theme( axis.text.x = element_text(size = 9, angle = 45, hjust = 1), axis.text.y = element_blank()) +
 	  theme(strip.text = element_text(size=8)) + # face="bold", lineheight=5.0)) +
-	 	theme(legend.position = "none") + labs(x ="") + labs(y = "") # Canberra Distances") 
+	 	theme(legend.position = "none") + labs(x = "") + labs(y = "") # Canberra Distances") 
 	 	# ggtitle(sprintf("Distances for k = %d", kv)) 
 	
 	
 	# dev.new(width = 4, height = 12)
-	outfname <- sprintf("%s-k=%d-allMeasures.png", tools::file_path_sans_ext(dfFilename), kv)
+	outfname <- sprintf("AFMeasureDistances-All-k=%d.png", kv)
 	ggsave( outfname, device = png(), width = 6, height = 12, dpi = 300)
 	#print(sp)
 	cat(sprintf("%s processed\n", outfname))

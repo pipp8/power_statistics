@@ -40,12 +40,34 @@ sortedMeasures <- c('chebyshev', 'euclidean', 'manhattan',
                     'intersection', 'kulczynski2',
                     'harmonicmean', 'squaredchord',
                     'jeffrey', 'jensenshannon')
+# mydf$task <- factor(mydf$task, levels = c("up", "down", "left", "right", "front", "back"))
 
+# rename in a human readable format the measure names
+measure_names <- function( measure) {
+  ris <- c()
+  for( m in measure) {
+    ris <- c(ris , str_to_title( switch( m,
+                                         'chisquare' = 'chi square',
+                                         'd2star' = 'd2*',
+                                         'harmonicmean' = 'harmonic\nmean',
+                                         'squaredchord' = 'squared\nchord',
+                                         'jensenshannon' = 'jensen\nshannon',
+                                         m)))
+  }
+  return( ris)
+}
 
 plot_labeller <- function(variable,value){
+  # cat(sprintf("nome: %s, valore: %s\n", variable, as.character(value)))
   if (variable=='gamma') {
     # N.B. len e' un factor
     return(sprintf("G = %.2f", value))
+  } else if (variable == 'measure') {
+    # N.B. Measure e' un factor
+    tr <- measure_names(as.character(value))
+    # cat(sprintf("pre: %s\npost: %s\n", as.character(value), tr))
+    return( tr)
+    # return( as.character(value))
   } else {
     return(as.character(value))
   }
@@ -85,7 +107,7 @@ for (am in levels(dati$model)) {
 	# dev.new(width = 9, height = 6)
 	# print(sp)
 	# stop("break")
-	outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f.png", dirname, am, alphaTarget)
+	outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f.png", dirname, str_replace(am, " ", ""), alphaTarget)
 	ggsave( outfname, device = png(), width = 9, height = 6, units = "in", dpi = 300)
 	# dev.off() #only 129kb in size
 }

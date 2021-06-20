@@ -24,6 +24,21 @@ tipo <- data.frame( "name" = c("canberra", "chebyshev", "d2", "d2z", "chisquare"
                                 "Distance", "Similarity", "Similarity", "Distance",
                                 "Distance", "Distance", "Similarity", "Distance"))
 
+# rename in a human readable format the measure names
+measure_names <- function( measure) {
+  ris <- c()
+  for( m in measure) {
+    ris <- c(ris , str_to_title( switch( m,
+                                         'chisquare' = 'chi square',
+                                         'd2star' = 'd2*',
+                                         'harmonicmean' = 'harmonic mean',
+                                         'squaredchord' = 'squared chord',
+                                         'jensenshannon' = 'jensen shannon',
+                                         m)))
+  }
+  return( ris)
+}
+
 ##### CARICO I TIPI DI AF 
 # tipo<-read.csv("Measures.csv",sep=";",header = FALSE)
 sign <- rep(1,nrow(tipo))
