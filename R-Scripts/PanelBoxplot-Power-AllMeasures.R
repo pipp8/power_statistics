@@ -4,13 +4,30 @@ library(facetscales)
 library(dplyr)
 library(rjson)
 
+
+###### DESCRIPTION
+
+# Produces a panel made of 6 boxplots (3x2), organized in three rows (i.e., $\gamma=0.01,0.05,0.1$)
+# and two columns (i.e., PT and MR alternate models). Each boxplot reports the
+# distribution of the proportion  of true positives cumulatively by length, for each AF and k. 
+
+# Note: this script must be executed after Power+T1-Json2RDS.R
+
+###### OPTIONS
+
+# Sets the path of the directory containing the input dataframe
+
 setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/results/dataset5-1000")
 
-# Figura 4 nel supplementary
-# produce un pannello con 6 boxplot (3 x 2) le colonne sono i 2 AM le righe i valori di gamma, 
-# i boxplot per ciascun grafico riportano i valori della power statistics
-# Aggregati per len per ogni misura ed ogni valore di K
+# Sets the name of the file containing the input dataframe
 
+dfFilename <- "Power+T1-Results.RDS"
+
+
+# Figura 4 nel supplementary
+
+
+###### CODE
 
 # rename in a human readable format the measure names
 measure_names <- function( measure) {
@@ -50,7 +67,6 @@ if (!dir.exists(dirname)) {
   dir.create(dirname)
 }
 
-dfFilename <- "Power+T1-Results.RDS"
 
 if (!file.exists(dfFilename)) {
   cat( sprintf("Input Dataframe (%s) does not exist. Exiting\n", dfFilename))
