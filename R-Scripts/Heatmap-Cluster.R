@@ -3,6 +3,7 @@ library(tidyr)
 library(dplyr)
 library(RColorBrewer)
 library(pheatmap)
+library(stringr)
 
 
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/results/dataset5-1000")
@@ -17,12 +18,30 @@ dati$len <- factor(dati$len)
 
 allMeasures <- levels(dati$Measure)
 
-tipo <- data.frame( "name" = c("canberra", "chebyshev", "d2", "d2z", "chisquare","d2s", "d2star",
-                                "euclidean","harmonicmean", "intersection", "jeffrey",
-                                "jensenshannon", "manhattan", "kulczynski2", "squaredchord"),
-                     "type" = c("Distance", "Distance", "Similarity", "Similarity", "Distance", "Similarity", "Similarity",
-                                "Distance", "Similarity", "Similarity", "Distance",
-                                "Distance", "Distance", "Similarity", "Distance"))
+# questo è l'ordine nel data.frame dati dati$MEasure
+tipo <- data.frame( "name" = c("chebyshev", "euclidean", "manhattan",
+                               "chisquare",
+                               "canberra",
+                               "d2", "d2s", "d2star", "d2z",
+                               "intersection", "kulczynski2",
+                               "harmonicmean", "squaredchord",
+                               "jeffrey", "jensenshannon"),
+                    
+                  "family" = c("Minkowski","Minkowski","Minkowski",
+                               "ChiSquared",
+                               "Canberra",
+                               "D2","D2", "D2","D2",
+                               "Intersection", "Intersection",
+                               "Inner Product", "Inner Product",
+                               "Divergence", "Divergence"),
+                  "type"   = c("Distance", "Distance", "Distance",
+                               "Distance",
+                               "Distance",
+                               "Similarity", "Similarity", "Similarity", "Similarity",
+                               "Similarity", "Similarity",
+                               "Similarity", "Distance",
+                               "Distance","Distance"))
+
 
 # rename in a human readable format the measure names
 measure_names <- function( measure) {
@@ -43,7 +62,8 @@ measure_names <- function( measure) {
 # tipo<-read.csv("Measures.csv",sep=";",header = FALSE)
 sign <- rep(1,nrow(tipo))
 sign[tipo$type == "Similarity"] <- -1
-tipo <- data.frame(tipo,sign)
+# tipo <- data.frame(tipo,sign)
+tipo$sign <- sign
 row.names(tipo) <- tipo[,1]
 
 
@@ -152,10 +172,18 @@ ann$Gamma<-as.numeric(ann$Gamma)/1000
 row.names(ann)<-row.names(df.color)
 df.color<-df.color[order(ann$Model,ann$Length,ann$k),]
 
-x1 <- pheatmap(df.color,cluster_rows = FALSE, annotation_names_row = TRUE, annotation_row = ann,
-                   show_rownames = FALSE, gaps_row = seq(3, nrow(df.color), by = 3),
-                   fontsize = 15, angle_col = 45,
-                   color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(1000), scale = "none")
+# aggiorna i nomi delle misure
+colnames(df.color) <- measure_names(colnames(df.color))
+
+# e l'associazione con le famiglie di misure
+anncol <- data.frame(tipo$family)
+row.names(anncol)<-colnames(df.color)
+
+x1 <- pheatmap(df.color, cluster_rows = FALSE, annotation_names_row = TRUE,
+               annotation_row = ann, annotation_col = anncol,
+               show_rownames = FALSE, gaps_row = seq(3, nrow(df.color), by = 3),
+               fontsize = 15, angle_col = 315,
+               color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(1000), scale = "none")
 
 filename<-'heatmap-clustering.png'
 png(filename, width = 1600, height=900)
@@ -165,7 +193,7 @@ dev.off()
 
 flag<-grepl("MR|PT",row.names(df.color))
 x2 <- pheatmap(df.color[flag,], cluster_rows = FALSE, annotation_names_row = TRUE,
-                    annotation_row=ann, show_rownames = FALSE,
+                    annotation_row = ann, show_rownames = FALSE,
                     fontsize = 15, angle_col = 90)
 
 filename<-'heatmap-clustering2.png'
