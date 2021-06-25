@@ -1,8 +1,7 @@
 ﻿
 We report in this document the steps required for replicating the experiments presented in the paper 
 
-> A Comprehensive Study  of Alignment-Free Histogram-based Functions for
-> Genome Scale Analysis
+> The Power of Alignment-Free Histogram-basedFunctions: a Comprehensive Genome Scale Experimental Analysis
 
 # Initial Requirements
 
@@ -16,9 +15,9 @@ As a requirement, we are assuming the availability of:
 
 Once downloaded and unpacked the archive file, a new directory will be created with name **power_statistics**.  In order to build all components needed to execute the experiments, move in this directory and run the command:
 
-> mvn compile
+> mvn package
 
-As a result, MAVEN will start downloading all required libraries and building the code needed to run the different steps of the experiment. 
+As a result, MAVEN will start downloading all required libraries and building the code needed to run the different steps of the experiment. At the end of the process, a new **powerstatistics-1.0-SNAPSHOT.jar** file will be available in the **target** directory.
 
 
 
@@ -47,15 +46,21 @@ Note: the aforementioned procedure is repeated several times by considering incr
 The dataset generator can be recalled by executing the **it.unisa.di.bio.DatasetBuilder** class available in the **powerstatistics-1.0-SNAPSHOT.jar** package.  Moreover, being a Spark application, it has to be executed through the **spark-submit** command, using the following syntax: 
 
 
-    spark-submit  --class it.unisa.di.bio.DatasetBuilder powerstatistics-1.0-SNAPSHOT.jar output_directory detailed|synthetic|mitocondri|shigella [local|yarn] 
+    spark-submit  --class it.unisa.di.bio.DatasetBuilder target/powerstatistics-1.0-SNAPSHOT.jar output_directory dataset_type [local|yarn] initial_length max_lenght step_size
 
 where:
-- the first argument denotes the file path where to save the generated sequences. It can be either a local file system path (if *local* execution mode is chosen) or an HDFS file system path (if  *yarn* execution mode is chosen)
--  **the second argument denotes the dataset type to generate**
--  the third argument denotes the execution mode to use (i.e., *local*, for executing the code on a local machine, or *yarn*, for executing the code on an Hadoop cluster).
-**(x Pippo: dovremmo rivedere gli argomenti in accordo a quelli realmente utilizzati, il mio suggerimento è utilizzare quasi esclusivamente il file di properties)**
+- the first argument, *output_directory*, denotes the file path where to save the generated sequences. It can be either a local file system path (if *local* execution mode is chosen for Spark) or an HDFS file system path (if  *yarn* execution mode is chosen for Spark)
+- the second argument denotes the dataset type to generate. Currently, only *detailed* is supported
+- the third argument denotes whether the code should be run on *local* mode or on an Hadoop cluster (*yarn*)
+- the fourth argument denotes the initial length (in characters) of the sequences to be generated
+- the fifth argument denotes the initial length (in characters) of the sequences to be generated
+- the sixth argument denotes the maximum length (in characters) of the sequences to be generated
+- the seventh argument denotes the length increase, in characters, of all sequences to be generated  with respect to the previous generation
 
-A convenience script, called **runGenerator.sh**, is available in the  **scripts** directory for simplifying its execution.  We advise to modify and use this script, according to the configuration of the Spark cluster being use. Instead, detailed instructions about the datasets to generate are provided by means of a configuration file called **PowerStatistics.properties**. Details about the supported options as well as a live example is provided in the **PowerStatistics.properties.sample** available in the **src/main/resources** package directory.
+A convenience script, called **runGenerator.sh**, is available in the  **scripts** directory for simplifying its execution.  We advise to modify and use this script, according to the configuration of the Spark cluster being used. In this same script, it is required to provide the name of the existing directory where to save the generated sequences. By default, this script is assumed to be run from the package main directory.
+
+Detailed instructions about the datasets to generate are provided by means of a configuration file called **PowerStatistics.properties**, that has to be found in the local directory where the generation script is executed. Details about the options supported by the dataset generator, together with s a live example useful to recreate the same type of datasets considered in the paper, is provided in the **PowerStatistics.properties.sample** file available in the **src/main/resources** package directory. We advise to make a copy of this file, to be renamed in 
+**PowerStatistics.properties**, and modify it according to the datasets to be generated.
 
 If run with the sample **PowerStatistics.properties** file, the generator will return as output four different collection of files: 
 
@@ -99,18 +104,19 @@ For example, consider the following the command line:
 
 Its execution will imply the analysis of all datasets being stored in the HDFS **/user/hduser/data/powerstatistics** directory. The analysis will be conducted with $k = {4,6,8,10}$ using the copy of FADE **fade-1.0.0-all.jar** available in **/user/foo/FADE**. Provided that the **results** directory exists in the HDFS home directory, the **allMeasures** directory will be created, containing the resulting AF measures.
 
+We refer to the documentation of FADE (https://github.com/fpalini/fade) for information about the possibility of evaluating AF measures different than the ones already available in this framework.
+
 # Step 3: AF Functions  Analysis
 
 In this step, we evaluate the control of Type I error and the power of the test statistic over a set of input AF functions by analyzing the AF values determined in the previous step respectively on the PT and MR alternate models, and on the null distribution, with different values of $k$, $\alpha$, and $\gamma$. Then, we summarize and plot the results of this evaluation on several charts that are automatically saved on disks as graphical images. The whole analysis process takes place in three substeps.
 
 ## Powerstatistics evaluation
-In this substep, we evaluate the powe statistics of choice on the AF measures determined in the previous step. This is done by running the **it.unisa.di.bio.PowerEvaluator** class available in the **powerstatistics-1.0-SNAPSHOT.jar** package, using the following syntax:
+In this substep, we evaluate the power statistics of choice on the AF measures determined in the previous step. This is done by running the **it.unisa.di.bio.PowerEvaluator** class available in the **powerstatistics-1.0-SNAPSHOT.jar** package, using the following syntax:
 
-java -cp powerstatistics-1.0-SNAPSHOT.jar  it.unisa.di.bio.PowerEvaluator input_directory [MotifReplace|PatternTransfer|Both] [syntheticAllK|syntheticAllLen]
+    java -cp powerstatistics-1.0-SNAPSHOT.jar  it.unisa.di.bio.PowerEvaluator input_directory [MotifReplace|PatternTransfer|Both] syntheticAllLen
 
-**(x Pippo: il terzo argomento viene utilizzato?)**
 
-Here, the first argument reports the directory containing the AF measures evaluated during previous step, encoded as CSV files. The second argument defines which alternate model to consider.
+Here, the first argument reports the directory containing the AF measures evaluated during previous step, encoded as CSV files. The second argument defines which alternate model to consider. The third argument must be set to *syntheticAllLen*.
 As a result, the program will generate, for each AM,  each value of $\alpha$ and of $k$, a separate directory containing a set of JSON files containing the corresponding power statistics.
 
 ## Powerstatistics summarization 
@@ -124,16 +130,33 @@ Once run, these two scripts will produce two files, **RawDistances-All.RDS** and
 ## Powerstatistics charting
 In this substep, data available in files  **RawDistances-All.RDS** and **Power+T1-Results.RDS** is processed and presented by means of several types of charts. In the following we report the list of plotting scripts available with a short description about their expected output:
 
- - **Plot-T1OnlyPanel.R**:  Shows several different collections of colored boxplots (one for ech distinct value of $k$) reporting the results of the T1 Error Control experiments for each of the considered AF functions (on the abscissa). The vertical length of each boxplot is proportional to the percentage of false positives.
- - **PlotHammingDistances.R**: Show a collection of colored boxplots reporting the Hamming Distance of values generated by the Alternative models, with respect to the Null model. On the abscissa, it is shown the generative models considered, with the letter $G$ denoting $\gamma$.
- -  **Heatmap-Cluster.R**: Creates a heatmap of the delta values obtained as the difference between the average of the distribution of AF values computed with   $NM$ and one of $AM$ and $PT$, with for different combinations of $n$, $k$ and $\gamma$,  reported as colors on the left panel annotation. The dendrogram on the top is a hierarchical clustering  on the delta values with Euclidean distance and complete linkage.
+ - **Plot-T1OnlyPanel.R**:  Shows several different collections of colored boxplots (one for ech distinct value of $k$) reporting the results of the T1 Error Control experiments for each of the considered AF functions (on the abscissa). The vertical length of each boxplot is proportional to the percentage of false positives. 
+ Used to generate **Figure 1** of the main paper, and **Figure 1** of the supplementary material.
+
+ - **PlotHammingDistances.R**: Shows a collection of colored boxplots reporting the Hamming Distance of values generated by the Alternative models, with respect to the Null model. On the abscissa, it is shown the generative models considered, with the letter $G$ denoting $\gamma$.
+Used to generate **Figure 2** of the main paper. 
+
+ -  **Heatmap-Cluster.R**: Creates a heatmap of the delta values obtained as the difference between the average of the distribution of AF values computed with   $NM$ and one of $MR$ and $PT$, with for different combinations of $n$, $k$ and $\gamma$,  reported as colors on the left panel annotation. The dendrogram on the top is a hierarchical clustering  on the delta values with Euclidean distance and complete linkage.
+Used to generate **Figure 3** of the main paper. 
+
+- **PlotPanelAllMeasures.R**: Produces two panels reporting the power trend, respectively for the $MR$ and $PT$ alternative models. In each panel, for each AF and $\gamma$ is reported the power level obtained across different values of $n$. It is also colored according to the value of $k$.
+Used to generate **Figure 4** of the main paper. 
+
+
+- **PlotRawDistances-AllK.R**: # Produces a panel made of a set of stacked boxplots (one for each distinct value of k), for each AF.
+ Each boxplot reports the distribution of the proportion of true positives, cumulatively by length, by considering values generated by the Alternative models, with increasing gamma, with respect to $NM$.
+Used to generate **Figure 5** of the main paper. 
+
+- **PlotAllRawDistances.R**: As **PlotOneMeasureRawDistances-AllK.R**, but by considering multiple AF measures at same time.
+Used to generate **Figure 2** and **Figure 3** of the supplementary material. 
+
  - **PanelBoxplot-Power-AllMeasures.R**: Creates a collection of images, one for each considered Alternative model. In each image it is reported. for each considered AF function and each value of $\gamma$, the power levels obtained across different values of $n$, as a function of $k$.
- - **PlotOneMeasureRawDistances-AllK.R**: Creates a collection of panels, one for each considered value of $k$, reporting the separation power, measured using the Hamming Distances, of values generated by the Alternative models, with respect to the Null model. On the abscissa, it is shown the generative models considered, with the letter $G$ denoting $\gamma$.
- - **PlotAllRawDistances.R**: As **PlotOneMeasureRawDistances-AllK.R**, but by considered multiple AF measures at same time.
+Used to generate **Figure 4** of the supplementary material. 
+
 
 Each of these scripts can be executed using the following syntax:
 
 > R -f <script name>
 
-Notice that each of these scripts comes with a set of basic options (e.g., changing the input directory, defining the values of $\gamma$ to be considered) that are available in its initial lines and that can be customized using a text editor. 
+Notice that each of these scripts comes with a set of basic options (e.g., changing the input directory, defining the values of $\gamma$ to be considered) that are available in the **Options** section of their initial lines and that can be customized, according to the own's needs, using a text editor. 
 
