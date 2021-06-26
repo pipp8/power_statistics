@@ -71,9 +71,9 @@ If run with the sample **PowerStatistics.properties** file, the generator will r
 
 # Step 2: AF measures evaluation
 
-Let $S$ be a set of $m$ pairs of sequences, each of length $n$,  generated in the previous step via $NM$. Let $S^{PT}_{\gamma}$ be a set of $m$ pairs of sequences, generated starting from $S$ during Step 1,  via $PT$ with parameter $\gamma$. Let $S^{MR}_{\gamma,m}$ be a set of $m$ pairs of sequences, generated starting from $S$ during Step 1,  via $MR$ with parameter $\gamma$ and $m$.
+Let $S$ be a set of $m$ pairs of sequences, each of length $n$,  generated in the previous step via $NM$. Let $S^{PT}\_{\gamma}$ be a set of $m$ pairs of sequences, generated starting from $S$ during Step 1,  via $PT$ with parameter $\gamma$. Let $S^{MR}\_{\gamma,m}$ be a set of $m$ pairs of sequences, generated starting from $S$ during Step 1,  via $MR$ with parameter $\gamma$ and $m$.
 
-In this step, we evaluate several types of AF  measures over all distinct pairs of sequences belonging to $S$, $S^{PT}_{\gamma}$  and $S^{MR}_{\gamma,m}$, using different assignments for $k$. The considered AF measures are, by default, all of those supported by the FADE framework ([https://github.com/fpalini/fade](https://github.com/fpalini/fade)). As a preliminary requirement, we are assuming that the **fade-1.0.0-all.jar** file, coming with FADE, is available in a known directory. It is possible to evaluate all AF measures for all sequence pairs stored in the **target directory** used in the previous step, by executing the **runFade.py** according to the following syntax:
+In this step, we evaluate several types of AF  measures over all distinct pairs of sequences belonging to $S$, $S^{PT}\_{\gamma}$  and $S^{MR}\_{\gamma,m}$, using different assignments for $k$. The considered AF measures are, by default, all of those supported by the FADE framework ([https://github.com/fpalini/fade](https://github.com/fpalini/fade)). As a preliminary requirement, we are assuming that the **fade-1.0.0-all.jar** file, coming with FADE, is available in a known directory. It is possible to evaluate all AF measures for all sequence pairs stored in the **target directory** used in the previous step, by executing the **runFade.py** according to the following syntax:
 
     runFade.py [options]
     
