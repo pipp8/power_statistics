@@ -216,8 +216,8 @@ def main():
                     datasetType, seqNum, seqLen, kVal, slices, gVal))
             if (not options.debug_flag):
                 retCode = ToolBox.RunCommand2(runSpark, out)
-			else:
-				print(runSpark)
+            else:
+                print(runSpark)
 
             out.close()
             # print  runSpark
