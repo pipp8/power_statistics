@@ -13,7 +13,7 @@ As a requirement, we are assuming the availability of:
 - the FADE framework  ([https://github.com/fpalini/fade](https://github.com/fpalini/fade)).
 
 
-Once downloaded and unpacked the archive file, a new directory will be created with name **power_statistics**.  In order to build all components needed to execute the experiments, move in this directory and run the command:
+Once downloaded and unpacked the archive file, a new directory will be created with name **power_statistics-main**.  In order to build all components needed to execute the experiments, move in this directory and run the command:
 
 > mvn package
 
@@ -59,7 +59,7 @@ where:
 
 A convenience script, called **runGenerator.sh**, is available in the  **scripts** directory for simplifying its execution.  We advise to modify and use this script, according to the configuration of the Spark cluster being used. In this same script, it is required to provide the name of the existing directory where to save the generated sequences. By default, this script is assumed to be run from the package main directory.
 
-Detailed instructions about the datasets to generate are provided by means of a configuration file called **PowerStatistics.properties**, that has to be found in the local directory where the generation script is executed. Details about the options supported by the dataset generator, together with s a live example useful to recreate the same type of datasets considered in the paper, is provided in the **PowerStatistics.properties.sample** file available in the **src/main/resources** package directory. We advise to make a copy of this file, to be renamed in 
+Detailed instructions about the datasets to generate are provided by means of a configuration file called **PowerStatistics.properties**, that has to be found in the local directory where the generation script is executed. Details about the options supported by the dataset generator, together with a live example useful to recreate the same type of datasets considered in the paper, is provided in the **PowerStatistics.properties.sample** file available in the **src/main/resources** package directory. We advise to make a copy of this file, to be renamed in 
 **PowerStatistics.properties**, and modify it according to the datasets to be generated.
 
 If run with the sample **PowerStatistics.properties** file, the generator will return as output four different collection of files: 
@@ -111,9 +111,9 @@ We refer to the documentation of FADE (https://github.com/fpalini/fade) for info
 In this step, we evaluate the control of Type I error and the power of the test statistic over a set of input AF functions by analyzing the AF values determined in the previous step respectively on the PT and MR alternate models, and on the null distribution, with different values of $k$, $\alpha$, and $\gamma$. Then, we summarize and plot the results of this evaluation on several charts that are automatically saved on disks as graphical images. The whole analysis process takes place in three substeps.
 
 ## Powerstatistics evaluation
-In this substep, we evaluate the power statistics of choice on the AF measures determined in the previous step. This is done by running the **it.unisa.di.bio.PowerEvaluator** class available in the **powerstatistics-1.0-SNAPSHOT.jar** package, using the following syntax:
+In this substep, we evaluate the power statistics of choice on the AF measures determined in the previous step. This is done by running the **it.unisa.di.bio.powerstatistics.PowerEvaluator** class available in the **powerstatistics-1.0-SNAPSHOT.jar** package, using the following syntax:
 
-    java -cp powerstatistics-1.0-SNAPSHOT.jar  it.unisa.di.bio.PowerEvaluator input_directory [MotifReplace|PatternTransfer|Both] syntheticAllLen
+    java -cp powerstatistics-1.0-SNAPSHOT.jar  it.unisa.di.bio.powerstatistics.PowerEvaluator input_directory [MotifReplace|PatternTransfer|Both] syntheticAllLen
 
 
 Here, the first argument reports the directory containing the AF measures evaluated during previous step, encoded as CSV files. The second argument defines which alternate model to consider. The third argument must be set to *syntheticAllLen*.
