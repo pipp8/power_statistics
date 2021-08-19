@@ -6,9 +6,35 @@ library(pheatmap)
 library(stringr)
 
 
+###### DESCRIPTION
+
+# Produces two heatmaps, encoded as PNG image, summarizing the delta values obtained as
+# the difference between the average of the distribution of AF values
+# computed with NM and one of AM and PT, for different combinations of k and gamma 
+# and n
+
+
+# Note: this script must be executed after Power+T1-Json2RDS.R
+
+
+###### OPTIONS
+
+# Sets the path of the directory containing the input dataframe
+
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/results/dataset5-1000")
 
+
+# Sets the input dataframe
+
 dati<-readRDS("RawDistances-All.RDS")
+
+
+# Sets the filename for the two output heatmaps
+filename1<-'heatmap-clustering.png'
+filename2<-'heatmap-clustering2.png'
+
+
+###### CODE
 
 # filter only 2 length and results for T1
 dati <- filter(dati, Model != "T1" & (len == 200000 | len == 5000000))
@@ -185,8 +211,8 @@ x1 <- pheatmap(df.color, cluster_rows = FALSE, annotation_names_row = TRUE,
                fontsize = 15, angle_col = 315,
                color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(1000), scale = "none")
 
-filename<-'heatmap-clustering.png'
-png(filename, width = 1600, height=900)
+
+png(filename1, width = 1600, height=900)
 grid::grid.newpage()
 grid::grid.draw(x1$gtable)
 dev.off()
@@ -196,8 +222,7 @@ x2 <- pheatmap(df.color[flag,], cluster_rows = FALSE, annotation_names_row = TRU
                     annotation_row = ann, show_rownames = FALSE,
                     fontsize = 15, angle_col = 90)
 
-filename<-'heatmap-clustering2.png'
-png(filename, width = 1600, height=900)
+png(filename2, width = 1600, height=900)
 grid::grid.newpage()
 grid::grid.draw(x2$gtable)
 dev.off()
