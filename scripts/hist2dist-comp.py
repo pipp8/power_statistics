@@ -3,6 +3,8 @@
 import re
 import os
 import sys
+import time
+from array import array
 
 inputFile = sys.argv[1]
 
@@ -20,62 +22,81 @@ seqDistDir = 'seqDists'
 basename = os.path.splitext(os.path.basename(inputFile))[0]
 
 
+def OutputFileName():
+    return( "%s/%s-All.distbin" % (seqDistDir, basename))
+
+
 # salva la distribuzione ed istogramma della sequenza prevSeq
-def SaveSeqFiles(prevSeq, model, len):
-    pairSeq = 'A' if (prevSeq % 2 == 0) else 'B'
-    d1 = "%s/%s" % (seqDistDir, model)
-    d2 = "%s/%d" % (d1, len)
-    if not os.path.exists(d1):
-        os.mkdir(d1)
-    if not os.path.exists(d2):
-        os.mkdir(d2)
-    fileName1 = "%s/%s-%s-%s.dist" % (d2, basename, str((prevSeq / 2) + 1).zfill(5), pairSeq)
-    fileName2 = "%s/%s-%s-%s.hist" % (d2, basename, str((prevSeq / 2) + 1).zfill(5), pairSeq)
+def SaveDistributions(model, pairs):
+    fileName1 = OutputFileName()
     with open(fileName1, "w") as outFileDist:
-    #    with open(fileName2, "w") as outFileHist:
-        for key in sorted(seqDict.keys()):
-            prob = seqDict[key] / float(totalSeqCnt)
-            outFileDist.write("%s\t%.10f\n" % (key, prob))
-            # poi salva l'istogramma della sequenza precedente
-            # outFileHist.write("%s\t%d\n" % (key, seqDict[key]))
+        kmers = sorted(seqDict.keys())
+        arrLen = [1]
+        arrLen[0] = len(kmers)
+        header = array('i', arrLen )
+        header.tofile(outFileDist)
+        pv = [0]*arrLen[0]
+        for seq in range(2 * pairs):
+            ks = 0
+            for key in sorted(seqDict.keys()):
+                av = seqDict[key]
+                # outFileDist.write("%s " % (key))
+                pv[ks] = av[seq] / float(totalSeqCnt)
+                ks = ks + 1
+
+            # salva l'intero vettore di probabilita'
+            fa = array('d', pv)
+            fa.tofile(outFileDist)
+            #outFileDist.write("\n")
+
 
 
 def main():
     global totalCnt, totalSeqCnt, totalKmer, totalProb, totalLines, writeSequenceHistogram, sumDict, seqDict
 
-    prevSeq = -1
+    prevSeq = 0 # N.B. la  prima sequenza ha indice 0
 
     if (writeSequenceHistogram):
         if not os.path.exists(seqDistDir):
             os.mkdir(seqDistDir)
 
-    m = re.search(r'^(.*)_(.*)-(\d+)\.(\d+)', basename)
+    m = re.search(r'^(.*)k=(\d+)_(.*)-(\d+)\.(\d+)', basename)
     if (m is None):
         print basename, " malformed histogram filename"
         exit()
     else:
-        model = m.group(2)
-        nPairs = int(m.group(3))
-        len = int(m.group(4))
+        kLen = int(m.group(2))
+        model = m.group(3)
+        nPairs = int(m.group(4))
+        len = int(m.group(5))
+
+    # crea il file distribuzione solo se l'input e' piu' recente
+    mt1 = os.path.getmtime(inputFile)
+    out = OutputFileName()
+    if (os.path.exists(out)):
+        mt2 = os.path.getmtime(out)
+        if (mt2 > mt1):
+            print( "The distribution file already exists and it is more recent than the histogram file")
+            print( "%s -> %s vs\n%s -> %s" % (inputFile, time.ctime(mt1), out, time.ctime(mt2)))
+            exit(-1)
 
     with open(inputFile) as inFile:
         for line in inFile:
+            # pattern ( idSeq, ( k-mer, cnt))
             m = re.search(r'^\((\d+),\(([A-Z]+),(\d+)\)\)', line)
             if (m is None):
                 print line, " malformed histogram file"
-                exit()
+                exit(-1)
             else:
                 seqNum = int(m.group(1))
                 kmer = m.group(2)
                 count = int(m.group(3))
 
             if (seqNum != prevSeq):
-                if (writeSequenceHistogram and prevSeq != -1):
-                    # salva la distribuzione e l'istogramma della sequenza precedente
-                    SaveSeqFiles(prevSeq, model, len)
-
-                # abbiamo salvato prevSeq prossima sequenza seqNum
-                seqDict = dict()
+                # salviamo tutto il dizionario unico alla fine
+                if (totalSeqCnt != len - kLen + 1):
+                    print("Wrong number of k-mers %d vs %d" & (totalSeqCnt, len - kLen + 1))
+                    exit(-1)
                 totalSeqCnt = 0
                 prevSeq = seqNum
                 sys.stdout.write('\r%d / %d Complete\r' % (seqNum,nPairs*2)),
@@ -87,18 +108,25 @@ def main():
             totalLines = totalLines + 1
 
             if kmer in sumDict:
-                sumDict[kmer] = sumDict[kmer] + int(count)
+                sumDict[kmer] = sumDict[kmer] + count
             else:
-                sumDict[kmer] = int(count)
+                sumDict[kmer] = count
 
             if kmer in seqDict:
-                seqDict[kmer] = seqDict[kmer] + int(count)
-            else:
-                seqDict[kmer] = int(count)
+                av = seqDict[kmer]
+                if (av[seqNum] != 0):
+                    print("Errore seqNum %d non zero initial value" & seqNum)
 
-    if (writeSequenceHistogram and prevSeq != -1):
+                av[seqNum] = count #otherwise av[seqNum] + count ????
+                seqDict[kmer] = av
+            else:
+                av = [0]*(2*nPairs)
+                av[seqNum] = count
+                seqDict[kmer] = av
+
+    if (writeSequenceHistogram):
         # salva la distribuzione e l'istogramma dell'ultima sequenza
-        SaveSeqFiles(seqNum, model, len)
+        SaveDistributions(model, nPairs)
 
     print('')
 

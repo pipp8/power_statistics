@@ -1,7 +1,7 @@
 library(ggplot2)
 
-# setwd("/Users/pipp8/Universita/Src/IdeaProjects/Kolmogorov")
-setwd("/Volumes/ExFat/PowerStatistics/Kolmogorov")
+# setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Kolmogorov")
+setwd("/Volumes/Catalina/PowerStatistics/Kolmogorov")
 
 ris <- data.frame( Name = character(), D = double(), PV = double(), stringsAsFactors=FALSE)
 
@@ -10,7 +10,7 @@ EvalKS <- function( model, k, len, gValues)
 	for( g in gValues) {
 		gVal <- if (g == "no g") "" else sprintf(".G=%.3f", g)
 
-		writeLines(  sprintf("model: %s, k: %d, len: %d, g:%s", model, k, len, gVal))
+		writeLines(  sprintf("model: %s, k: %d, len: %d, %s", model, k, len, gVal))
 		k1 <- sprintf("%s-%d%s", model, len, gVal)
 
 		start <- nrow(ris) + 1
@@ -27,6 +27,7 @@ EvalKS <- function( model, k, len, gValues)
 			ksRis <- ks.test(xv, yv)
 
 			ris[nrow(ris) + 1,] <<- list( k1, as.numeric(ksRis[1]), as.numeric(ksRis[2]))
+			# print( ksRis)
 			cat( sprintf("%5d /%5d\r", pair, nPairs))
 		}
 		end <- nrow(ris)
@@ -50,33 +51,43 @@ nPairs <- 1000
 # len <- 100000
 
 #for( k in c(4, 6, 8, 10)) {
-for( k in c(10)) {
+for( k in c(4, 6, 8)) {
 
-	for( len in c(100000, 1000000, 10000000)) {
-#	for( len in c(10000000)) {
-		# resetta il dataframe con i risultati
-		ris <- data.frame( Name = character(), D = double(), PV = double(), stringsAsFactors=FALSE)
+	for( len in c(200000, 2000000)) {
 
-		model <- "MotifRepl-U"
-		gValues <- c(0.010, 0.050, 0.100)
-		EvalKS( model, k, len, gValues)
-
-		model <- "PatTransf-U"
-		gValues <- c(0.010, 0.050, 0.100)
-		EvalKS( model, k, len, gValues)
-
-		model <- "Uniform"
-		gValues <- c("no g")
-		EvalKS( model, k, len, gValues)
-
-		model <- "Uniform-T1"
-		gValues <- c("no g")
-		EvalKS( model, k, len, gValues)
-
-#		stop("break")
-
-		colnames(ris) <- c("Name", "D", "PV")
-
+		dfFilename = sprintf("Kolmogorov-k=%d-len=%d.df", k, len)		
+		if (file.exists(dfFilename)) {
+			cat( sprintf("Data file exists. Skipping k = %d, len = %d", k, len))	
+			
+			# carica il dataframe dal file
+			ris <- readRDS(file = dfFilename)
+		}
+		else {
+			# resetta il dataframe con i risultati
+			ris <- data.frame( Name = character(), D = double(), PV = double(), stringsAsFactors=FALSE)
+	
+			model <- "MotifRepl-U"
+			gValues <- c(0.010, 0.050, 0.100)
+			EvalKS( model, k, len, gValues)
+	
+			model <- "PatTransf-U"
+			gValues <- c(0.010, 0.050, 0.100)
+			EvalKS( model, k, len, gValues)
+	
+			model <- "Uniform"
+			gValues <- c("no g")
+			EvalKS( model, k, len, gValues)
+	
+			model <- "Uniform-T1"
+			gValues <- c("no g")
+			EvalKS( model, k, len, gValues)
+	
+	#		stop("break")	
+			colnames(ris) <- c("Name", "D", "PV")
+			
+			saveRDS(ris, file = dfFilename)
+		}
+		
 		title = sprintf("D value Test di Kolmogorov/Smirnov (len: %d, k=%d)", len, k)
 
 		sp2 <-	ggplot(ris, aes(x = Name, y = D, color = Name)) +

@@ -3,9 +3,12 @@ package it.unisa.di.bio.powerstatistics;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.ResourceBundle;
+
 
 public class PowerProps {
 
+    // private String fname= "PowerStatistics.properties";
     private String fname= "PowerStatistics.properties";
 
     private Properties appProps;

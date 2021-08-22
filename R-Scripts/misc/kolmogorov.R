@@ -1,7 +1,7 @@
 
-#setwd("/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/study/k=4")
+setwd("/Users/pipp8/Universita/Src/IdeaProjects/power_statistics/data/results/Kolmogorov/k=4")
 
-setwd("/Volumes/Catalina/PowerStatistics/study/k=6")
+#setwd("/Volumes/Catalina/PowerStatistics/study/k=6")
 
 files <- list.files(".", "*.dist")
 
