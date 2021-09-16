@@ -1,6 +1,6 @@
 package it.unisa.di.bio
 
-import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
+
 import it.unisa.di.bio.DatasetBuilder.{GCReachDist, appProperties, debug, gValues, getDistribution, getNullModelFilename, getSequenceName, hadoopConf, local, mitocondriDist, numberOfPairs, patternLen, patternTransfer, savePath, saveSequence, sc, shigellaDist, uniformDist}
 import it.unisa.di.bio.Misc.nucleotideRepr
 import org.apache.hadoop.fs.{FileSystem, Path}
