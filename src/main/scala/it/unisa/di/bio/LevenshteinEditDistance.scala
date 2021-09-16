@@ -85,12 +85,12 @@ object LevenshteinEditDistance {
         var startTime = System.currentTimeMillis()
         var d = distanceMatrix(seq1, seq2)
         var totTime = System.currentTimeMillis() - startTime
-        println (s"The edit distance (matrix) between seq1 and seq2 (len=${seq1.length}) is ${d}, delay:{totTime/1000} sec.")
+        println (s"The edit distance (matrix) between seq1 and seq2 (len=${seq1.length}) is ${d}, delay:${totTime/1000} sec.")
 
         startTime = System.currentTimeMillis()
         d = distanceSparse(seq1, seq2)
         totTime = System.currentTimeMillis() - startTime
-        println (s"The edit distance (sparse) between seq1 and seq2 (len=${seq2.length}) is ${d}, delay:{totTime/1000} sec.")
+        println (s"The edit distance (sparse) between seq1 and seq2 (len=${seq2.length}) is ${d}, delay:${totTime/1000} sec.")
       }
     }
     catch {
