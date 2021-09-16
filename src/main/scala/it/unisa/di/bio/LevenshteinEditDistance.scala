@@ -82,8 +82,15 @@ object LevenshteinEditDistance {
         seq2 = it.next().toString
         i += 1
 
-        val d = distance (seq1, seq2)
-        println (s"The edit distance between seq1(${i}) and seq2(${i}) is ${d}")
+        var startTime = System.currentTimeMillis()
+        var d = distanceMatrix(seq1, seq2)
+        var totTime = System.currentTimeMillis() - startTime
+        println (s"The edit distance (matrix) between seq1 and seq2 (len=${seq1.length}) is ${d}, delay:{totTime/1000} sec.")
+
+        startTime = System.currentTimeMillis()
+        d = distanceSparse(seq1, seq2)
+        totTime = System.currentTimeMillis() - startTime
+        println (s"The edit distance (sparse) between seq1 and seq2 (len=${seq2.length}) is ${d}, delay:{totTime/1000} sec.")
       }
     }
     catch {
@@ -98,7 +105,7 @@ object LevenshteinEditDistance {
 
 
 
-  def  distance (word1: String,word2: String) : Int = {
+  def  distanceSparse (word1: String,word2: String) : Int = {
 
     // val matrix = Array.ofDim[Int](word1.length + 1, word2.length + 1)
     val matrix = new SparseMatrix(word1.length * 10)
@@ -152,7 +159,7 @@ object LevenshteinEditDistance {
   }
 
 
-  def  distance2 (word1: String,word2: String) : Int = {
+  def  distanceMatrix (word1: String,word2: String) : Int = {
 
     val matrix = Array.ofDim[Int](word1.length + 1, word2.length + 1)
 
