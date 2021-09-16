@@ -11,7 +11,6 @@ import java.time.LocalDateTime
 import java.util.Properties
 import java.time.format.DateTimeFormatter
 
-import it.unisa.di.bio.DatasetBuilder.{buildDatasetWithDistribution, getNullModelFilename, motif}
 import org.apache.spark.{SparkConf, SparkContext}
 import it.unisa.di.bio.Misc._
 import org.apache.hadoop.conf.Configuration
@@ -21,7 +20,6 @@ import org.apache.spark.rdd.RDD
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io.BufferedSource
 import scala.math._
-import scala.tools.cmd.Property
 
 
 

@@ -66,8 +66,11 @@ public class PowerEvaluator {
                     case "syntheticAllK":       // Dataset4-1000
                         AnalyzeDataset4(v, Uniform);
                         break;
-                    case "syntheticAllLen":     // ultimo data set distanza lineare tr ale lunghezze
-                        AnalyzeDataset5(v, Uniform, 11, 12); // 0, -1
+                    case "syntheticAllLen":     // ultimo data set distanza lineare tra le lunghezze
+                        AnalyzeDataset5(v, Uniform, 0, -1); // 0, -1
+                        break;
+                    case "syntheticShortLen":     // ultimo data set distanza lineare tra le lunghezze
+                        AnalyzeDataset6(v, Uniform, 0, -1); // 0, -1
                         break;
                     default:
                         AnalyzeDataset3(v, DatasetType.valueOf(args[2]));
@@ -77,6 +80,93 @@ public class PowerEvaluator {
     }
 
 
+    // Analisi del dataset small len in {1000, 5000, 10000, 50000, 100000}
+    static void AnalyzeDataset6(double alphaValue, DatasetType nullModel, int firstMeasure, int lastMeasure) {
+
+        String[] gValues = appProps.getAppProps().getProperty("powerstatistics.datasetBuilder.gammaProbabilities").split(",");
+        double gamma, minDst, maxDst, avg, area[] = new double[gValues.length];
+
+        ExpParams par = null;
+        String measure = "";
+
+        int m,  kValues[] = {4, 6, 8, 10};
+
+        ArrayList<ExpParams> lenList = getNullModelSeqLengths(nullModel, Paths.get( resultsPath, String.format("k=%d", kValues[0])));
+
+        double[] tresh = new double[lenList.size()];
+        System.out.printf("Distances for alternate model: %s\n", alternateModel.toString());
+
+        ReadDistances ar = new ReadDistances(nullModel, alternateModel, lenList.get(0).filename, 0.); // solo per leggere la lista di misure disponibili
+        lastMeasure = lastMeasure >= 0 ? lastMeasure : ar.measureNames.length;
+
+        // per tutte le misure previste dall'esperimento
+        for(int d = firstMeasure; d < lastMeasure; d++) {
+
+            ArrayList<PowerValue> list = new ArrayList<PowerValue>();
+            m = 0;
+            // per tutti i valori di k
+            for(int k : kValues) {
+                System.out.printf("Analyzing distance: %s for alpha = %.3f and k = %d\n", ar.measureNames[d], alphaValue, k);
+                Path  kdir = Paths.get(resultsPath, String.format("k=%d", k));
+
+                // per tutti i gamma presenti nelle properties (devono coincidere con quelli effettivamente utilizzati)
+                for (int i = 0; i < gValues.length; i++) {
+
+                    gamma = Double.parseDouble(gValues[i]);
+
+                    // per tutte le lunghezze definite per il null model (cf. getNullModelSeqLengths())
+                    for (int j = 0; j < lenList.size(); j++) {
+                        par = lenList.get(j);
+
+                        ar = new ReadDistances(nullModel, alternateModel, kdir.toString(), par.numPairs, k, par.seqLength, gamma);
+                        // il costruttore legge automaticamente il nullModel
+                        ar.readAlternateModel();
+                        ar.readType1Check();
+
+                        ar.setRefMeasure(d);        // ordina anche i risultati infunzione della misura scelta
+
+                        ar.setThreshold(alphaValue);
+                        tresh[j] = ar.getThreshold();
+                        System.out.printf("Threshold(alpha = %.3f): %.3f\t", alphaValue, ar.getThreshold());
+
+                        measure = ar.getCurrentMeasureName();
+                        double power = ar.getPowerValue();
+
+                        double t1 = ar.getType1Value();
+
+                        System.out.printf("%s Power(k = %d, gamma = %.3f, n = %d) = %.4f, T1 = %.3f\n",
+                                ar.getCurrentMeasureName(), k, gamma, par.seqLength, power, t1);
+
+                        list.add(new PowerValue(k, par.seqLength, alphaValue, gamma, power, t1));
+                    } // foreach len
+                    double tot = 0;
+                    minDst = Double.MAX_VALUE;
+                    maxDst = Double.MIN_VALUE;
+                    for (double t : tresh) {
+                        tot += t;
+                        minDst = Double.min(t, minDst);
+                        maxDst = Double.max(t, maxDst);
+                    }
+                    avg = tot / lenList.size();
+                    tot = 0;
+                    for (double t : tresh) {
+                        tot += Math.pow(t - avg, 2);
+                    }
+                    double var = tot / lenList.size();
+
+                    area[i] = PowerValue.GetArea( list, m++, lenList.size());
+
+                    System.out.printf("Mes: %s, alpha: %.3f, gamma: %.3f, area tot: %.3f, min: %.3f, max: %.3f, var: %.3f\n",
+                            measure, alphaValue, gamma, area[i], minDst, maxDst, var);
+                } // foreach i in gamma
+            } // foreach k
+            saveJSonResults(list, measure, par.k, nullModel.name(), alternateModel.name(), area);
+            System.out.println("** Saved ***\n");
+        } // foreach measure
+    }
+
+
+    // analisi del dataset large da 200.000 a 10.000.000 step 200.000
     static void AnalyzeDataset5(double alphaValue, DatasetType nullModel, int firstMeasure, int lastMeasure) {
 
         String[] gValues = appProps.getAppProps().getProperty("powerstatistics.datasetBuilder.gammaProbabilities").split(",");
