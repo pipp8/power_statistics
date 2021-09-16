@@ -1,7 +1,6 @@
 #! /bin/bash
 
 maxSeqNum=1000
-k=8
 prefix=Uniform
 tmp=/tmp/aa.tmp
 path=data/dataset5-1000
@@ -15,20 +14,20 @@ for len in $(seq 200000 200000 10000000); do
 	for gamma in 100 050 010; do
 
 	    case $prefix in
-		Uniform | Uniform-T1)
-		    postfix=".fasta"
-		    file=$prefix-1000.$len$postfix
-		    one=1
-		    ;;
-		MotifRepl-U | PatTransf-U)
-		    postfix=.G=0.$gamma.fasta
-		    file=$prefix-1000.$len$postfix
-		    one=0
-		    ;;
-		*)
-		    echo "Unknown prefix"
-		    exit -1
-		    ;;
+		    Uniform | Uniform-T1)
+          postfix=".fasta"
+          file=$prefix-1000.$len$postfix
+          one=1
+          ;;
+    		MotifRepl-U | PatTransf-U)
+          postfix=.G=0.$gamma.fasta
+          file=$prefix-1000.$len$postfix
+          one=0
+          ;;
+    		*)
+          echo "Unknown prefix"
+          exit -1
+          ;;
 	    esac
 
 	    echo "Downloading file: <$path/$file>"

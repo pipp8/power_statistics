@@ -1,5 +1,6 @@
 package it.unisa.di.bio
 
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
 import it.unisa.di.bio.DatasetBuilder.{GCReachDist, appProperties, debug, gValues, getDistribution, getNullModelFilename, getSequenceName, hadoopConf, local, mitocondriDist, numberOfPairs, patternLen, patternTransfer, savePath, saveSequence, sc, shigellaDist, uniformDist}
 import it.unisa.di.bio.Misc.nucleotideRepr
 import org.apache.hadoop.fs.{FileSystem, Path}
@@ -8,8 +9,27 @@ import org.apache.spark.{SparkConf, SparkContext}
 import java.io.{FileNotFoundException, IOException}
 import java.util.Properties
 import scala.io.BufferedSource
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
+
+
 
 object LevenshteinEditDistance {
+
+  class SparseMatrix(var size: Int) {
+
+    private val map = new Long2IntOpenHashMap( size)
+
+    def get(x: Int, y: Int ): Int = {
+      val key : Long = (x.toLong << 32) + y
+      val ret = map.getOrDefault(key, -1)
+      return ret
+    }
+    def set(x: Int, y: Int, value: Int ) = {
+      val key : Long = (x.toLong << 32) + y
+      map.put( key, value)
+    }
+  }
+
 
   def main(args: Array[String]) {
 
@@ -80,6 +100,60 @@ object LevenshteinEditDistance {
 
   def  distance (word1: String,word2: String) : Int = {
 
+    // val matrix = Array.ofDim[Int](word1.length + 1, word2.length + 1)
+    val matrix = new SparseMatrix(word1.length * 10)
+
+    for (i <- 0 to word1.length) {
+      // matrix(i)(0) = i
+      matrix.set(i, 0, i)
+    }
+    for (i <- 0 to word2.length) {
+      // matrix(0)(i) = i
+      matrix.set(0, i, i)
+    }
+
+    for (i <- 1 to word1.length) {
+      var c1: Char = 0
+
+      c1 = word1.charAt(i - 1)
+      for (j <- 1 to word2.length) {
+        var c2: Char = 0
+
+        c2 = word2.charAt(j - 1)
+        if (c1 == c2) {
+          // matrix(i)(j) = matrix(i-1)(j-1)
+          matrix.set(i, j, matrix.get(i - 1, j - 1))
+        }
+        else {
+          var delete = 0
+          var insert = 0
+          var substitute = 0
+          var minimum = 0
+
+          // delete = matrix(i-1)(j) + 1
+          delete = matrix.get(i - 1, j) + 1
+          // insert = matrix(i)(j-1) + 1
+          insert = matrix.get(i, j - 1) + 1
+          // substitute = matrix(i-1)(j-1) + 1
+          substitute = matrix.get(i - 1, j - 1) + 1
+          minimum = delete
+          if (insert < minimum) {
+            minimum = insert
+          }
+          if (substitute < minimum) {
+            minimum = substitute
+          }
+          // matrix(i)(j) = minimum
+          matrix.set(i, j, minimum)
+        }
+      }
+    }
+    return matrix.get(word1.length, word2.length)
+  }
+
+
+  def  distance2 (word1: String,word2: String) : Int = {
+
     val matrix = Array.ofDim[Int](word1.length + 1, word2.length + 1)
 
     for (i <- 0 to word1.length) {
@@ -90,14 +164,13 @@ object LevenshteinEditDistance {
     }
 
     for (i <- 1 to word1.length) {
-      var j = 0
-      var c1 : Char = 0
+      var c1: Char = 0
 
-      c1 = word1.charAt(i-1)
+      c1 = word1.charAt(i - 1)
       for (j <- 1 to word2.length) {
         var c2: Char = 0
 
-        c2 = word2.charAt(j-1)
+        c2 = word2.charAt(j - 1)
         if (c1 == c2) {
           matrix(i)(j) = matrix(i-1)(j-1)
         }
