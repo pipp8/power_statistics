@@ -11,7 +11,7 @@ import java.util.Properties
 import scala.io.BufferedSource
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
 import org.apache.commons.io.FilenameUtils
-import org.apache.commons.io.FilenameUtils.getFullPath
+import org.apache.commons.io.FilenameUtils.{getFullPath, getPath}
 import org.apache.hadoop.conf.Configuration
 
 import java.net.URI
@@ -78,7 +78,7 @@ object LevenshteinEditDistance {
 
     var seq1: String = null
     var seq2: String = null
-    val outputPath = s"${getFullPath(ds)}${FilenameUtils.getBaseName(ds)}.csv"
+    val outputPath = s"${getPath(ds)}${FilenameUtils.getBaseName(ds)}.csv"
 
     println(s"*** Slave Started ***")
 
@@ -90,7 +90,7 @@ object LevenshteinEditDistance {
               new OutputStreamWriter(FileSystem.get(URI.create(outputPath), hadoopConf)
                 .create(new Path(outputPath))))
 
-      var reader: BufferedSource =
+      val reader: BufferedSource =
         if (local)
           // legge dal filesystem locale
           scala.io.Source.fromFile(ds)
