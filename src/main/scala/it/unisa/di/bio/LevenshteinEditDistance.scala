@@ -6,7 +6,7 @@ import it.unisa.di.bio.Misc.nucleotideRepr
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.{SparkConf, SparkContext}
 
-import java.io.{BufferedWriter, FileNotFoundException, IOException, OutputStreamWriter}
+import java.io.{BufferedWriter, File, FileNotFoundException, FileWriter, IOException, OutputStreamWriter}
 import java.util.Properties
 import scala.io.BufferedSource
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
@@ -47,7 +47,6 @@ object LevenshteinEditDistance {
 
     val inputPath = args(0)
     val outDir = args(1)
-    val outputPath = s"${outDir}/${FilenameUtils.getBaseName(inputPath)}.csv"
     local = (args(2) == "local")
 
     val sparkConf = new SparkConf().setAppName("LevenshteinEditDistance")
@@ -79,12 +78,14 @@ object LevenshteinEditDistance {
 
     var seq1: String = null
     var seq2: String = null
-    val outputPath = getFullPath(ds)
-
+    val outputPath = s"${getFullPath(ds)}${FilenameUtils.getBaseName(ds)}.csv"
     try {
-      val writer = new BufferedWriter(
-        new OutputStreamWriter(FileSystem.get(URI.create(outputPath), hadoopConf)
-          .create(new Path(outputPath))))
+      val writer = if (local)
+            new BufferedWriter(new FileWriter(new File(outputPath)))
+          else
+            new BufferedWriter(
+              new OutputStreamWriter(FileSystem.get(URI.create(outputPath), hadoopConf)
+                .create(new Path(outputPath))))
 
       var reader: BufferedSource =
         if (local)
