@@ -11,6 +11,7 @@ import java.util.Properties
 import scala.io.BufferedSource
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
 import org.apache.commons.io.FilenameUtils
+import org.apache.commons.io.FilenameUtils.getFullPath
 import org.apache.hadoop.conf.Configuration
 
 import java.net.URI
@@ -56,8 +57,29 @@ object LevenshteinEditDistance {
 
     println(s"***App ${this.getClass.getCanonicalName} Started***")
 
+    val meta = "-1000.10000."
+    val AM1Prefix = "MotifRepl-U"
+    val AM2Prefix = "PatTransf-U"
+    val NM = List(s"${inputPath}/Uniform${meta}fasta")
+
+    val gValues = List("010", "050", "100")
+
+    val AM1 = gValues.map(x => s"${inputPath}/${AM1Prefix}${meta}G=0.${x}.fasta")
+    val AM2 = gValues.map(x => s"${inputPath}/${AM2Prefix}${meta}G=0.${x}.fasta")
+
+    val dsList = NM ++ AM1 ++ AM2
+
+    val results = sc.parallelize( dsList).map(x => computeLevenshtainDistance(x)).collect()
+
+    println(s"results: ${results.toString}")
+  }
+
+
+  def computeLevenshtainDistance( ds: String) : Int = {
+
     var seq1: String = null
     var seq2: String = null
+    val outputPath = getFullPath(ds)
 
     try {
       val writer = new BufferedWriter(
@@ -67,12 +89,12 @@ object LevenshteinEditDistance {
       var reader: BufferedSource =
         if (local)
           // legge dal filesystem locale
-          scala.io.Source.fromFile(inputPath)
+          scala.io.Source.fromFile(ds)
         else
           // solo questo codice legge dal HDFS Source.fromFile legge solo da file system locali
           // val hdfs = FileSystem.get(new URI("hdfs://master:8020/"), new Configuration())
           scala.io.Source.fromInputStream(FileSystem.get(hadoopConf)
-            .open(new Path( inputPath)))
+            .open(new Path( ds)))
 
       var i = 1
       val it : Iterator[String] = reader.getLines()
@@ -98,13 +120,16 @@ object LevenshteinEditDistance {
         // println (s"The edit distance (sparse) between seq1 and seq2 (len=${seq2.length}) is ${d}, delay:${totTime/1000} sec.")
       }
       writer.close()
+      return i
     }
     catch {
       case x: FileNotFoundException => {
-        println(s"Exception: Input dataset ${inputPath} not found")
+        println(s"Exception: Input dataset ${ds} not found")
+        return -1
       }
       case x: IOException   => {
         println("Input/output Exception")
+        return -1
       }
     }
   }
