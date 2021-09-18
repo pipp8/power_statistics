@@ -79,6 +79,9 @@ object LevenshteinEditDistance {
     var seq1: String = null
     var seq2: String = null
     val outputPath = s"${getFullPath(ds)}${FilenameUtils.getBaseName(ds)}.csv"
+
+    println(s"*** Slave Started ***")
+
     try {
       val writer = if (local)
             new BufferedWriter(new FileWriter(new File(outputPath)))
@@ -121,6 +124,7 @@ object LevenshteinEditDistance {
         // println (s"The edit distance (sparse) between seq1 and seq2 (len=${seq2.length}) is ${d}, delay:${totTime/1000} sec.")
       }
       writer.close()
+      println(s"*** Slave Finished ***")
       return i
     }
     catch {
