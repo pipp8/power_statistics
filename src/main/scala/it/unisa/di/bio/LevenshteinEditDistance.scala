@@ -1,24 +1,29 @@
 package it.unisa.di.bio
 
 
-import it.unisa.di.bio.DatasetBuilder.{GCReachDist, appProperties, debug, gValues, getDistribution, getNullModelFilename, getSequenceName, hadoopConf, local, mitocondriDist, numberOfPairs, patternLen, patternTransfer, savePath, saveSequence, sc, shigellaDist, uniformDist}
-import it.unisa.di.bio.Misc.nucleotideRepr
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.commons.io.FilenameUtils.{getBaseName, getFullPath}
 
-import java.io.{BufferedWriter, File, FileNotFoundException, FileWriter, IOException, OutputStreamWriter}
-import java.util.Properties
+import java.io.{BufferedReader, BufferedWriter, File, FileNotFoundException, FileWriter, IOException, OutputStreamWriter, StringReader}
 import scala.io.BufferedSource
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
-import org.apache.commons.io.FilenameUtils
-import org.apache.commons.io.FilenameUtils.{getFullPath, getPath}
 import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.io.{LongWritable, Text}
+import org.apache.hadoop.mapreduce.lib.input.NLineInputFormat
 
 import java.net.URI
+import scala.collection.mutable.ArrayBuffer
 
 
 
 object LevenshteinEditDistance {
+
+  var local = true
+
+  var sc:  SparkContext = null
+
+  var hadoopConf: org.apache.hadoop.conf.Configuration = null
 
   class SparseMatrix(var size: Int) {
 
@@ -68,17 +73,54 @@ object LevenshteinEditDistance {
 
     val dsList = NM ++ AM1 ++ AM2
 
-    val results = sc.parallelize( dsList).map(x => computeLevenshtainDistance(x)).collect()
+    hadoopConf.setInt("mapreduce.input.lineinputformat.linespermap", 4);
 
-    println(s"results: ${results.toString}")
+    val records = sc.newAPIHadoopFile(inputPath,
+        classOf[NLineInputFormat], classOf[LongWritable], classOf[Text], hadoopConf)
+
+    // val records = sc.wholeTextFiles(inputPath)
+
+    println(s"Num Partition = ${records.partitions.size}")
+
+    var ris = records.mapPartitions( processDataset).saveAsTextFile(outDir)
+
+//    ris.foreach( x => {
+//      println(s"records: ${x._1} - ${x._2}")
+//    })
   }
 
 
-  def computeLevenshtainDistance( ds: String) : Int = {
+  def processDataset( it: Iterator[(LongWritable, Text)]) : Iterator[(String, Double)] = {
+
+    val buf = ArrayBuffer[(String, Double)]()
+    val params = Array.ofDim[String](4)
+    // println(s"*** Slave Started len = ${it.length} ***")
+
+    var p = 0
+    while( it.hasNext) {
+      params(p) = it.next()._2.toString
+      p += 1
+    }
+    if (p != 4) {
+      println("Split failed")
+      throw( new Exception("Split Error"))
+    }
+    val d = distanceMatrix( params(1), params(3))
+    val distance = (params(1).length + params(3).length) / d.toDouble
+
+    buf += ((params(0) + params(2), distance))
+
+    println(s"*** Slave Finished ***")
+    return buf.iterator
+  }
+
+
+
+  def computeLevenshtainDistance( ds: String, local: Boolean) : Int = {
 
     var seq1: String = null
     var seq2: String = null
-    val outputPath = s"${getPath(ds)}${FilenameUtils.getBaseName(ds)}.csv"
+    val outputPath = s"${getFullPath(ds)}${getBaseName(ds)}.csv"
 
     println(s"*** Slave Started ***")
 
@@ -129,10 +171,14 @@ object LevenshteinEditDistance {
     }
     catch {
       case x: FileNotFoundException => {
-        println(s"Exception: dataset ${ds} or ${outputPath} not found")
+        println(s"Exception: ${x.getMessage}")
+        x.printStackTrace()
+        println(s"dataset ${ds} or ${outputPath} not found")
         return -1
       }
       case x: IOException   => {
+        println(s"Exception: ${x.getMessage}")
+        x.printStackTrace()
         println("Input/output Exception")
         return -1
       }

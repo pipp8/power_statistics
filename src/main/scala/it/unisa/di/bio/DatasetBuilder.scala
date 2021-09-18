@@ -46,8 +46,6 @@ object DatasetBuilder {
 
   var hadoopConf: org.apache.hadoop.conf.Configuration = null
 
-  var savedTask : Saver.SaveClosure = null
-
 
 
 
@@ -74,7 +72,7 @@ object DatasetBuilder {
     appProperties.load(this.getClass.getClassLoader.getResourceAsStream("PowerStatistics.properties"))
 
     val sparkConf = new SparkConf().setAppName(appProperties.getProperty("powerstatistics.datasetBuilder.appName"))
-                                    .setMaster(if (local) "local" else "yarn")
+      .setMaster(if (local) "local" else "yarn")
     sc = new SparkContext(sparkConf)
     hadoopConf = sc.hadoopConfiguration
 
@@ -86,28 +84,28 @@ object DatasetBuilder {
 
     // Array(0.25, 0.25, 0.25, 0.25) // P(A), P(C), P(G), P(T) probability
     var stVal = appProperties.getProperty("powerstatistics.datasetBuilder.uniformDistribution").split(",")
-    for( i <- 0 to 3) {
+    for (i <- 0 to 3) {
       uniformDist(i) = stVal(i).toDouble
     }
 
     // Array(0.166666666666667, 0.333333333333333, 0.333333333333333, 0.166666666666667) // P(A), P(C), P(G), P(T) probability
     stVal = appProperties.getProperty("powerstatistics.datasetBuilder.GCReachDistribution").split(",")
-    for( i <- 0 to 3) {
+    for (i <- 0 to 3) {
       GCReachDist(i) = stVal(i).toDouble
     }
     stVal = appProperties.getProperty("powerstatistics.datasetBuilder.mitocondriEmpiricalDistribution").split(",")
-    for( i <- 0 to 3) {
+    for (i <- 0 to 3) {
       mitocondriDist(i) = stVal(i).toDouble
     }
     stVal = appProperties.getProperty("powerstatistics.datasetBuilder.shigellaEmpiricalDistribution").split(",")
-    for( i <- 0 to 3) {
+    for (i <- 0 to 3) {
       shigellaDist(i) = stVal(i).toDouble
     }
 
     // Array(0.001, 0.005, 0.01, 0.05, 0.1)
     stVal = appProperties.getProperty("powerstatistics.datasetBuilder.gammaProbabilities").split(",")
     gValues = new Array[Double](stVal.length)
-    for( i <- 0 to stVal.length - 1) {
+    for (i <- 0 to stVal.length - 1) {
       gValues(i) = stVal(i).toDouble
     }
 
@@ -124,36 +122,21 @@ object DatasetBuilder {
         appProperties.getProperty("powerstatistics.datasetBuilder.uniformPrefix"), uniformDist, args)
 
       case x if (x.compareTo("syntheticMitocondri") == 0) => dataset2(
-              appProperties.getProperty("powerstatistics.datasetBuilder.synthMitocondriPrefix"), mitocondriDist, args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.synthMitocondriPrefix"), mitocondriDist, args)
 
       case x if (x.compareTo("syntheticShigella") == 0) => dataset2(
-              appProperties.getProperty("powerstatistics.datasetBuilder.synthShigellaPrefix"), shigellaDist, args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.synthShigellaPrefix"), shigellaDist, args)
 
       case y if (y.compareTo("mitocondri") == 0) => semiSynthetic(
-              appProperties.getProperty("powerstatistics.datasetBuilder.syntheticNullModelPrefix.mitocondri"), args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.syntheticNullModelPrefix.mitocondri"), args)
 
       case y if (y.compareTo("shigella") == 0) => semiSynthetic(
-              appProperties.getProperty("powerstatistics.datasetBuilder.syntheticNullModelPrefix.shigella"), args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.syntheticNullModelPrefix.shigella"), args)
 
       case z => println(s"${z} must be in: detailed | synthetic | syntheticMitocondri | syntheticShigella | Mitocondri | Shigella");
-              sc.stop()
+        sc.stop()
     }
-//    print(s"${savedTask.closures.length} tasks")
-//    // savedTask.closures.foreach(  x => { savedTask.exec( x._1, x._2)})
-//    val rdd:RDD[((Seq[Any]) => Unit, Seq[Any])] = sc.parallelize(savedTask.closures)
-//
-//    println(s"RDD Total Length: ${savedTask.closures.length} / #Partitions: ${rdd.getNumPartitions}")
-//    // val mapped = rdd.mapPartitionsWithIndex( processPartition)
-//    val mapped = rdd.map( x => {
-//      myExec( x._1, x._2)
-//    })
-//    print( mapped.collect())
   }
-
-//  def myExec(f:(Seq[Any]) => Unit, params: Seq[Any]) : Int = {
-//    f( params)
-//    return 1
-//  }
 
 
   def datasetDetailed( nullModelPrefix: String, distribution: Array[Double], lengths: Array[String]) : Unit = {
