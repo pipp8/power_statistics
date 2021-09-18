@@ -129,7 +129,7 @@ object LevenshteinEditDistance {
     }
     catch {
       case x: FileNotFoundException => {
-        println(s"Exception: Input dataset ${ds} not found")
+        println(s"Exception: dataset ${ds} or ${outputPath} not found")
         return -1
       }
       case x: IOException   => {
