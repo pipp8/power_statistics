@@ -6,10 +6,14 @@ import it.unisa.di.bio.Misc.nucleotideRepr
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.{SparkConf, SparkContext}
 
-import java.io.{FileNotFoundException, IOException}
+import java.io.{BufferedWriter, FileNotFoundException, IOException, OutputStreamWriter}
 import java.util.Properties
 import scala.io.BufferedSource
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
+import org.apache.commons.io.FilenameUtils
+import org.apache.hadoop.conf.Configuration
+
+import java.net.URI
 
 
 
@@ -33,7 +37,7 @@ object LevenshteinEditDistance {
 
   def main(args: Array[String]) {
 
-    if (args.length < 2) {
+    if (args.length < 3) {
       System.err.println("Errore nei parametri sulla command line")
       System.err.println("Usage:\nit.unisa.di.bio.LevenshteinEditDistance inputDataSet [[local|yarn]")
       throw new IllegalArgumentException(s"illegal number of argouments. ${args.length} should be at least 2")
@@ -41,11 +45,9 @@ object LevenshteinEditDistance {
     }
 
     val inputPath = args(0)
-
-    if (args.length > 1) {
-      local = (args(1) == "local")
-    }
-
+    val outDir = args(1)
+    val outputPath = s"${outDir}/${FilenameUtils.getBaseName(inputPath)}.csv"
+    local = (args(2) == "local")
 
     val sparkConf = new SparkConf().setAppName("LevenshteinEditDistance")
       .setMaster(if (local) "local" else "yarn")
@@ -54,23 +56,23 @@ object LevenshteinEditDistance {
 
     println(s"***App ${this.getClass.getCanonicalName} Started***")
 
-    var reader: BufferedSource = null
     var seq1: String = null
     var seq2: String = null
 
     try {
-      if (local) {
-        // legge dal filesystem locale
-        reader = scala.io.Source.fromFile(inputPath)
-      }
-      else {
-        // solo questo codice legge dal HDFS Source.fromFile legge solo da file system locali
-        // val hdfs = FileSystem.get(new URI("hdfs://master:8020/"), new Configuration())
-        val hdfs = FileSystem.get(sc.hadoopConfiguration)
-        val path = new Path(inputPath)
-        val stream = hdfs.open(path)
-        reader = scala.io.Source.fromInputStream(stream)
-      }
+      val writer = new BufferedWriter(
+        new OutputStreamWriter(FileSystem.get(URI.create(outputPath), hadoopConf)
+          .create(new Path(outputPath))))
+
+      var reader: BufferedSource =
+        if (local)
+          // legge dal filesystem locale
+          scala.io.Source.fromFile(inputPath)
+        else
+          // solo questo codice legge dal HDFS Source.fromFile legge solo da file system locali
+          // val hdfs = FileSystem.get(new URI("hdfs://master:8020/"), new Configuration())
+          scala.io.Source.fromInputStream(FileSystem.get(hadoopConf)
+            .open(new Path( inputPath)))
 
       var i = 1
       val it : Iterator[String] = reader.getLines()
@@ -85,13 +87,17 @@ object LevenshteinEditDistance {
         var startTime = System.currentTimeMillis()
         var d = distanceMatrix(seq1, seq2)
         var totTime = System.currentTimeMillis() - startTime
-        println (s"The edit distance (matrix) between seq1 and seq2 (len=${seq1.length}) is ${d}, delay:${totTime/1000} sec.")
+        println (s"The edit distance (matrix) between seq1 and seq2 (len=${seq1.length}) is ${d}, delay:${totTime} msec.")
+        val distance = s"${(seq1.length+seq2.length)/d.toDouble}\n"
+        writer.write( distance)
+        writer.flush()
 
-        startTime = System.currentTimeMillis()
-        d = distanceSparse(seq1, seq2)
-        totTime = System.currentTimeMillis() - startTime
-        println (s"The edit distance (sparse) between seq1 and seq2 (len=${seq2.length}) is ${d}, delay:${totTime/1000} sec.")
+        // startTime = System.currentTimeMillis()
+        // d = distanceSparse(seq1, seq2)
+        // totTime = System.currentTimeMillis() - startTime
+        // println (s"The edit distance (sparse) between seq1 and seq2 (len=${seq2.length}) is ${d}, delay:${totTime/1000} sec.")
       }
+      writer.close()
     }
     catch {
       case x: FileNotFoundException => {
@@ -132,25 +138,17 @@ object LevenshteinEditDistance {
           matrix.set(i, j, matrix.get(i - 1, j - 1))
         }
         else {
-          var delete = 0
-          var insert = 0
-          var substitute = 0
-          var minimum = 0
+          val delete = matrix.get(i - 1, j) + 1
+          val insert = matrix.get(i, j - 1) + 1
+          val substitute = matrix.get(i - 1, j - 1) + 1
+          var minimum = delete
 
-          // delete = matrix(i-1)(j) + 1
-          delete = matrix.get(i - 1, j) + 1
-          // insert = matrix(i)(j-1) + 1
-          insert = matrix.get(i, j - 1) + 1
-          // substitute = matrix(i-1)(j-1) + 1
-          substitute = matrix.get(i - 1, j - 1) + 1
-          minimum = delete
           if (insert < minimum) {
             minimum = insert
           }
           if (substitute < minimum) {
             minimum = substitute
           }
-          // matrix(i)(j) = minimum
           matrix.set(i, j, minimum)
         }
       }
@@ -182,15 +180,11 @@ object LevenshteinEditDistance {
           matrix(i)(j) = matrix(i-1)(j-1)
         }
         else {
-          var delete = 0
-          var insert = 0
-          var substitute = 0
-          var minimum = 0
+          val delete = matrix(i-1)(j) + 1
+          val insert = matrix(i)(j-1) + 1
+          val substitute = matrix(i-1)(j-1) + 1
+          var minimum = delete
 
-          delete = matrix(i-1)(j) + 1
-          insert = matrix(i)(j-1) + 1
-          substitute = matrix(i-1)(j-1) + 1
-          minimum = delete
           if (insert < minimum) {
             minimum = insert
           }

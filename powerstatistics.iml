@@ -19,6 +19,8 @@
     <orderEntry type="library" name="scala-sdk-2.12" level="application" />
     <orderEntry type="library" name="Python 2.7 interpreter library" level="application" />
     <orderEntry type="library" exported="" name="scala-sdk-2.12.8" level="application" />
+    <orderEntry type="library" name="it.unimi.dsi.fastutil" level="project" />
+    <orderEntry type="library" name="scala-sdk-2.12.12" level="application" />
     <orderEntry type="library" name="Maven: org.apache.spark:spark-core_2.12:3.1.2" level="project" />
     <orderEntry type="library" name="Maven: com.thoughtworks.paranamer:paranamer:2.8" level="project" />
     <orderEntry type="library" name="Maven: org.apache.avro:avro:1.8.2" level="project" />
@@ -218,8 +220,6 @@
     <orderEntry type="library" name="Maven: junit:junit:4.10" level="project" />
     <orderEntry type="library" name="Maven: org.hamcrest:hamcrest-core:1.1" level="project" />
     <orderEntry type="library" name="Maven: javax.json:javax.json-api:1.1.4" level="project" />
-    <orderEntry type="library" name="Maven: it.unimi.dsi:fastutil:8.2.4" level="project" />
-    <orderEntry type="library" name="it.unimi.dsi.fastutil" level="project" />
-    <orderEntry type="library" name="scala-sdk-2.12.12" level="application" />
+    <orderEntry type="library" name="Maven: it.unimi.dsi:fastutil:8.5.6" level="project" />
   </component>
 </module>
