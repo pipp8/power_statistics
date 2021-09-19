@@ -105,7 +105,7 @@ object LevenshteinEditDistance {
       println("Split failed")
       throw( new Exception("Split Error"))
     }
-    val d = distanceMatrix( params(1), params(3))
+    val d = if (params(1).length > 10000) distanceSparse(params(1), params(3)) else distanceMatrix( params(1), params(3))
     val distance = d.toDouble / (params(1).length + params(3).length)
 
     buf += ((params(0) + params(2), distance))
@@ -121,8 +121,6 @@ object LevenshteinEditDistance {
     var seq1: String = null
     var seq2: String = null
     val outputPath = s"${getFullPath(ds)}${getBaseName(ds)}.csv"
-
-    println(s"*** Slave Started ***")
 
     try {
       val writer = if (local)
@@ -153,7 +151,7 @@ object LevenshteinEditDistance {
         i += 1
 
         var startTime = System.currentTimeMillis()
-        var d = if (seq1.length > 10000) distanceMatrix(seq1, seq2) else distanceSparse(seq1, seq2)
+        var d = distanceMatrix(seq1, seq2)
         var totTime = System.currentTimeMillis() - startTime
         println (s"The edit distance (matrix) between seq1 and seq2 (len=${seq1.length}) is ${d}, delay:${totTime} msec.")
         val distance = s"${(seq1.length+seq2.length)/d.toDouble}\n"
@@ -189,8 +187,7 @@ object LevenshteinEditDistance {
 
   def  distanceSparse (word1: String,word2: String) : Int = {
 
-    // val matrix = Array.ofDim[Int](word1.length + 1, word2.length + 1)
-    val matrix = new SparseMatrix(word1.length * 10)
+     val matrix = new SparseMatrix(word1.length * 10)
 
     for (i <- 0 to word1.length) {
       // matrix(i)(0) = i
@@ -210,7 +207,6 @@ object LevenshteinEditDistance {
 
         c2 = word2.charAt(j - 1)
         if (c1 == c2) {
-          // matrix(i)(j) = matrix(i-1)(j-1)
           matrix.set(i, j, matrix.get(i - 1, j - 1))
         }
         else {
