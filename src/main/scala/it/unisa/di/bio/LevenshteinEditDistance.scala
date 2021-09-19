@@ -106,7 +106,7 @@ object LevenshteinEditDistance {
       throw( new Exception("Split Error"))
     }
     val d = distanceMatrix( params(1), params(3))
-    val distance = (params(1).length + params(3).length) / d.toDouble
+    val distance = d.toDouble / (params(1).length + params(3).length)
 
     buf += ((params(0) + params(2), distance))
 
@@ -116,7 +116,7 @@ object LevenshteinEditDistance {
 
 
 
-  def computeLevenshtainDistance( ds: String, local: Boolean) : Int = {
+  def LevenshtainDistanceSequential( ds: String, local: Boolean) : Int = {
 
     var seq1: String = null
     var seq2: String = null
