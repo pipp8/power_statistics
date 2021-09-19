@@ -153,7 +153,7 @@ object LevenshteinEditDistance {
         i += 1
 
         var startTime = System.currentTimeMillis()
-        var d = distanceMatrix(seq1, seq2)
+        var d = if (seq1.length > 10000) distanceMatrix(seq1, seq2) else distanceSparse(seq1, seq2)
         var totTime = System.currentTimeMillis() - startTime
         println (s"The edit distance (matrix) between seq1 and seq2 (len=${seq1.length}) is ${d}, delay:${totTime} msec.")
         val distance = s"${(seq1.length+seq2.length)/d.toDouble}\n"
