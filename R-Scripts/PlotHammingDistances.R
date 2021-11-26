@@ -93,19 +93,19 @@ if (file.exists(dfFilename)) {
 df$Name = factor(df$Name, levels = c('NM', 'MR.G=0.010','MR.G=0.050','MR.G=0.100', 'PT.G=0.010','PT.G=0.050','PT.G=0.100'))
 
 df$len <- factor(df$len)
-levels(df$len) <- c("n = 1 000", "n = 50 000", "n = 200 000", "n = 10 000 000")
+levels(df$len) <- c("n = 1 000", "n = 10 000", "n = 50 000", "n = 200 000", "n = 10 000 000")
 
-# dff <- filter( df, df$len == 'n = 5 000 000')
+dff <- filter( df, df$len == 'n = 10 000')
 sp <- ggplot( df, aes(x = Name,y = Dist, fill = Name)) + 
    	geom_boxplot( aes(color = Name), outlier.size = 0.3) +
-   	facet_grid(cols = vars( len)) +
+   	facet_grid(rows = vars( len)) +
    	scale_y_continuous(name = "Hamming Distance", limits = c(0, 1)) +
    	theme_bw()+ theme( axis.text.x = element_text(size = 8, angle = 45, hjust =1)) +
    	theme(legend.position = "none") + labs(x ="")
 
 # dev.new(width = 9, height = 6)
-outfname <- "HammingDistances.png"
-ggsave( outfname, device = png(), width = 9, height = 4, dpi = 300)
+outfname <- "HammingDistances.pdf"
+ggsave( outfname, device = pdf(), width = 4, height = 9, dpi = 300)
 # ggsave( outfname, device = png(), dpi = 300)
 #			print( sp2)
 # stop("break")
