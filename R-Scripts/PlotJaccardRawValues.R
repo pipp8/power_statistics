@@ -185,7 +185,7 @@ for( n in lengths) {
     	facet_grid(cols = vars( len), rows = vars( k), scales = "free", labeller = plot_labeller) +
     	# facet_grid_sc(cols = vars( len), rows = vars( k), scales = list( y = scales_y)) +
     	theme_bw() + theme( axis.text.x = element_text(size = 10, angle = 45, hjust = 1)) + # axis.text.y = element_blank()) +
-    	theme(legend.position = "none") + labs(x = "") + labs(y = sprintf("Valore di A/(N-D)"))
+    	theme(legend.position = "none") + labs(x = "") + labs(y = sprintf("Value of A/(N-D)"))
     	# ggtitle(sprintf("Distances for k = %d", kv))
     
     

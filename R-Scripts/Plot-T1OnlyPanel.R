@@ -1,5 +1,6 @@
 library(rjson)
 library(dplyr)
+library(stringr)
 library(RColorBrewer)
 library(ggplot2)
 library(facetscales)
@@ -81,14 +82,16 @@ for( a in c( 0.01, 0.05, 0.10)) {
   levels(dff$measure2) <- measure_names(levels(dff$measure))
   
 	sp <- ggplot( dff, aes(x = measure2, y = T1)) + 
-	 	geom_boxplot( aes(color = k, fill = k), alpha=0.7, outlier.size = 0.25) +
+	  # geom_boxplot( aes(color = k, fill = k), alpha=0.7, outlier.size = 0.25) +
+	 	geom_boxplot( aes(fill = k), alpha=0.7, outlier.size = 0.25) +
 		scale_y_continuous(name = "T1 Value", limits = c(0, MaxT1)) +
-	  	geom_hline(yintercept = a, linetype="dashed", color = "black") +
+	  geom_hline(yintercept = a, linetype="dashed", color = "black") +
 	 	theme_bw() + theme(  axis.text.x = element_text(size = 11, angle = 45, hjust = 1),  # increase al font sizes
 							 axis.text.y = element_text(size = 12),
 							 legend.title = element_text(size = 14),
 							 legend.text = element_text(size = 13)) +
-	 	labs(x = "") # theme(legend.position = "none") 
+	 	labs(x = "") + # theme(legend.position = "none") +
+	  scale_fill_grey(start = 0, end = .9)
 	 	# ggtitle("Pannello risultati T1-Check") 
 	
 	# dev.new(width = 10, height = 5)

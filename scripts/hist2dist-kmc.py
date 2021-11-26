@@ -15,6 +15,7 @@ totalProb = 0.0
 totalLines = 0
 
 sumDict = dict()  # dizionario vuoto
+dist = 'dist' # directory per le distribuzioni
 basename = os.path.splitext(os.path.basename(inputFile))[0]
 
 
@@ -22,10 +23,7 @@ def main():
     global totalCnt, totalSeqCnt, totalKmer, totalProb, totalLines, sumDict, seqDict
 
     m = re.search(r'^(.*)_(.*)-(\d+)\.(\d+)', basename)
-    if (m is None):
-        print basename, " malformed histogram filename"
-        exit()
-    else:
+    if (m is not None):
         model = m.group(2)
         nPairs = int(m.group(3))
         seqLen = int(m.group(4))
@@ -64,7 +62,7 @@ def main():
 
     totalKmer = 0
     totalProb = 0
-    probFile = basename + '.dist'
+    probFile = "%s/%s.dist" % (dist, basename)
     with open(probFile, "w") as outDist :
         kmers = sorted(sumDict.keys())
         # arrLen = [1]
