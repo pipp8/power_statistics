@@ -22,7 +22,7 @@ for f in $files; do
     k=$minK
     while ((k <= maxK)); do
       echo "dataset: $f k = $k"
-      kmc -k$k -m2 -fm -ci0 -cs1000000 -n77 $f tt $temp
+      kmc -b -v -k$k -m2 -fm -ci0 -cs1000000 -n77 $f tt $temp
       base=$(basename $f .fasta)
       outFile=$hist/distk=${k}_${base}.hist
       kmc_dump tt $outFile
