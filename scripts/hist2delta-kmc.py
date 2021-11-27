@@ -72,7 +72,9 @@ def main():
         totalProb = totalProb + prob
         totalKmer = totalKmer + 1
         Hk = Hk + prob * math.log(prob, 2)
+        print( "prob = %f log(prob) = %f" % (prob, math.log(prob, 2)))
 
+    Hk = Hk * -1
     Nmax = len(sumDict.keys())
     if (totalKmer != Nmax):
         print( "errore %d vs %d" % (totalKmer, Nmax))
@@ -88,7 +90,7 @@ def main():
 #    print("total prob-distr.:\t%f" % totalProb)  # totale distribuzione di probabilita'
     # N.B. canonical k-mers ?!?!?!?
     TotalAllowedKmers = 4 ** k   
-    delta = Nmax / (2 * TotalAllowedKmers)
+    delta = float(Nmax) / (2 * TotalAllowedKmers)
     # print("Nmax = %d, 2xN = %d, delta = %.4f, H(%d)=%f, Error=%f" % (Nmax, 2*TotalAllowedKmers, delta, k, Hk, delta/Hk))
 
     header = ['Model', 'G', 'len', 'pairdId', 'k', 'Nmax', '2N', 'delta', 'Hk', 'error']
@@ -104,6 +106,8 @@ def main():
 
     writer.writerow(data)
     f.close()
+    print( data)
+
 
 if __name__ == "__main__":
     main()
