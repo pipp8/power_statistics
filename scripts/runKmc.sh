@@ -9,7 +9,7 @@ temp=tmp
 if [ "$#" -lt 1 ]; then
     files=*.fasta
 else
-    files=$1
+    files=$@
 fi
 
 minK=4
