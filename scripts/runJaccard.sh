@@ -5,12 +5,12 @@ cores=8
 prefix=""
 tmp=/tmp/aa.$$
 path=data/dataset5-1000
+resultsPath='/home/cattaneo/spark/power_statistics/data/results/Jaccard'
 
 
+for len in $(seq 4800000 200000 10000000); do
 
-for len in $(seq 200000 200000 10000000); do
-
-    for prefix in Uniform Uniform-T1 MotifRepl-U PatTransf-U; do
+    for prefix in Uniform Uniform-T1 MotifRepl PatTransf; do
 	    
 	for gamma in 100 050 010; do
 
@@ -20,9 +20,9 @@ for len in $(seq 200000 200000 10000000); do
 		    file=$prefix-1000.$len$postfix
 		    one=1
 		    ;;
-		MotifRepl-U | PatTransf-U)
+		MotifRepl | PatTransf)
 		    postfix=.G=0.$gamma.fasta
-		    file=$prefix-1000.$len$postfix
+		    file=$prefix-U-1000.$len$postfix
 		    one=0
 		    ;;
 		*)
@@ -41,9 +41,12 @@ for len in $(seq 200000 200000 10000000); do
 	    
 	    for k in 4 6 8 10; do
 
-		results="../k=$k/dist-k=${k}_$(basename $file .fasta).csv"
+		results=${resultsPath}"/k=$k/dist-k=${k}_$(basename $file .fasta).csv"
 		echo "SEQ1, SEQ2, jaccard" > $results
+		results2=$(dirname $results)/$(basename $results .csv)-values.csv
+		echo "A, B, C, D, N, N-D-A" > $results2
 		echo "Processing Sequences from $file for k=$k"
+		
 		for i in $(seq 1 $maxSeqNum); do
 		    seqId=$(printf "$prefix-%05d" $i)
 		    if [ "$one" = 1 ]; then
@@ -51,7 +54,7 @@ for len in $(seq 200000 200000 10000000); do
 			seq2=$seqId-B.fasta
 		    else
 			seq1=$seqId.G=$gamma-A.fasta
-			seq2=$seqId-G=$gamma-B.fasta
+			seq2=$seqId.G=$gamma-B.fasta
 		    fi
 
 		    runCafe.sh $seq1 $seq2 $k $results & # run in background
@@ -61,16 +64,6 @@ for len in $(seq 200000 200000 10000000); do
 			wait -n
 			bck=( $(jobs -p) )
 		    done
-		    # cafe -R -K $k -J /usr/local/bin/jellyfish -D jaccard -I $seq1,$seq2 > $tmp
-		    # line=$(tail -n 5 $tmp | head -1)
-		    # f1=$(echo $line | cut -d ' ' -f 1-1)
-		    # d=$(echo $line | cut -d ' ' -f 3-3)
-		    # if [ "$f1.fasta" != "$seq1" ]; then
-		#	echo "cafe failed!!! see file $tmp"
-		#	exit -1
-		#    else
-		#	echo $seq1,$seq2, $d >> $results
-		#    fi
 		
 		done # for each pair
 		echo "k = $k terminated"
@@ -78,7 +71,7 @@ for len in $(seq 200000 200000 10000000); do
 	    done # for each k
 	    # wait for all background processes
 	    bck=( $(jobs -p) )
-	    while (( ${#bck[@]} >= 0 )); do
+	    while (( ${#bck[@]} > 0 )); do
 		wait -n
 		bck=( $(jobs -p) )
 	    done

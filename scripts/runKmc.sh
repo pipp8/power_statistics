@@ -1,6 +1,7 @@
 #! /bin/bash
 
 scDir='/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/scripts'
+scDir='/home/cattaneo/spark/PowerStatistics/scripts'
 
 hist=hist
 temp=tmp
@@ -18,10 +19,9 @@ mkdir $temp
 mkdir $hist
 
 for f in $files; do
-    echo $f
     k=$minK
     while ((k <= maxK)); do
-	echo k = $k
+	echo "dataset: $f k = $k"
 	kmc -k$k -m2 -fm -ci0 -cs1000000 -n77 $f tt $temp
 	base=$(basename $f .fasta)
 	outFile=$hist/distk=${k}_${base}.hist

@@ -23,7 +23,7 @@ outFile = 'PAResults.csv'
 
 def main():
     global totalCnt, totalSeqCnt, totalKmer, totalProb, totalLines, sumDict, seqDict
-
+    k = 1
     m = re.search(r'^.*k=(\d+)_(.*)-(\d+)\.(\d+)(.*)-([AB])', basename)
     if (m is not None):
         k = int(m.group(1))
@@ -86,7 +86,8 @@ def main():
     print("total distinct kmers (Nmax):\t%d" % totalKmer)# Nmax number of distinct kmers with frequency > 0
     print("total kmers counter:\t%d" % totalCnt)  # totale conteggio
 #    print("total prob-distr.:\t%f" % totalProb)  # totale distribuzione di probabilita'
-    TotalAllowedKmers = 4 ** k      # N.B. canonical k-mers ?!?!?!?
+    # N.B. canonical k-mers ?!?!?!?
+    TotalAllowedKmers = 4 ** k   
     delta = Nmax / (2 * TotalAllowedKmers)
     # print("Nmax = %d, 2xN = %d, delta = %.4f, H(%d)=%f, Error=%f" % (Nmax, 2*TotalAllowedKmers, delta, k, Hk, delta/Hk))
 
