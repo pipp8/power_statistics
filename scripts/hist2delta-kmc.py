@@ -23,7 +23,12 @@ outFile = 'PAResults.csv'
 
 def main():
     global totalCnt, totalSeqCnt, totalKmer, totalProb, totalLines, sumDict, seqDict
-    k = 1
+    k = 0
+    model = ''
+    pairId = 1
+    seqLen = 0
+    gamma = 0.0
+    seqId = '-'
     m = re.search(r'^.*k=(\d+)_(.*)-(\d+)\.(\d+)(.*)-([AB])', basename)
     if (m is not None):
         k = int(m.group(1))
@@ -72,7 +77,7 @@ def main():
         totalProb = totalProb + prob
         totalKmer = totalKmer + 1
         Hk = Hk + prob * math.log(prob, 2)
-        # print( "prob = %f log(prob) = %f" % (prob, math.log(prob, 2)))
+        # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
 
     Hk = Hk * -1
     Nmax = len(sumDict.keys())
@@ -88,13 +93,10 @@ def main():
     print("total distinct kmers (Nmax):\t%d" % totalKmer)# Nmax number of distinct kmers with frequency > 0
     print("total kmers counter:\t%d" % totalCnt)  # totale conteggio
 #    print("total prob-distr.:\t%f" % totalProb)  # totale distribuzione di probabilita'
-    # N.B. canonical k-mers ?!?!?!?
-    TotalAllowedKmers = 4 ** k   
-    delta = float(Nmax) / (2 * TotalAllowedKmers)
-    # print("Nmax = %d, 2xN = %d, delta = %.4f, H(%d)=%f, Error=%f" % (Nmax, 2*TotalAllowedKmers, delta, k, Hk, delta/Hk))
-
+    N = totalCnt
+    delta = float(Nmax) / (2 * N)
     header = ['Model', 'G', 'len', 'pairdId', 'k', 'Nmax', '2N', 'delta', 'Hk', 'error']
-    data = [model, gamma, seqLen, pairId, k, Nmax, 2*TotalAllowedKmers, delta, Hk, delta/Hk ]
+    data = [model, gamma, seqLen, pairId, k, Nmax, 2*N, delta, Hk, delta/Hk ]
 
     if (not os.path.exists( outFile)):
         f = open(outFile, 'w')
