@@ -66,13 +66,13 @@ def main():
     #probFile = "%s/%s.dist" % (dist, basename)
     # with open(probFile, "w") as outDist :
     #    kmers = sorted(sumDict.keys())
-    Hk = 0
+    Hk = 0.0
     for key in sumDict.keys():
         prob = sumDict[key] / float(totalCnt)
         totalProb = totalProb + prob
         totalKmer = totalKmer + 1
         Hk = Hk + prob * math.log(prob, 2)
-        print( "prob = %f log(prob) = %f" % (prob, math.log(prob, 2)))
+        # print( "prob = %f log(prob) = %f" % (prob, math.log(prob, 2)))
 
     Hk = Hk * -1
     Nmax = len(sumDict.keys())
