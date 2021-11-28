@@ -190,7 +190,7 @@ object DatasetBuilder {
   def buildSyntenthicDataset( targetLen: Int, nullModelPrefix: String, distribution: Array[Double]) : Unit = {
 
     val st = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now)
-    println(s"${st} *** Building Synthetic Dataset (Null Model + Alternate Model) <- ${nullModelPrefix} for len: ${targetLen} ***")
+    println(s"${st} *** Building Synthetic Dataset (Null Model + Alternate Model) <- ${nullModelPrefix} #pairs: ${numberOfPairs} for len: ${targetLen} ***")
 
     seqLen = targetLen
     // crea il dataset uniform
