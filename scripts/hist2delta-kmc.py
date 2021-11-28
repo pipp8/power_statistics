@@ -37,6 +37,8 @@ def main():
         seqLen = int(m.group(4))
         gamma = float("0."+m.group(5)[3:])
         seqId = m.group(6)
+        print("Processing histogram: %s k=%d, model=%s, pair=%d, len=%d, gamma=%.2f, S=%s" %
+              (basename, k, model, pairId, seqLen, gamma, seqId))
     else:
         print("did not match")
 
@@ -46,13 +48,20 @@ def main():
         totalSeqCnt = 0
         seqNum = 1
         for line in inFile:
-            m = re.search(r'^([A-Z]+)[ \t]+(\d+)', line)
-            if (m is None):
-                print line, " malformed histogram file"
+            # m = re.search(r'^([A-Z]+)[ \t]+(\d+)', line)
+            # if (m is None):
+            #    print line, " malformed histogram file"
+            #    exit()
+            # else:
+            #    kmer = m.group(1)
+            #    count = int(m.group(2))
+            s = line.split()   # molto piu' veloce della re
+            if (len(s) != 2):
+                print( "%sMalformed histogram file (%d token)" % (line, len(s)))
                 exit()
             else:
-                kmer = m.group(1)
-                count = int(m.group(2))
+                kmer = s[0]
+                count = int(s[1])
 
             # totale generale per il calcolo della probabilita' empirica
             totalCnt = totalCnt + count
@@ -64,7 +73,6 @@ def main():
             else:
                 sumDict[kmer] = int(count)
 
-    print('')
 
     totalKmer = 0
     totalProb = 0
@@ -85,14 +93,14 @@ def main():
         print( "errore %d vs %d" % (totalKmer, Nmax))
         exit(-1)
 
-    # if (totalProb != 1.):
-    #    print( "errore Somma(p) = %f" % (totalProb))
-    #    exit(-1)
+    if (round(totalProb,0) != 1.0):
+        print( "errore Somma(p) = %f" % (totalProb))
+        exit(-1)
 
-#    print("total kmer values:\t%d" % totalLines)  # numero dei conteggi
+    # print("total kmer values:\t%d" % totalLines)  # numero dei conteggi
     print("total distinct kmers (Nmax):\t%d" % totalKmer)# Nmax number of distinct kmers with frequency > 0
     print("total kmers counter:\t%d" % totalCnt)  # totale conteggio
-#    print("total prob-distr.:\t%f" % totalProb)  # totale distribuzione di probabilita'
+    # print("total prob-distr.:\t%f" % totalProb)  # totale distribuzione di probabilita'
     N = totalCnt
     delta = float(Nmax) / (2 * N)
     header = ['Model', 'G', 'len', 'pairdId', 'k', 'Nmax', '2N', 'delta', 'Hk', 'error']
