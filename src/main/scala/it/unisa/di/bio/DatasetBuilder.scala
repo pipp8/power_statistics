@@ -53,7 +53,7 @@ object DatasetBuilder {
 
     if (args.length < 2) {
       System.err.println("Errore nei parametri sulla command line")
-      System.err.println("Usage:\nit.unisa.di.bio.DatasetBuilder outputDir detailed|synthetic|mitocondri|shigella [[local|yarn] len1 len2 ...]")
+      System.err.println("Usage:\nit.unisa.di.bio.DatasetBuilder outputDir detailed|synthetic|mitocondri|shigella [local|yarn [start [end [step [#pairs]]]]]]")
       throw new IllegalArgumentException(s"illegal number of argouments. ${args.length} should be at least 2")
       return
     }
@@ -141,15 +141,14 @@ object DatasetBuilder {
 
   def datasetDetailed( nullModelPrefix: String, distribution: Array[Double], lengths: Array[String]) : Unit = {
 
-    var fromLen = 100000
-    var maxSeqLen = appProperties.getProperty("powerstatistics.datasetBuilder.maxSequenceLength").toInt
-    var step = appProperties.getProperty("powerstatistics.datasetBuilder.lengthStep").toInt
+    val fromLen =   if (lengths.length > 3)   lengths(3).toInt else 100000
+    val maxSeqLen = if (lengths.length > 4)   lengths(4).toInt else
+                            appProperties.getProperty("powerstatistics.datasetBuilder.maxSequenceLength").toInt
+    val step =      if (lengths.length > 5)   lengths(5).toInt else
+                            appProperties.getProperty("powerstatistics.datasetBuilder.lengthStep").toInt
 
-    if (lengths.length > 3) {
-      fromLen = lengths(3).toInt
-      maxSeqLen = lengths(4).toInt
-      step = lengths(5).toInt
-    }
+    numberOfPairs = if (lengths.length > 6)   lengths(6).toInt else
+                            appProperties.getProperty("powerstatistics.datasetBuilder.numberOfPairs").toInt
 
     seqLen = fromLen
     while (seqLen <= maxSeqLen ) {
