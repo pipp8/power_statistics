@@ -502,8 +502,9 @@ object DatasetBuilder {
     // Randomly selects a motif from a set of motifs to keep the number of motif replacements
     // equal to the P(gamma) * 25.000 / 5 (Reinert's dataset has MotifLength= 5 e SeqLength= 25.000)
     // val maxNumberOfMotifs : Int =  max( 1, (inputSeq1.length / (5000 * motifLen)).toInt)  // SeqLen 10.000.000 => circa 200
-    val maxNumberOfMotifs : Int =  max( 1, (inputSeq1.length / 25000 ).toInt)  // SeqLen 10.000.000 => circa 200
-    val motifCnt = Array.fill[Int](maxNumberOfMotifs)(0)
+    var maxNumberOfMotifs : Int =  max( 1, (inputSeq1.length / 25000 ).toInt)  // SeqLen 10.000.000 => circa 200
+    maxNumberOfMotifs = min( maxNumberOfMotifs, motif.length/motifLen) // to avoid arrayOutOfBoundError on motif source string
+    val motifCnt = Array.fill[Int](maxNumberOfMotifs)(0)        // to count effective use of each motif
     var motifIndex : Int = 0
 
     while( c < inputSeq1.length - motifLen) {
