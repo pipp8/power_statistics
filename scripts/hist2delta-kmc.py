@@ -6,23 +6,22 @@ import sys
 import math
 import csv
 from array import array
+from filelock import Timeout, FileLock
 
-
-inputFile = sys.argv[1]
-
-totalCnt = 0
-totalSeqCnt = 0
-totalKmer = 0
-totalProb = 0.0
-totalLines = 0
 
 sumDict = dict()  # dizionario vuoto
 dist = 'dist' # directory per le distribuzioni
+
+inputFile = sys.argv[1]
 basename = os.path.splitext(os.path.basename(inputFile))[0]
 outFile = 'PAResults.csv'
 
 def main():
-    global totalCnt, totalSeqCnt, totalKmer, totalProb, totalLines, sumDict, seqDict
+    totalCnt = 0
+    totalSeqCnt = 0
+    totalKmer = 0
+    totalProb = 0.0
+    totalLines = 0
     k = 0
     model = ''
     pairId = 1
@@ -98,25 +97,34 @@ def main():
         exit(-1)
 
     # print("total kmer values:\t%d" % totalLines)  # numero dei conteggi
-    print("total distinct kmers (Nmax):\t%d" % totalKmer)# Nmax number of distinct kmers with frequency > 0
-    print("total kmers counter:\t%d" % totalCnt)  # totale conteggio
+    print("total distinct kmers (Nmax):\t%d" % totalKmer) # Nmax number of distinct kmers with frequency > 0
+    print("total kmers counter (N):\t%d" % totalCnt)  # totale conteggio
     # print("total prob-distr.:\t%f" % totalProb)  # totale distribuzione di probabilita'
     N = totalCnt
     delta = float(Nmax) / (2 * N)
     header = ['Model', 'G', 'len', 'pairdId', 'k', 'Nmax', '2N', 'delta', 'Hk', 'error']
     data = [model, gamma, seqLen, pairId, k, Nmax, 2*N, delta, Hk, delta/Hk ]
 
-    if (not os.path.exists( outFile)):
-        f = open(outFile, 'w')
-        writer = csv.writer(f)
-        writer.writerow(header)
-    else:
-        f = open(outFile, 'a')
-        writer = csv.writer(f)
+    lock = FileLock(outFile + '.lck')
+    try:
+        lock.acquire(5)
+        print("Lock acquired.")
+        print( data)
+        if (not os.path.exists( outFile)):
+            with open(outFile, 'w') as f:
+                writer = csv.writer(f)
+                writer.writerow(header)
+                writer.writerow(data)
+        else:
+            with open(outFile, 'a') as f:
+                writer = csv.writer(f)
+                writer.writerow(data)
+            
+        lock.release()
+        
+    except Timeout:
+        print("Another instance of this application currently holds the lock.")
 
-    writer.writerow(data)
-    f.close()
-    print( data)
 
 
 if __name__ == "__main__":
