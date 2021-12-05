@@ -67,7 +67,7 @@ maxK = 62
 
 def main():
     l = len(sys.argv)
-    if (l <= 1 || l >= 3):
+    if (l <= 1 or l >= 3):
         print("Errore nei parametri:")
         print("Usage: %s model [k]" % sys.argv[0])
         exit(-1)
