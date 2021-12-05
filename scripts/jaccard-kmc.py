@@ -60,13 +60,49 @@ def extractKmers( dataset, k, seq):
 
     return vect
 
-
+gVals = [ 10, 50, 100]
+lengths = [2000, 20000, 200000, 2000000, 20000000]
+minK = 4
+maxK = 62
 
 def main():
-    outFile = 'JaccardData.csv'
-    k = int(sys.argv[1])
-    ds = sys.argv[2]
+    l = len(sys.argv)
+    if (l <= 1 || l >= 3):
+        print("Errore nei parametri:")
+        print("Usage: %s model [k]" % sys.argv[0])
+        exit(-1)
 
+    if (l > 1):
+        model = sys.argv[1]
+
+    if (l > 2):
+        minK = int(sys.argv[2])
+        maxK = minK
+
+    gammas =  ['none'] if model.startswith('Uniform') else gVals
+    for seqLen in lengths:
+        for seqId in range(1, 21):
+            if (not gammas):
+                for g in gammas:
+                    gamma = '' if g == 'none' else '.G=%03d' % g
+                    k = minK
+                    while (k <= maxK):
+                        dataset = '%s-%04d.%d%s' % (model, seqId, seqLen, gamma)
+                        runJaccard( dataset, k)
+
+                        if (k < 20):
+                            k += 2
+                        elif (k < 30):
+                            k += 3
+                        else:
+                            k += 10
+
+
+
+# run jaccard on sequence pair ds with kmer of length = k
+def runJaccard( ds, k):
+
+    outFile = 'JaccardData.csv'
     m = re.search(r'^(.*)-(\d+)\.(\d+)(.*)-', ds)
     if (m is not None):
         model = m.group(1)

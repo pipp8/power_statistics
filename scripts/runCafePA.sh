@@ -24,59 +24,58 @@ maxK=62
 
 
 for m in $models; do
-    case $m in
-	"Uniform*")
+  case $m in
+	  "Uniform*")
 	    gammas=''
 	    ;;
-	"MotifRepl" | "PatTransf")
+	  "MotifRepl" | "PatTransf")
 	    gammas=$gVals
 	    ;;
-    esac
+  esac
 	    
-    for len in $lens; do
-	for seqId in $(seq 1 20); do
-	    for g in $gammas; do
-		if [ -z "$g" ]; then
-		    gamma=''
-		else
-		    gamma=$(printf ".G=%03d" $g)
-		fi
-		k=$minK
-		while ((k <= maxK)); do
-		    dataset=$(printf %s-%04d.%d%s $m $seqId $len $gamma)
-		    seq1=$dataset-A.fasta
-		    seq2=$dataset-B.fasta
-		    
-		    cmd="cafe-mod -R -K $k -J /usr/local/bin/jellyfish -D jaccard -I $seq1,$seq2"
-		    echo "Processing $cmd"
+  for len in $lens; do
+    for seqId in $(seq 1 20); do
+      for g in $gammas; do
+        if [ -z "$g" ]; then
+            gamma=''
+        else
+            gamma=$(printf ".G=%03d" $g)
+        fi
+        k=$minK
+        while ((k <= maxK)); do
+            dataset=$(printf %s-%04d.%d%s $m $seqId $len $gamma)
+            seq1=$dataset-A.fasta
+            seq2=$dataset-B.fasta
 
-		    $cmd > $jfOutput
+            cmd="cafe-mod -R -K $k -J /usr/local/bin/jellyfish -D jaccard -I $seq1,$seq2"
+            echo "Processing $cmd"
 
-		    echo "Command finished"
-		    rm hash_${dataset}*
-		    line=$(tail -n 5 $jfOutput| head -1)
-		    f1=$(echo $line | cut -d ' ' -f 1-1)
-		    d=$(echo $line | cut -d ' ' -f 3-3)
-		    if [ "$f1.fasta" != $(basename "$seq1") ]; then
-			echo "cafe failed!!! see file $jfOutput"
-			exit -1
-		    else
-			echo $seq1,$seq2, $d >> $res1
-			line2=$(tail -n 9 $jfOutput | head -1)
-			echo $line2 >> $res2
-		    fi
-		    
-		    
-		    if (( k < 20)); then
-			((k+=2))
-		    elif (( k < 30)); then
-			((k+=3))
-		    else
-			((k+=10))
-		    fi
-		done
-	    done
-	done
+            $cmd > $jfOutput
+
+            echo "Command finished"
+            rm hash_${dataset}*
+            line=$(tail -n 5 $jfOutput| head -1)
+            f1=$(echo $line | cut -d ' ' -f 1-1)
+            d=$(echo $line | cut -d ' ' -f 3-3)
+            if [ "$f1.fasta" != $(basename "$seq1") ]; then
+              echo "cafe failed!!! see file $jfOutput"
+              exit -1
+                else
+              echo $seq1,$seq2, $d >> $res1
+              line2=$(tail -n 9 $jfOutput | head -1)
+              echo $line2 >> $res2
+            fi
+
+            if (( k < 20)); then
+              ((k+=2))
+            elif (( k < 30)); then
+              ((k+=3))
+            else
+              ((k+=10))
+            fi
+        done
+      done
     done
+  done
 done
 

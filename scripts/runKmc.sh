@@ -32,11 +32,11 @@ for f in $files; do
       rm $outFile
       
       if (( k < 20)); then
-	  ((k+=2))
+    	  ((k+=2))
       elif (( k < 30)); then
-	  ((k+=3))
+	      ((k+=3))
       else
-	  ((k+=10))
+	      ((k+=10))
       fi
     done
 done
