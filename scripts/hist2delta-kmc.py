@@ -5,7 +5,6 @@ import os
 import sys
 import math
 import csv
-from array import array
 
 
 inputFile = sys.argv[1]
