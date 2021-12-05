@@ -91,18 +91,23 @@ def runJaccard( ds, k):
 
     intersection = np.intersect1d( leftKmers, rightKmers)
     bothCnt = intersection.size
+    A = bothCnt
     leftCnt = leftKmers.size - bothCnt
+    B = leftCnt
     rightCnt = rightKmers.size - bothCnt
-
+    C = rightCnt
+    
     NMax = pow(4, k)
     M01M10 = leftCnt + rightCnt
     M01M10M11 = bothCnt + M01M10
-    absentCnt = NMax - M01M10M11
+    absentCnt = NMax - (A + B + C) # M01M10M11
+    D = absentCnt
     # (M10 + M01) / (M11 + M10 + M01)
-    jaccardDistance = M01M10 / float(M01M10M11)
+    # jaccardDistance = M01M10 / float(M01M10M11)
+    jaccardIndex = 1 - min( 1.0, A / float(NMax - D))
     
-    header = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'Distance', 'Both', 'leftOnly', 'rightOnly', 'absent', 'Nmax']
-    data = [model, gamma, seqLen, pairId, k, jaccardDistance, bothCnt, leftCnt, rightCnt, absentCnt, NMax]
+    header = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'JaccardIndex', 'A', 'B', 'C', 'D', 'Nmax']
+    data = [model, gamma, seqLen, pairId, k, jaccardIndex, bothCnt, leftCnt, rightCnt, absentCnt, NMax]
 
     lock = FileLock(outFile + '.lck')
     try:
