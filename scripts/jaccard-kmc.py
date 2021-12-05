@@ -9,9 +9,16 @@ import csv
 from filelock import Timeout, FileLock
 import numpy as np
 
-# private temporary directory
+
+# process private temporary directory
 tempDir = "tmp.%d" % os.getpid()
-os.mkdir(tempDir)
+
+gVals = [10, 50, 100]
+lengths = [2000, 20000, 200000, 2000000, 20000000]
+minK = 4
+maxK = 62
+model = 'Uniform'
+
 
 
 def loadKmerList( file):
@@ -60,42 +67,6 @@ def extractKmers( dataset, k, seq):
 
     return vect
 
-gVals = [ 10, 50, 100]
-lengths = [2000, 20000, 200000, 2000000, 20000000]
-minK = 4
-maxK = 62
-
-def main():
-    l = len(sys.argv)
-    if (l <= 1 or l >= 3):
-        print("Errore nei parametri:")
-        print("Usage: %s model [k]" % sys.argv[0])
-        exit(-1)
-
-    if (l > 1):
-        model = sys.argv[1]
-
-    if (l > 2):
-        minK = int(sys.argv[2])
-        maxK = minK
-
-    gammas =  ['none'] if model.startswith('Uniform') else gVals
-    for seqLen in lengths:
-        for seqId in range(1, 21):
-            if (not gammas):
-                for g in gammas:
-                    gamma = '' if g == 'none' else '.G=%03d' % g
-                    k = minK
-                    while (k <= maxK):
-                        dataset = '%s-%04d.%d%s' % (model, seqId, seqLen, gamma)
-                        runJaccard( dataset, k)
-
-                        if (k < 20):
-                            k += 2
-                        elif (k < 30):
-                            k += 3
-                        else:
-                            k += 10
 
 
 
@@ -103,7 +74,7 @@ def main():
 def runJaccard( ds, k):
 
     outFile = 'JaccardData.csv'
-    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*)-', ds)
+    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*)', ds)
     if (m is not None):
         model = m.group(1)
         pairId = int(m.group(2))
@@ -124,10 +95,14 @@ def runJaccard( ds, k):
     rightCnt = rightKmers.size - bothCnt
 
     NMax = pow(4, k)
-    absentCnt = NMax - (bothCnt + leftCnt + rightCnt)
-
-    header = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'Both', 'leftOnly', 'rightOnly', 'absent', 'Nmax']
-    data = [model, gamma, seqLen, pairId, k, bothCnt, leftCnt, rightCnt, absentCnt, NMax]
+    M01M10 = leftCnt + rightCnt
+    M01M10M11 = bothCnt + M01M10
+    absentCnt = NMax - M01M10M11
+    # (M10 + M01) / (M11 + M10 + M01)
+    jaccardDistance = M01M10 / float(M01M10M11)
+    
+    header = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'Distance', 'Both', 'leftOnly', 'rightOnly', 'absent', 'Nmax']
+    data = [model, gamma, seqLen, pairId, k, jaccardDistance, bothCnt, leftCnt, rightCnt, absentCnt, NMax]
 
     lock = FileLock(outFile + '.lck')
     try:
@@ -149,10 +124,52 @@ def runJaccard( ds, k):
     except Timeout:
         print("Another instance of this application currently holds the lock.")
 
+
+
+
+def main():
+    global minK, maxK
+    
+    l = len(sys.argv)
+    if (l < 2 or l > 3):
+        print("Errore nei parametri:")
+        print("Usage: %s model [k]" % (sys.argv[0], l))
+        exit(-1)
+
+    if (l > 1):
+        model = sys.argv[1]
+
+    if (l > 2):
+        minK = int(sys.argv[2])
+        maxK = minK
+
+    # private temporary directory
+    tempDir = "tmp.%d" % os.getpid()
+    os.mkdir(tempDir)
+    
+    gammas =  ['none'] if model.startswith('Uniform') else gVals
+    for seqLen in lengths:
+        for seqId in range(1, 21):
+            for g in gammas:
+                gamma = '' if g == 'none' else '.G=%03d' % g
+                k = minK
+                while (k <= maxK):
+                    dataset = '%s-%04d.%d%s' % (model, seqId, seqLen, gamma)
+                    print("dataset: %s" % dataset)
+                    runJaccard( dataset, k)
+                    
+                    if (k < 20):
+                        k += 2
+                    elif (k < 30):
+                        k += 3
+                    else:
+                        k += 10
     # cleanup
     os.rmdir(tempDir)
 
 
+
+        
 
 if __name__ == "__main__":
     main()
