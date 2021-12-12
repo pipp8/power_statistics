@@ -9,7 +9,7 @@ library(stringr)
 setwd("~/Universita/Progetti/BioInformatica/Present-Absent")
 
 # Defines the name of the file containing a copy of the dataframe created by this script
-csvFilename <- "PAResults-it.csv"
+csvFilename <- "DatiErrorRate-us.csv"
 
 df <- read.csv( file = csvFilename)
 
@@ -42,7 +42,7 @@ sp <- ggplot( df, aes(x = len, y = error, fill = k)) + geom_boxplot() +
   # scale_y_continuous(sec.axis = sec_axis(~ . * 10))
   facet_grid(rows = vars( G)) +
   theme( axis.text.x = element_text(size = 10, angle = 45, hjust = 1)) + # axis.text.y = element_blank()) +
-  labs(x = "Sequence length (MotifReplace)") + labs(y = "delta/Hk")
+  labs(x = "Sequence length (MotifReplace)", y = "delta/Hk")
 # ggtitle(sprintf("Distances for k = %d", kv))
 
 
