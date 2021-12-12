@@ -104,10 +104,10 @@ def runJaccard( ds, k):
     D = absentCnt
     # (M10 + M01) / (M11 + M10 + M01)
     # jaccardDistance = M01M10 / float(M01M10M11)
-    jaccardIndex = 1 - min( 1.0, A / float(NMax - D))
+    jaccardDistance = 1 - min( 1.0, A / float(NMax - D))
     
-    header = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'JaccardIndex', 'A', 'B', 'C', 'D', 'Nmax']
-    data = [model, gamma, seqLen, pairId, k, jaccardIndex, bothCnt, leftCnt, rightCnt, absentCnt, NMax]
+    header = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'Jaccard Distance', 'A', 'B', 'C', 'D', 'Nmax']
+    data = [model, gamma, seqLen, pairId, k, jaccardDistance, bothCnt, leftCnt, rightCnt, absentCnt, NMax]
 
     lock = FileLock(outFile + '.lck')
     try:
@@ -138,7 +138,7 @@ def main():
     l = len(sys.argv)
     if (l < 2 or l > 3):
         print("Errore nei parametri:")
-        print("Usage: %s model [k]" % (sys.argv[0], l))
+        print("Usage: %s model [k]" % (sys.argv[0]))
         exit(-1)
 
     if (l > 1):

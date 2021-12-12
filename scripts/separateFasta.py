@@ -62,8 +62,8 @@ def main():
 
                 out.write( nl) # \n are in the original strings
 
-                sys.stdout.write('.')
-                sys.stdout.flush()
+                # sys.stdout.write('.')
+                # sys.stdout.flush()
 
     out.close()
     print('terminated, %d / %d bases substituted' % (cnt, totCnt))
