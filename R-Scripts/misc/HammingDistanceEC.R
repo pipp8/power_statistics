@@ -3,8 +3,8 @@ library(ggplot2)
 library(dplyr)
 
 
-# setwd("/home/cattaneo/results/Escherichiacoli")
-setwd('/Users/pipp8/Universita/Progetti/BioInformatica/Present-Absent/Src')
+setwd("/home/cattaneo/results/Escherichiacoli")
+# setwd('/Users/pipp8/Universita/Progetti/BioInformatica/Present-Absent/Src')
 
 dfFilename = "HammingDistanceEC-All.df"
 
@@ -16,7 +16,7 @@ if (file.exists(dfFilename)) {
 	df <- readRDS(file = dfFilename)
 } else {
 
-	df <- data.frame( Name = character(), Gamma = double(), Dist = double(), P = double, len = numeric(), stringsAsFactors=FALSE)
+	df <- data.frame( Name = character(), Gamma = double(), Dist = double(), len = numeric(), stringsAsFactors=FALSE)
 
 	model = 'EscherichiaColi'
 
@@ -47,7 +47,7 @@ if (file.exists(dfFilename)) {
 		}
 		close(con1)
 		close(con2)
-		df[nrow(df) + 1,] <- list( model, g, d[1]/totLen, d[2], totLen)
+		df[nrow(df) + 1,] <- list( model, g, d[1]/totLen, totLen)
 		cat( sprintf("%s. G=%f d = %d. done.\n", model, g, d))
 	}
 	saveRDS( df, file = dfFilename)
