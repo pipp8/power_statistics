@@ -27,6 +27,8 @@ if (file.exists(dfFilename)) {
 		con2 = file(f2, "r")
     d <- 0
     totLen <- 0
+
+    cat( sprintf("Starting for gamma = %.3f\n", g))
 		while( TRUE) {
 
 			s1Name = readLines(con1, n = 1)
@@ -34,10 +36,10 @@ if (file.exists(dfFilename)) {
 			s2Name = readLines(con2, n = 1)
 			s2 = readLines(con2, n = 1)
 
-			if (length(s1Name) == 0 || length(s2Name) == 0) {
+			if (length(s1Name) == 0 | length(s2Name) == 0) {
 			  break
 			}
-			if (startsWith(s1, ">") || startsWith(s2, ">")) {
+			if (startsWith(s1, ">") | startsWith(s2, ">")) {
 			  stop("Malformed input file")
 			}
 			
