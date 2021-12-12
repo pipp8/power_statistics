@@ -6,7 +6,7 @@ library(dplyr)
 setwd("/home/cattaneo/results/Escherichiacoli")
 # setwd('/Users/pipp8/Universita/Progetti/BioInformatica/Present-Absent/Src')
 
-dfFilename = "HammingDistanceEC-All.df"
+dfFilename = "HammingDistanceEC.df"
 
 gammas <- c(0.005, 0.010, 0.050, 0.100, 0.200, 0.300, 0.500)
 
@@ -36,8 +36,9 @@ if (file.exists(dfFilename)) {
 			s2Name = readLines(con2, n = 1)
 			s2 = readLines(con2, n = 1)
 
-			if (length(s1Name) == 0 | length(s2Name) == 0) {
-			  break
+			if (length(s1Name) == 0 | length(s2Name) == 0 | 
+			    length(s1) == 0 | length(s2) == 0) {
+			    break
 			}
 			if (startsWith(s1, ">") | startsWith(s2, ">")) {
 			  stop("Malformed input file")
