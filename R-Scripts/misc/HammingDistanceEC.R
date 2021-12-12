@@ -3,8 +3,8 @@ library(ggplot2)
 library(dplyr)
 
 
-setwd("/home/cattaneo/results/Escherichiacoli")
-# setwd('/Users/pipp8/Universita/Progetti/BioInformatica/Present-Absent/Src')
+# setwd("/home/cattaneo/results/Escherichiacoli")
+setwd('/Users/pipp8/Universita/Progetti/BioInformatica/Present-Absent/Src')
 
 dfFilename = "HammingDistanceEC.df"
 
@@ -25,7 +25,7 @@ if (file.exists(dfFilename)) {
 	  con1 = file(f1, "r")
 	  f2 <- sprintf("%s-G=%.3f.fasta", model, g)
 		con2 = file(f2, "r")
-    d <- 0
+    distance <- 0
     totLen <- 0
 
     cat( sprintf("Starting for gamma = %.3f\n", g))
@@ -45,72 +45,30 @@ if (file.exists(dfFilename)) {
 			}
 			
 			# compute hamming distance
-			d <- d + StrDist(s1, s2, method = 'hamming')
+			d <- StrDist(s1, s2, method = 'hamming')
+			distance <- distance + d[1]
 			totLen <- totLen + length(s1)
 		}
 		close(con1)
 		close(con2)
-		df[nrow(df) + 1,] <- list( model, g, d[1]/totLen, totLen)
+		df[nrow(df) + 1,] <- list( model, g, distance/totLen, totLen)
 		cat( sprintf("%s. G=%f d = %d. done.\n", model, g, d))
 	}
 	saveRDS( df, file = dfFilename)
 }
 
-stop()
 
-df$Name = factor(df$Name, levels = c('NM', 'MR.G=0.010','MR.G=0.050','MR.G=0.100', 'PT.G=0.010','PT.G=0.050','PT.G=0.100'))
+df$Gamma = as.factor(df$Gamma)
 
-
-HammingPower <- data.frame( Name = character(), len = numeric(), Power = double(), alpha = double(), threshold = double(), stringsAsFactors=FALSE)
-
-aValues <- c( 0.01, 0.05, 0.10)
-
-for( len in lenghts)	{
-	df2 <- filter(df, df$Name == 'NM' & df$len == len)
-	NM <- df2[order(df2$Dist),2]
-	
-	threshold <- NM[length(NM) * aValues[1]]
-	threshold <- c(threshold, NM[length(NM) * aValues[2]])
-	threshold <- c(threshold, NM[length(NM) * aValues[3]])
-
-	for(i in 1:3) {
-		for( model in c('MR', 'PT')) {
-			for( g in c(0.01, 0.05, 0.10)) {
-				k1 <- sprintf("%s.G=%.3f", model, g)
-			
-				AM <- filter(df, df$Name == k1 & df$len == len)[,2]
-				pwr <- 0
-				for(dist in AM) {
-					if (dist <= threshold[i])
-						pwr <- pwr + 1
-				}
-				HammingPower[nrow( HammingPower) + 1,] <- list( k1, len, pwr / length(AM), aValues[i], threshold[i])
-			}
-		}
-	}
-}
-
-HammingPower$Name <- factor(HammingPower$Name)
-HammingPower$len <- factor(HammingPower$len)
-levels(HammingPower$len) <- c('n = 200 000', 'n = 5 000 000')
-	
-sp <- ggplot( HammingPower, aes(x = Name, y = Power)) +
-# sp <- ggplot( HammingPower, aes(x = Name, y = Power, fill = Name)) + 
- 	# geom_boxplot( aes(color = Name), outlier.size = 0.3) +
- 	geom_point( aes(color = Name), shape = 15, size = 4) +
- 	facet_grid(cols = vars( len)) +
- 	scale_y_continuous(name = "HD Power Statistics", limits = c(0, 1)) +
- 	theme_bw() + theme( axis.text.x = element_text(size = 10, angle = 45, hjust =1)) +
- 	theme(legend.position = "none") + labs(x = "")
- 	# ggtitle("Power Statistics for Hamming Distance") + labs(y = "Power")
+sp <- ggplot( dfNM, aes(x = Gamma, y = Dist)) +
+  geom_line() +
+  geom_point(aes(shape = 2, size = 3)) +
+  labs(y = "Hamming Distance")
 
 
-# dev.new(width = 6, height = 9)
-outfname <- sprintf( "HammingPowerStatistics.png",  tools::file_path_sans_ext(dfFilename))
-ggsave( outfname, device = png(), width = 9, height = 4, dpi = 300)
-# ggsave( outfname, device = png(), dpi = 300)
-print( sp)
+# dev.new(width = 6, height = 6)
+outfname <- sprintf("JaccardEscherichiacoli-AllK.pdf")
+ggsave( outfname, device = pdf(), width = 6, height = 6, dpi = 300)
+# print(sp)
+# dev.off() #only 129kb in size
 
-# stop("break")
-# readline(prompt="Press [enter] to continue")
-#			dev.off() #only 129kb in size
