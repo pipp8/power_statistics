@@ -3,8 +3,8 @@ library(ggplot2)
 library(dplyr)
 
 
-# setwd("/home/cattaneo/results/Escherichiacoli")
-setwd('/Users/pipp8/Universita/Progetti/BioInformatica/Present-Absent/Src')
+setwd("/home/cattaneo/results/Escherichiacoli")
+# setwd('/Users/pipp8/Universita/Progetti/BioInformatica/Present-Absent/Src')
 
 dfFilename = "HammingDistanceEC.df"
 
@@ -36,8 +36,8 @@ if (file.exists(dfFilename)) {
 			s2Name = readLines(con2, n = 1)
 			s2 = readLines(con2, n = 1)
 
-			if (length(s1Name) == 0 | length(s2Name) == 0 | 
-			    length(s1) == 0 | length(s2) == 0) {
+			if (nchar(s1Name) == 0 | nchar(s2Name) == 0 | 
+			    nchar(s1) == 0 | nchar(s2) == 0) {
 			    break
 			}
 			if (startsWith(s1, ">") | startsWith(s2, ">")) {
@@ -47,7 +47,8 @@ if (file.exists(dfFilename)) {
 			# compute hamming distance
 			d <- StrDist(s1, s2, method = 'hamming')
 			distance <- distance + d[1]
-			totLen <- totLen + length(s1)
+			cat(sprintf("d = %f, len = %d\n", d[1], nchar(s1)))
+			totLen <- totLen + nchar(s1)
 		}
 		close(con1)
 		close(con2)
