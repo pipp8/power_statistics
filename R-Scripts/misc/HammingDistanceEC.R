@@ -47,7 +47,6 @@ if (file.exists(dfFilename)) {
 			# compute hamming distance
 			d <- StrDist(s1, s2, method = 'hamming')
 			distance <- distance + d[1]
-			cat(sprintf("d = %f, len = %d\n", d[1], nchar(s1)))
 			totLen <- totLen + nchar(s1)
 		}
 		close(con1)
