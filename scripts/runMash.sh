@@ -2,28 +2,37 @@
 
 tmp=tmp.$$
 path=~/results/Escherichiacoli
+cd $path
 
-gammas='000 005 010 050 100 200 300 500'
-kMin=10
-kMax=32
+gammas='000 005 010 050 100 200 300 400 500'
+sketches='1000 10000 100000'
+kMin=4
+kMax=33
 model='EscherichiaColi'
 
-results=$model.csv
+results=$model-Mash.csv
+
+declare -a mValues
 
 k=$kMin
-while ((k < kMax)); do
-    echo "Sketch for k = $k"
-    mash sketch -k $k ${model}.fasta
 
-    for g in $gammas; do
-	echo "Distances for gamma = $g"
-	mash sketch -k $k ${model}-G=0.$g.fasta
-	mash dist ${model}.fasta.msh ${model}-G\=0.$g.fasta.msh > $tmp
-	distance=$(cat $tmp | cut -f 3-3)
-	echo "$model, 0.$g, $k, $distance" >> $results
-
-    done # for each gamma
-    ((k += 2))
-done # for each k
-
+for sketchSize in $sketches; do
+    while ((k < kMax)); do
+	echo "$(date) Sketch for k = $k size = $sketchSize"
+	mash sketch -s $sketchSize -k $k ${model}.fasta
+	
+	for g in $gammas; do
+	    echo "Distances for gamma = $g"
+	    mash sketch -s $sketchSize -k $k ${model}-G=0.$g.fasta
+	    mash dist ${model}.fasta.msh ${model}-G\=0.$g.fasta.msh > $tmp
+	    mValues=($(cat $tmp | cut -f 3-5))
+	    distance=${mValues[0]}
+	    pvalue=${mValues[1]}
+	    A=${mValues[2]}
+	    echo "$model, 0.$g, $k, $sketchSize, $distance, $pvalue, $A" >> $results
+	    
+	done # for each gamma
+	((k += 2))
+    done # for each k
+done # for each sketch
 rm $tmp
