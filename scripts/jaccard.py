@@ -18,6 +18,7 @@ minK = 4
 maxK = 62
 model = 'Uniform'
 
+outFile = ''
 
 
 def loadKmerList( file):
@@ -79,8 +80,7 @@ def extractKmers( dataset, k, remove = True):
 
 # run jaccard on sequence pair ds with kmer of length = k
 def runJaccard( ds1, ds2, k):
-
-    outFile = 'JaccardDistances.csv'
+    global outFile
 
     leftKmers = extractKmers(ds1, k, False)
     rightKmers = extractKmers(ds2, k, False)
@@ -101,11 +101,12 @@ def runJaccard( ds1, ds2, k):
     absentCnt = NMax - (A + B + C) # M01M10M11
     D = absentCnt
     # (M10 + M01) / (M11 + M10 + M01)
-    # jaccardDistance = M01M10 / float(M01M10M11)
-    jaccardDistance = 1 - min( 1.0, A / float(NMax - D))
+    # jaccardIndex = M01M10 / float(M01M10M11)
+    jaccardIndex = A / float(NMax - D)
+    jaccardDistance = 1 - jaccardIndex
     
-    header = ['model', 'gamma', 'k', 'JaccardDistance', 'A', 'B', 'C', 'D', 'Nmax']
-    data = [model, gamma, k, jaccardDistance, bothCnt, leftCnt, rightCnt, absentCnt, NMax]
+    header = ['model', 'gamma', 'k', 'Jaccard Distance', 'A', 'B', 'C', 'D', 'Nmax', 'A/(N-D)']
+    data = [model, gamma, k, jaccardDistance, bothCnt, leftCnt, rightCnt, absentCnt, NMax, jaccardIndex]
 
     lock = FileLock(outFile + '.lck')
     try:
@@ -131,21 +132,22 @@ def runJaccard( ds1, ds2, k):
 
 
 def main():
-    global minK, maxK, gamma, model
+    global minK, maxK, gamma, model, outFile
     
     l = len(sys.argv)
-    if (l < 3 or l > 4):
+    if (l < 4 or l > 5):
         print("Errore nei parametri:")
-        print("Usage: %s seq1 seq2 [k]" % (sys.argv[0]))
+        print("Usage: %s seq1 seq2 file.csv [k]" % (sys.argv[0]))
         exit(-1)
 
-    if (l > 2):
+    if (l > 3):
         seq1 = sys.argv[1]
         seq2 = sys.argv[2]
-
-    if (l > 3):
+        outFile = sys.argv[3]
+        
+    if (l > 4):
         # solo uno specifico valore di k
-        minK = int(sys.argv[3])
+        minK = int(sys.argv[4])
         maxK = minK
 
     # private temporary directory

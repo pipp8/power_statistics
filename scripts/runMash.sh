@@ -11,12 +11,14 @@ kMax=33
 model='EscherichiaColi'
 
 results=$model-Mash.csv
+if [ ! -s $results ]; then
+    echo "model,gamma,k,sketchSize,MashDistance,p-value, A/sketchsize" > $results
+fi
 
 declare -a mValues
 
-k=$kMin
-
 for sketchSize in $sketches; do
+    k=$kMin
     while ((k < kMax)); do
 	echo "$(date) Sketch for k = $k size = $sketchSize"
 	mash sketch -s $sketchSize -k $k ${model}.fasta
@@ -33,6 +35,6 @@ for sketchSize in $sketches; do
 	    
 	done # for each gamma
 	((k += 2))
-    done # for each k
+    done # while k
 done # for each sketch
 rm $tmp
