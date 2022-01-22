@@ -4,13 +4,18 @@ import re
 import os
 import sys
 
-inputFile = sys.argv[1]
-
 writeSequenceHistogram = True
+seqDistDir = 'seqDists'
 
-seqDistDir = 'seqDists/'
+
 
 def main():
+
+    splitFastaSequences(sys.argv[1])
+
+    
+    
+def splitFastaSequences( inputFile):
 
     if (writeSequenceHistogram):
         if not os.path.exists(seqDistDir):
@@ -39,9 +44,9 @@ def main():
                 sys.stdout.flush()
 
             else:
-                seqName = m.group(1)
+                # seqName = m.group(1)
                 seqId = int(m.group(2))
-                gValue = m.group(3)
+                # gValue = m.group(3)
                 pairId = m.group(4)
                 hdrLine = line
                 # print( "Name: %s, id:%d, GValue: %s, pair:%s" %(seqName, seqId, gValue, pairId))

@@ -52,7 +52,7 @@ if (file.exists(dfFilename)) {
 		close(con1)
 		close(con2)
 		df[nrow(df) + 1,] <- list( model, g, distance/totLen, totLen)
-		cat( sprintf("%s. G=%f d = %d. done.\n", model, g, d))
+		cat( sprintf("%s. G=%f d = %d. done.\n", model, g, distance/totLen))
 	}
 	saveRDS( df, file = dfFilename)
 }
