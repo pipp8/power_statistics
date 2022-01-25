@@ -20,17 +20,21 @@ if (os.path.exists(libPath)):
 tempDir = "tmp.%d" % os.getpid()
 
 models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
-lengths = [2000, 20000, 200000, 2000000, 20000000]
-lengths = [2000, 20000]
+hdfsDataDir = 'data/dataset7-1000'
+lengths = range(1000, 50001, 1000) # small dataset
 gVals = [10, 50, 100]
 nPairs = 1000
-nTests = 3
+nTests = 500
 minK = 4
-maxK = 12
+maxK = 32
 sketchSize = 1000
 outFile = 'PresentAbsentData.csv'
 hdfsDataDir = 'data/dataset7-1000'
 
+# variabili globali per il calcolo dell'entropia
+Hk = 0.0
+nKeys = 0
+totalCnt = 0
 
 
 def extractKmers( dataset, k, seq):
@@ -58,8 +62,13 @@ def extractKmers( dataset, k, seq):
 
 
 
+
+# calcola anche i valori dell'entropia per non caricare due volte l'istogramma
 def loadKmerList( file):
+    global Hk, nKeys, totalCnt
+    
     print("Loading from file %s" % file)
+    totalCnt = 0
     # ogni file contiene l'istogramma di una sola sequenza prodotto con kmc 3
     with open(file) as inFile:
         seqDict = dict()
@@ -77,12 +86,44 @@ def loadKmerList( file):
             else:
                 seqDict[kmer] = count
 
+            totalCnt = totalCnt + count
+            
+
+    totalKmers = 0 # this should be seqLen - k + 1
+    totalKeys = 0  # this value should be len(seqDict.keys()) 
+    totalProb = 0.0
+    Hk = 0.0
+    for key in seqDict.keys():
+        cnt = seqDict[key]
+        prob = cnt / float(totalCnt)
+        totalProb = totalProb + prob
+        totalKeys = totalKeys + 1
+        totalKmers = totalKmers + cnt
+        Hk = Hk + prob * math.log(prob, 2)
+        # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
+
+    Hk = Hk * -1
+    nKeys = len(seqDict.keys())
+    if (totalKeys != nKeys):
+        print( "errore totalKeys = %d vs len(seqDict.keys()) = %d" % (totalKmers, nKeys))
+        exit(-1)
+
+
+    if (totalKmers != totalCnt):
+        print( "errore k-mers count %d vs %d (this should be = seqLen - k + 1)" % (totalKmers, totalCnt))
+        exit(-1)
+
+    if (round(totalProb,0) != 1.0):
+        print( "errore Somma(p) = %f" % (totalProb))
+        exit(-1)
+
     return np.array(seqDict.keys())
 
 
 
 # run jaccard on sequence pair ds with kmer of length = k
 def runPresentAbsent( ds, k):
+    global Hk, nKeys, totalCnt, tempDir
 
     m = re.search(r'^(.*)-(\d+)\.(\d+)(.*)', ds)
     if (m is not None):
@@ -224,7 +265,15 @@ def runPresentAbsent( ds, k):
 
     mashResults = out.split()
 
-    data = [model, gamma, seqLen, pairId, k, A, B, C, D, NMax, anderberg, antidice, dice, gower, hamman, hamming, jaccard, jaccardDistance, kulczynski, matching, ochiai, phi, russel, sneath, tanimoto, yule, mashResults[2], mashResults[3], mashResults[4] ]
+    # dati sull'entropia della sequenza B (non A)
+    delta = float(nKeys) / (2 * totalCnt)
+
+    # salva il risultato nel file CSV
+    data = [model, gamma, seqLen, pairId, k, A, B, C, D, NMax,
+            anderberg, antidice, dice, gower, hamman, hamming, jaccard, jaccardDistance,
+            kulczynski, matching, ochiai, phi, russel, sneath, tanimoto, yule,
+            mashResults[2], mashResults[3], mashResults[4],
+            nKeys, 2*totalCnt, delta, Hk, delta/Hk ]
 
     lock = FileLock(outFile + '.lck')
     try:
@@ -234,7 +283,12 @@ def runPresentAbsent( ds, k):
         if (not os.path.exists( outFile)):
             f = open(outFile, 'w')
             writer = csv.writer(f)
-            header = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'A', 'B', 'C', 'D', 'N', 'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming', 'Jaccard', 'jaccardDistance', 'Kulczynski', 'Matching', 'Ochiai', 'Phi', 'Russel', 'Sneath', 'Tanimoto', 'Yule', 'Mash Pv', 'Mash Distance', 'A/N']
+            header = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'A', 'B', 'C', 'D', 'N',
+                      'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming',
+                      'Jaccard', 'jaccardDistance', 'Kulczynski', 'Matching', 'Ochiai',
+                      'Phi', 'Russel', 'Sneath', 'Tanimoto', 'Yule',
+                      'Mash Pv', 'Mash Distance', 'A/N',
+                      'NKeys', '2*totalCnt', 'delta', 'Hk', 'error']
             writer.writerow(header)
         else:
             f = open(outFile, 'a')
@@ -247,6 +301,9 @@ def runPresentAbsent( ds, k):
     except Timeout:
         print("Another instance of this application currently holds the lock.")
 
+    # clean up remove kmc temporary files
+    for f in glob.glob('%s/*%s-*' % (tempDir, ds)):
+            os.remove(f)
 
 
 
@@ -274,15 +331,18 @@ def main():
                 for seqId in range(1, nTests):
                     
                     ds = '%s-%04d.%d%s' % (model, seqId, seqLen, gamma)
-                    for k in range(4, 32, 4):
+                    for k in range(4, 33, 4):
                         
-                        # run kmc on both the sequences and eval A, B, C, D
+                        # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
                         runPresentAbsent(ds, k)
-                                            
-                        # calcola Mash
-                        
-                        # calcola Hk
-                        
+
+                # clean up
+                # posso rimnuovere il dataset se importato altrimenti non cancellare !!!!
+                os.remove( dataset)
+                # remove histogram files (A & B) + mash sketch files
+                for f in glob.glob('%s/%s-*' % (splitFasta.seqDistDir, model)):
+                    os.remove(f)
+
 
 
 
