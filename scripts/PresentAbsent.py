@@ -20,8 +20,9 @@ if (os.path.exists(libPath)):
 tempDir = "tmp.%d" % os.getpid()
 
 models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
-hdfsDataDir = 'data/dataset7-1000'
-lengths = range(1000, 50001, 1000) # small dataset
+hdfsDataDir = 'data/dataset5-1000'
+#lengths = range(1000, 50001, 1000) # small dataset
+lengths = [ 10000, 100000, 1000000, 10000000]
 gVals = [10, 50, 100]
 nPairs = 1000
 nTests = 500
@@ -29,7 +30,6 @@ minK = 4
 maxK = 32
 sketchSize = 1000
 outFile = 'PresentAbsentData.csv'
-hdfsDataDir = 'data/dataset7-1000'
 
 # variabili globali per il calcolo dell'entropia
 Hk = 0.0
