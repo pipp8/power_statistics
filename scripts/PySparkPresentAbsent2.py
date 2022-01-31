@@ -6,6 +6,7 @@ import sys
 import glob
 import tempfile
 import shutil
+import copy
 import subprocess
 import csv
 import math
@@ -21,14 +22,15 @@ from pyspark import SparkFiles
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data/'
 spark = None
 
+hdfsDataDir = hdfsPrefixPath + 'dataset5-1000'
+inputRE = '*1000.[2-8]00000*'
+
 models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
-hdfsDataDir = hdfsPrefixPath + 'dataset7-1000'
 #lengths = range(1000, 50001, 1000) # small dataset
-lengths = [ 10000, 100000, 1000000, 10000000]
-gVals = [10, 50, 100]
-nTests = 100
+#gVals = [10, 50, 100]
+nTests = 500
 minK = 4
-maxK = 33
+maxK = 32
 stepK = 4
 sketchSize = 1000
 outFile = 'PresentAbsentData.csv'
@@ -41,7 +43,6 @@ outFile = 'PresentAbsentData.csv'
 # calcola anche i valori dell'entropia per non caricare due volte l'istogramma
 def loadKmerList( file):
 
-    print("Loading from file %s" % file)
     totalCnt = 0
     # ogni file contiene l'istogramma di una sola sequenza prodotto con kmc 3
     with open(file) as inFile:
@@ -95,10 +96,14 @@ def loadKmerList( file):
 
 
 
-def extractKmers( dataset, k, seq, seqDir, tempDir):
 
-    inputDataset = '%s/%s-%s.fasta' % (seqDir, dataset, seq)
-    kmcOutputPrefix = "%s/k=%d%s-%s" % (tempDir, k, dataset, seq)
+
+def extractKmers( dataset, k, seq):
+
+    tempDir = os.path.dirname( dataset)
+    baseDS = os.path.basename( dataset)
+    inputDataset = '%s-%s.fasta' % (dataset, seq)
+    kmcOutputPrefix = "%s/k=%d-%s-%s" % (tempDir, k, baseDS, seq)
     # run kmc on the first sequence
     cmd = "/usr/local/bin/kmc -b -k%d -m2 -fm -ci0 -cs1000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
     p = subprocess.Popen(cmd.split())
@@ -106,7 +111,7 @@ def extractKmers( dataset, k, seq, seqDir, tempDir):
     print("cmd: %s returned: %s" % (cmd, p.returncode))
 
     # dump the result -> kmer histogram
-    histFile = "%s/distk=%d_%s-%s.hist" % (tempDir, k, dataset, seq)
+    histFile = "%s/histk=%d-%s-%s.hist" % (tempDir, k, baseDS, seq)
     cmd = "/usr/local/bin/kmc_dump %s %s" % ( kmcOutputPrefix, histFile)
     p = subprocess.Popen(cmd.split())
     p.wait()
@@ -120,23 +125,10 @@ def extractKmers( dataset, k, seq, seqDir, tempDir):
 
 
 # run jaccard on sequence pair ds with kmer of length = k
-def runPresentAbsent( ds, model, seqId, seqLen, gamma, k, seqDir, tempDir):
+def runPresentAbsent( ds, model, seqId, seqLen, gamma, k):
 
-    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*)', ds)
-    if (m is not None):
-        if ((model != m.group(1)) or (seqId != int(m.group(2))) or
-            (seqLen != int(m.group(3)))):
-            # or (gamma != float('0.' + m.group(4)[5:]))):
-            err = 'Wrong function paramenters: %s %s, %d %d, %d %d, %s %s' % (
-                model, m.group(1), seqId, int(m.group(2)),
-                seqLen, int(m.group(3)), gamma, float('0.' + m.group(4)[5:]))
-            return [ err]
-    else:
-        err = 'Malformed dataset name'
-        return [ err]
-
-    (nKeys, totalCnt, Hk, leftKmers) = extractKmers(ds, k, 'A', seqDir, tempDir)
-    (nKeys, totalCnt, Hk, rightKmers) = extractKmers(ds, k, 'B', seqDir, tempDir)
+    (nKeys, totalCnt, Hk, leftKmers) = extractKmers(ds, k, 'A')
+    (nKeys, totalCnt, Hk, rightKmers) = extractKmers(ds, k, 'B')
     print("left: %d, right: %d" % (leftKmers.size, rightKmers.size))
 
     intersection = np.intersect1d( leftKmers, rightKmers)
@@ -246,8 +238,8 @@ def runPresentAbsent( ds, model, seqId, seqLen, gamma, k, seqDir, tempDir):
         yule = 'UnDefined'
 
     # run mash on the same sequence pair
-    inputDS1 = '%s/%s-A.fasta' % (seqDir, ds)
-    inputDS2 = '%s/%s-B.fasta' % (seqDir, ds)
+    inputDS1 = ds + '-A.fasta'
+    inputDS2 = ds + '-B.fasta'
 
     # extract mash sketch from the first sequence
     cmd = "/usr/local/bin/mash sketch -s %d -k %d %s" % (sketchSize, k, inputDS1)
@@ -278,98 +270,137 @@ def runPresentAbsent( ds, model, seqId, seqLen, gamma, k, seqDir, tempDir):
             nKeys, 2 * totalCnt, delta, Hk, delta / Hk]
 
     # clean up remove kmc temporary files
-    for f in glob.glob('%s/*%s-*' % (tempDir, ds)):
-           os.remove(f)
-    os.remove(inputDS1 + '.msh')
-    os.remove(inputDS2 + '.msh')
+    # for f in glob.glob('%s/*%s-*' % (, ds)):
+    #        os.remove(f)
+    # os.remove(inputDS1 + '.msh')
+    # os.remove(inputDS2 + '.msh')
 
     return data
 
 
 
 
-
-def splitFastaSequences(model, seqLen, gamma, dsContent, nSeq):
-
-    seqDir = tempfile.mkdtemp()
-
-    lookForHeader = True
-    start = 0
-    cnt = 0
-    for ndx in range(len( dsContent)):
-        if (dsContent[ndx] == 10):  # end of line
-            if lookForHeader:
-                header = dsContent[start:ndx+1].decode('UTF-8') #incluso il '\n'
-                start = ndx + 1
-                lookForHeader = False
-                m = re.search(r'^>(.+)\.(\d+)(.*)-([AB]$)', header)
-                if (m is not None):
-                    # seqName = m.group(1) # unico per l'intero file
-                    seqId = int(m.group(2))
-                    # gValue = m.group(3) # unico per l'intero file
-                    pairId =  m.group(4)
-                    # print( "Name: %s, id:%d, GValue: %s, pair:%s" % (model, seqId, gamma, pairId))
-                else:
-                    print("Malformed header: %s" % header)
-                    return ''
-            else:
-                sequence = dsContent[start:ndx+1].decode('UTF-8') # incluso il '\n'
-                start = ndx + 1
-                lookForHeader = True
-                # salva la sequenza localmente
-                fileName = "%s/%s-%04d.%d%s-%s.fasta" % (seqDir, model, seqId, seqLen, gamma, pairId)
-                with open(fileName, "w") as outText:
-                    outText.write("%s%s" % (header, sequence)) # \n are in the original strings
-
-                cnt = cnt + 1
-                if (cnt > nSeq*2):    # salva solo le prime nSeq coppie che servono
-                    break
-
-
-    return seqDir
+def saveSingleSequence(prefix, seq, header, sequence):
+    # save sequence
+    fileName = "%s-%s.fasta" % (prefix, seq)
+    with open(fileName, "w") as outText:
+        outText.write(header)
+        outText.write('\n')
+        outText.write(sequence)
+        outText.write('\n')
 
 
 
 
-def processDataset( ds):
 
-    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*).fasta', os.path.basename(ds[0]))
+# processo una coppia del tipo (id, (hdrA, seqA), (hdrB, seqB))
+def processPair( seqPair):
+
+    dataset = seqPair[0]
+    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*)', dataset)
     if (m is None):
-        print("Malformed file name %s" % ds[0])
-        return -2
+        raise ValueError("Malformed file name %s" % dataset)
     else:
         model = m.group(1)
         nPairs = int(m.group(2))
         seqLen = int(m.group(3))
         gamma = m.group(4)
 
-    if (nTests > nPairs):
-        raise ValueError( 'For this dataset the max number of runs is %d.' % nPairs)
-
-    print("Splitting dataset: %s@%s" % (ds[0], os.uname()[1]))
-    seqDir = splitFastaSequences( model, seqLen, gamma, ds[1], nTests)
+    header = seqPair[1][0]
+    m = re.search(r'^>(.+)\.(\d+)(.*)-([AB]$)', header)
+    if (m is not None):
+        # seqName = m.group(1)
+        seqId = int(m.group(2))
+        # gValue = m.group(3)
+        pairId = m.group(4)
 
     # process private temporary directory
     tempDir = tempfile.mkdtemp()
 
+    # common prefix
+    fileNamePrefix = "%s/%s-%04d.%d%s" % (tempDir, model, seqId, seqLen, gamma)
+    # save sequence seqId-A
+    saveSingleSequence(fileNamePrefix, 'A', seqPair[1][0], seqPair[1][1])
+    # save sequence seqId-B
+    saveSingleSequence(fileNamePrefix, 'B', seqPair[2][0], seqPair[2][1])
+
     results = []
-    for seqId in range(1, nTests+1):
-        ds = '%s-%04d.%d%s' % (model, seqId, seqLen, gamma)
-        for k in range( minK, maxK, stepK):
-            # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
-            results.append(runPresentAbsent(ds, model, seqId, seqLen, gamma, k, seqDir, tempDir))
+    for k in range( minK, maxK+1, stepK):
+        # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
+        results.append(runPresentAbsent(fileNamePrefix, model, seqId, seqLen, gamma, k))
 
     # clean up
     # do not remove daset on hdfs
     # remove histogram files (A & B) + mash sketch file and kmc temporary files
     try:
-        print("Cleaning directory %s and %s" % (tempDir, seqDir))
+        print("Cleaning temporary directory %s" % (tempDir))
         shutil.rmtree(tempDir)
-        shutil.rmtree(seqDir)
     except OSError as e:
-        print("Error removing: %s and %s: %s" % (tempDir, seqDir, e.strerror))
+        print("Error removing: %s: %s" % (tempDir, e.strerror))
 
     return results
+
+
+
+# produce a list of sequence pairs with len nSeq
+def splitDataset(ds, nRun):
+
+    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*).fasta', os.path.basename(ds[0]))
+    if (m is None):
+        raise ValueError("Malformed file name %s" % ds[0])
+    else:
+        model = m.group(1)
+        nPairs = int(m.group(2))
+        seqLen = int(m.group(3))
+        gamma = m.group(4)
+
+    seqLabel = "%s-%d.%d%s" % (model, nPairs, seqLen, gamma) #uguale per tutto il dataset
+    if (nTests > nPairs):
+        raise ValueError( 'For this dataset the max number of runs is %d.' % nPairs)
+
+    print("Splitting dataset: %s@%s" % (ds[0], os.uname()[1]))
+    dsContent = ds[1]
+    results = []
+    ids = [ '', 'A', 'B']
+    seqPair = [ 'name', [ 'header', 'sequenceA'], ['headerB', 'sequenceB']]
+    lookForHeader = True
+    (start, cnt, seq) = (0, 0, 0)
+    for ndx in range(len( dsContent)):
+        if (dsContent[ndx] == 10):  # end of line
+            if lookForHeader:
+                header = dsContent[start:ndx].decode('UTF-8') # senza il '\n'
+                start = ndx + 1
+                lookForHeader = False
+                seq = seq + 1 # trovata l'header della prima sequenza
+                m = re.search(r'^>(.+)\.(\d+)(.*)-([AB]$)', header)
+                if (m is not None):
+                    # seqName = m.group(1) e gValue = m.group(3) sono unici per l'intero file
+                    seqId = int(m.group(2))
+                    pairId =  m.group(4)
+                else:
+                    raise ValueError("Malformed sequence header: %s" % header)
+
+                seqPair[0] = seqLabel
+                seqPair[seq][0] = header
+                if (seqId != int(cnt / 2 + 1)):
+                    raise ValueError("sequence out of count %d vs %d" % (seqId, cnt / 2 + 1))
+                if (pairId != ids[seq]):
+                    raise ValueError("sequence out of order %s vs %s" % (pairId, ids[seq]))
+
+            else:
+                sequence = dsContent[start:ndx].decode('UTF-8') # senza il '\n'
+                start = ndx + 1
+                lookForHeader = True
+                seqPair[seq][1] = sequence
+                seq = seq % 2
+                if (seq == 0):
+                    results.append(copy.deepcopy(seqPair))
+                cnt = cnt + 1
+                if (seqId >= nRun):    # salva solo le prime nSeq coppie che servono
+                    break
+
+    return results
+
 
 
 
@@ -381,28 +412,32 @@ def main():
 
     spark = SparkSession \
         .builder \
-        .appName("PresentAbsent") \
+        .appName("PresentAbsent2") \
         .getOrCreate()
 
     sc = spark.sparkContext
 
     # partitions = int(sys.argv[1]) if len(sys.argv) > 1 else 10
     #
-    rdd = sc.binaryFiles( '%s/*.fasta' % hdfsDataDir)
-    print("Number of Partitions: " + str(rdd.getNumPartitions()))
+    rdd = sc.binaryFiles( '%s/%s.fasta' % (hdfsDataDir, inputRE))
+    # print("Number of Partitions: " + str(rdd.getNumPartitions()))
     #
-    counts = rdd.flatMap(lambda x: processDataset(x))
+    counts = rdd.flatMap(lambda x: splitDataset(x, nTests)).\
+        flatMap(lambda x: processPair(x))
 
     columns = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'A', 'B', 'C', 'D', 'N',
-                'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming',
+               'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming',
                 'Jaccard', 'jaccardDistance', 'Kulczynski', 'Matching', 'Ochiai',
                 'Phi', 'Russel', 'Sneath', 'Tanimoto', 'Yule',
                 'Mash Pv', 'Mash Distance', 'A/N',
                 'NKeys', '2*totalCnt', 'delta', 'Hk', 'error']
-    df = counts.toDF(columns)
-    # df.show()
-    # print( counts.collect())
 
+    df = counts.toDF(columns)
+    # a = df.take(1)
+    # print( a)
+    # a = df.take(5)
+    # print( a)
+    # df.show()
     # df.write.format("csv").save(outFile)
     df.write.option("header",True).csv(outFile)
     spark.stop()
