@@ -22,11 +22,12 @@ hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data/'
 spark = None
 
 models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
-hdfsDataDir = hdfsPrefixPath + 'dataset7-1000'
+hdfsDataDir = hdfsPrefixPath + 'dataset5-1000'
+inputRE = '*1000.[2-8]00000*'
 #lengths = range(1000, 50001, 1000) # small dataset
 lengths = [ 10000, 100000, 1000000, 10000000]
 gVals = [10, 50, 100]
-nTests = 100
+nTests = 500
 minK = 4
 maxK = 33
 stepK = 4
@@ -388,8 +389,8 @@ def main():
 
     # partitions = int(sys.argv[1]) if len(sys.argv) > 1 else 10
     #
-    rdd = sc.binaryFiles( '%s/*.fasta' % hdfsDataDir)
-    print("Number of Partitions: " + str(rdd.getNumPartitions()))
+    rdd = sc.binaryFiles( '%s/%s.fasta' % (hdfsDataDir, inputRE))
+    # print("Number of Partitions: " + str(rdd.getNumPartitions()))
     #
     counts = rdd.flatMap(lambda x: processDataset(x))
 
