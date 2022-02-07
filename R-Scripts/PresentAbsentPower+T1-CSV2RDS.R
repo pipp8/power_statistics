@@ -14,7 +14,8 @@ setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 # Defines the name of the file containing a copy of the dataframe created by this script
 dfFilename <- "Power+T1.RDS"
-csvFilename <- 'PresentAbsentData.csv'
+csvFilename <- 'PresentAbsentData-all.csv'
+csvFilename <- 'tt.csv'
 
 ###### CODE
 
@@ -51,7 +52,7 @@ columnClasses = c( "character", "numeric", "integer", "integer", "integer",
                    "numeric", "numeric", "numeric", "numeric", "numeric",
                    "numeric", "numeric", "numeric", "character", "numeric",
                    "numeric", "numeric", "numeric", "numeric")
-df <- read.csv( file = csvFilename, colClasses = columnClasses)
+df <-read.csv( file = csvFilename, colClasses = columnClasses)
 df$model = factor(df$model)
 # df$gamma = factor(df$gamma)
 # df$k = factor(df$k)
@@ -87,8 +88,9 @@ for( len in lengths) {
           # calcola 2 volte T1 una per ciascun AM
           nmT1 <- filter( df, df$model == 'Uniform-T1' & df$seqLen == len & df$k == kv)
           T1 <- getT1error(nmT1[[mes]], threshold)
-          cat(sprintf("T1: %s, T1-error = %f\n", nmt1$model[1], T1))
+          cat(sprintf("T1: %s, T1-error = %f\n", nmT1$model[1], T1))
           resultsDF[nrow( resultsDF)+1,] <- c(mes, altMod, len, g, kv, threshold, power, T1)
+       }
       }
     }
   }
@@ -97,3 +99,4 @@ for( len in lengths) {
 saveRDS( resultsDF, file = dfFilename)
 
 cat(sprintf("Dataset %s %d rows saved.", dfFilename, nrow(resultsDF)))
+

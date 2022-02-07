@@ -1,5 +1,4 @@
 #! /usr/bin/python3
-import numpy
 import re
 import os
 import sys
@@ -8,9 +7,7 @@ import tempfile
 import shutil
 import copy
 import subprocess
-import csv
 import math
-from filelock import Timeout, FileLock
 import numpy as np
 
 from operator import add
@@ -65,15 +62,13 @@ def loadKmerList( file):
     totalKeys = 0  # this value should be len(seqDict.keys()) 
     totalProb = 0.0
     Hk = 0.0
-    kList = seqDict.keys()
+    kList = list(seqDict.keys())
     aSize = len(kList)
-    npArray = np.empty( aSize, numpy.str)
+    npArray = np.array( kList)
     for key in kList:
         cnt = seqDict[key]
         prob = cnt / float(totalCnt)
         totalProb = totalProb + prob
-        npArray[totalKeys] = key
-        totalKeys = totalKeys + 1
         totalKmers = totalKmers + cnt
         Hk = Hk + prob * math.log(prob, 2)
         # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
@@ -81,8 +76,8 @@ def loadKmerList( file):
     Hk = Hk * -1
     # arr = np.array(list(seqDict.keys()))
     nKeys = npArray.size
-    if (totalKeys != nKeys):
-        raise ValueError( "TotalKeys = %d vs len(seqDict.keys()) = %d" % (totalKmers, nKeys))
+    if (aSize != nKeys):
+        raise ValueError( "TotalKeys = %d vs len(seqDict.keys()) = %d" % (nKeys, aSize))
 
     if (totalKmers != totalCnt):
         raise ValueError ( "k-mers count %d vs %d (should be = seqLen - k + 1)" % (totalKmers, totalCnt))
@@ -116,7 +111,9 @@ def extractKmers( dataset, k, seq):
     print("cmd: %s returned: %s" % (cmd, p.returncode))
     # load kmers from histogram file
     results = loadKmerList(histFile)
-
+    os.remove(histFile) # remove histogram file
+    os.remove(kmcOutputPrefix+'.kmc_pre') # remove kmc output prefix file
+    os.remove(kmcOutputPrefix+'.kmc_suf') # remove kmc output suffix file
     return results
 
 
@@ -148,42 +145,42 @@ def runPresentAbsent( ds, model, seqId, seqLen, gamma, k):
     try:
         anderberg = 1 - (A/float(A + B) + A/float(A + C) + D/float(C + D) + D/float(B + D))/4.0
     except (ZeroDivisionError, ValueError):
-        anderberg = 'UnDefined'
+        anderberg = 1.000001
 
     # Antidice dissimilarity => Antidice = 1 - A/(A + 2(B + C))
     try:
         antidice = 1 - A / float(A + 2.0 * (B + C))
     except (ZeroDivisionError, ValueError):
-        antidice = 'UnDefined'
+        antidice = 1.000001
 
     # Dice dissimilarity => Dice = 1 - 2A/(2A + B + C)
     try:
         dice = 1 - 2*A / float(2.0*A + B + C)
     except (ZeroDivisionError, ValueError):
-        dice  = 'UnDefined'
+        dice  = 1.000001
     # Gower dissimilarity => Gower = 1 - A x D/sqrt(A + B) x(A + C) x (D + B x (D + C)
     try:
         gower = 1 - A * D / math.sqrt((A + B) * (A + C) * (D + B * (D + C)))
     except (ZeroDivisionError, ValueError):
-        gower = 'UnDefined'
+        gower = 1.000001
 
     # Hamman dissimilarity => Hamman = 1 - [((A + D) - (B + C))/N]2
     try:
         hamman = 1 - math.pow((((A + D) - (B + C)) / float(NMax)), 2.0)
     except (ZeroDivisionError, ValueError):
-        hamman = 'UnDefined'
+        hamman = 1.000001
 
     # Hamming dissimilarity => Hamming = (B + C)/N
     try:
         hamming = (B + C)/ NMax
     except (ZeroDivisionError, ValueError):
-        hamming = 'UnDefined'
+        hamming = 1.000001
 
     # Jaccard dissimilarity => Jaccard = 1 - A/(N - D)
     try:
         jaccard = 1 - A / (NMax - D)
     except (ZeroDivisionError, ValueError):
-        jaccard = 'UnDefined'
+        jaccard = 1.000001
 
     jaccardDistance = 1 - min( 1.0, A / float(NMax - D))
 
@@ -191,49 +188,49 @@ def runPresentAbsent( ds, model, seqId, seqLen, gamma, k):
     try:
         kulczynski = 1 - (A / float(A + B) + A / float(A + C)) / 2.0
     except (ZeroDivisionError, ValueError):
-        kulczynski = 'UnDefined'
+        kulczynski = 1.000001
 
     # Matching dissimilarity => Matching = 1 - (A + D)/N
     try:
         matching = 1 - (A + D) / NMax
     except (ZeroDivisionError,ValueError):
-        matching = 'UnDefined'
+        matching = 1.000001
 
     # Ochiai dissimilarity => Ochiai = 1 - A/sqrt(A + B) x (A + C)
     try:
         ochiai = 1 - A / math.sqrt((A + B) * (A + C))
     except (ZeroDivisionError, ValueError):
-        ochiai = 'UnDefined'
+        ochiai = 1.000001
 
     # Phi dissimilarity => Phi = 1 - [(A x  B x  C x D)/sqrt(A + B) x (A + C) x (D + B) x (D + C)]2
     try:
         phi = 1 - math.pow((A * B * C * D)/ math.sqrt((A + B) * (A + C) * (D + B) * (D + C)), 2.0)
     except (ZeroDivisionError, ValueError):
-        phi = 'UnDefined'
+        phi = 1.000001
 
     # Russel dissimilarity => Russel = 1 - A/N
     try:
         russel = 1 - A / NMax
     except (ZeroDivisionError, ValueError):
-        russel = 'UnDefined'
+        russel = 1.000001
 
     # Sneath dissimilarity => Sneath = 1 - 2(A + D)/(2 x (A + D) + (B + C))
     try:
         sneath = 1 - 2.0 * (A + D) / (2.0 * (A + D) + (B + C))
     except (ZeroDivisionError, ValueError):
-        sneath = 'UnDefined'
+        sneath = 1.000001
 
     # Tanimoto dissimilarity => Tanimoto = 1 - (A + D)/((A + D) + 2(B + C))
     try:
         tanimoto = 1 - (A + D) / float((A + D) + 2.0 * (B + C))
     except (ZeroDivisionError, ValueError):
-        tanimoto = 'UnDefined'
+        tanimoto = 1.000001
 
     # Yule dissimilarity => Yule = 1 - [(A x D - B x C)/(A x D + B x C)]2
     try:
         yule = 1 - math.pow(((A * D - B * C) / float(A * D + B * C)), 2.0)
     except (ZeroDivisionError, ValueError):
-        yule = 'UnDefined'
+        yule = 1.000001
 
     # run mash on the same sequence pair
     inputDS1 = ds + '-A.fasta'
@@ -270,8 +267,8 @@ def runPresentAbsent( ds, model, seqId, seqLen, gamma, k):
     # clean up remove kmc temporary files
     # for f in glob.glob('%s/*%s-*' % (, ds)):
     #        os.remove(f)
-    # os.remove(inputDS1 + '.msh')
-    # os.remove(inputDS2 + '.msh')
+    os.remove(inputDS1 + '.msh')
+    os.remove(inputDS2 + '.msh')
 
     return data
 
@@ -325,7 +322,8 @@ def processPair( seqPair):
     results = []
     for k in range( minK, maxK+1, stepK):
         # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
-        results.append(runPresentAbsent(fileNamePrefix, model, seqId, seqLen, gamma, k))
+        g = float(gamma[3:]) if (len(gamma) > 0) else 0.0
+        results.append(runPresentAbsent(fileNamePrefix, model, seqId, seqLen, g, k))
 
     # clean up
     # do not remove daset on hdfs
@@ -397,24 +395,27 @@ def main():
 
     spark = SparkSession \
         .builder \
-        .appName("PresentAbsent3") \
+        .appName("PresentAbsent3 %d" % seqLen) \
         .getOrCreate()
 
     sc = spark.sparkContext
 
+    sc2 = spark._jsc.sc()
+    nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) -1
+
+    print(nWorkers)
     # partitions = int(sys.argv[1]) if len(sys.argv) > 1 else 10
     #
-    rdd = sc.wholeTextFiles( '%s/%s' % (hdfsDataDir, inputRE))
+    inputDataset = '%s/%s' % (hdfsDataDir, inputRE)
+    rdd = sc.wholeTextFiles( inputDataset, minPartitions = 48*100) # 100 tasks per 48 executors
     # print("Number of Partitions: " + str(rdd.getNumPartitions()))
     #
     # .map(lambda x: (x[0], x[1][0], x[1][1], x[2][0], x[2][1]))
     # columns = ['name', 'seqA', 'contentA', 'seqB', 'contentB']
 
     print("**** RDD number of Partitions: %d" % rdd.getNumPartitions())
-    rdd2 = rdd.repartition(1000)
-    print("**** RDD2 number of Partitions: %d" % rdd2.getNumPartitions())
 
-    pairs = rdd2.map(lambda x: splitPair(x))
+    pairs = rdd.map(lambda x: splitPair(x))
     print("**** pairs number of Partitions: %d" % pairs.getNumPartitions())
 
     counts = pairs.flatMap(lambda x: processPair(x))
