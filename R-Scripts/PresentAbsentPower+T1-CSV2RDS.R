@@ -13,9 +13,8 @@ library(dplyr)
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 # Defines the name of the file containing a copy of the dataframe created by this script
-dfFilename <- "Power+T1.RDS"
+dfFilename <- "PresentAbsent-Power+T1.RDS"
 csvFilename <- 'PresentAbsentData-all.csv'
-csvFilename <- 'tt.csv'
 
 ###### CODE
 
@@ -34,15 +33,16 @@ getPower <- function( am, mes, threshold)
   # return (sum(am <= threshold) / length(am)) # è un data.frame non un vector
   tot <- 0
   for(v in am[[mes]]) {
-    tot <- tot + if (v <= threshold) 1 else 0
+    # strettamente minore
+    tot <- tot + if (v < threshold) 1 else 0
   }
   return (tot / nrow(am))
 }
 
 getT1error <- function( nm, threshold)
 {
-  # se distanza (dissimilarità) conta il numero di risultati migliori (<=) della soglia threshold
-  return (sum(nm <= threshold) / length(nm))
+  # se distanza (dissimilarità) conta il numero di risultati migliori (<) della soglia threshold
+  return (sum(nm < threshold) / length(nm))
 }
 
 columnClasses = c( "character", "numeric", "integer", "integer", "integer",
@@ -67,31 +67,46 @@ col <- colnames(df)
 measures <- c(col[11:26], col[28])
 altModels = levels(df$model)[1:2]
 
+alphaValues <- c( 0.01, 0.05, 0.10)
+
+
 resultsDF <- data.frame( Measure = character(),  Model = character(), len = numeric(), gamma = double(),
-                         k = numeric(), threshold = double(), power = double(), T1 = double(), stringsAsFactors=FALSE)
+                         k = numeric(), alpha=double(), threshold = double(),
+                         power = double(), T1 = double(), stringsAsFactors=FALSE)
 
 for( len in lengths) {
+  cat(sprintf("len = %d\n", len))
   for(kv in kValues)  {
+    cat(sprintf("\tk = %d\n\t\t", kv))
     # Collect the Null-Model results
     nm <- filter( df, df$model == 'Uniform' & df$seqLen == len & df$k == kv)
     for( mes in measures) {
       nmDistances <- sort(nm[[mes]])   # sort in ordine crescente sono tutte dissimilarità / distanze
       for( g in gValues) { # salta gamma == 0
-        ndx <- round(length(nmDistances) * g)
-        threshold <- nmDistances[ndx]
-        cat( sprintf("len = %d, k = %d, measure = %s,  gamma = %f, ndx = %d, threshold = %f\n",
-                     len, kv, mes, g, ndx, threshold))
-        for(altMod in altModels ) {  # 2 alternative models "MotifRepl-U" "PatTransf-U"
-          am <- filter( df, df$model == altMod & df$gamma == g & df$seqLen == len & df$k == kv)
-          power = getPower(am, mes, threshold)
-          cat(sprintf("AM: %s, power = %f\n", altMod, power))
-          # calcola 2 volte T1 una per ciascun AM
-          nmT1 <- filter( df, df$model == 'Uniform-T1' & df$seqLen == len & df$k == kv)
-          T1 <- getT1error(nmT1[[mes]], threshold)
-          cat(sprintf("T1: %s, T1-error = %f\n", nmT1$model[1], T1))
-          resultsDF[nrow( resultsDF)+1,] <- c(mes, altMod, len, g, kv, threshold, power, T1)
-       }
+        for(alpha in alphaValues) {
+          ndx <- round(length(nmDistances) * alpha)
+          threshold <- nmDistances[ndx]
+          if (threshold == 1) {
+            cat(sprintf("\nmeasure: %s, threshold: %.3f\n", mes, threshold))
+          }
+#          cat( sprintf("len = %d, k = %d, measure = %s,  gamma = %.3f, alpha = %.3f ndx = %d, threshold = %f\n",
+#                       len, kv, mes, g, alpha, ndx, threshold))
+          for(altMod in altModels ) {  # 2 alternative models "MotifRepl-U" "PatTransf-U"
+            am <- filter( df, df$model == altMod & df$gamma == g & df$seqLen == len & df$k == kv)
+            power = getPower(am, mes, threshold)
+#            cat(sprintf("AM: %s, power = %f  -  ", altMod, power))
+            cat('.')
+            if(altMod == altModels[1]) {
+              # calcola solo una volta T1 una per ciascun AM
+              nmT1 <- filter( df, df$model == 'Uniform-T1' & df$seqLen == len & df$k == kv)
+              T1 <- getT1error(nmT1[[mes]], threshold)
+#              cat(sprintf("T1-error = %f  -  ", T1))
+            }
+            resultsDF[nrow( resultsDF)+1,] <- list(mes, altMod, len, g, kv, alpha, threshold, power, T1)
+          }
+        }
       }
+      cat('\n\t\t')
     }
   }
 }

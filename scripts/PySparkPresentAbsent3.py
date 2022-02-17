@@ -62,19 +62,21 @@ def loadKmerList( file):
     totalKeys = 0  # this value should be len(seqDict.keys()) 
     totalProb = 0.0
     Hk = 0.0
-    kList = list(seqDict.keys())
+    kList = seqDict.keys()
     aSize = len(kList)
-    npArray = np.array( kList)
+    npArray = np.empty( aSize, np.object)
     for key in kList:
         cnt = seqDict[key]
         prob = cnt / float(totalCnt)
+        npArray[totalKeys] = key
+        totalKeys = totalKeys + 1
         totalProb = totalProb + prob
         totalKmers = totalKmers + cnt
         Hk = Hk + prob * math.log(prob, 2)
         # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
 
     Hk = Hk * -1
-    # arr = np.array(list(seqDict.keys()))
+    # arr = np.array(list(seqDict.keys())) => out of memory double allocation of the k-mer list
     nKeys = npArray.size
     if (aSize != nKeys):
         raise ValueError( "TotalKeys = %d vs len(seqDict.keys()) = %d" % (nKeys, aSize))
@@ -258,7 +260,7 @@ def runPresentAbsent( ds, model, seqId, seqLen, gamma, k):
     delta = float(nKeys) / (2 * totalCnt)
 
     # salva il risultato nel file CSV
-    data = [model, gamma, seqLen, seqId, k, A, B, C, D, NMax,
+    data = [model, gamma, seqLen, seqId, k, A, B, C, str(D), str(NMax),
             anderberg, antidice, dice, gower, hamman, hamming, jaccard, jaccardDistance,
             kulczynski, matching, ochiai, phi, russel, sneath, tanimoto, yule,
             mashPv, mashDist, mashAN,
