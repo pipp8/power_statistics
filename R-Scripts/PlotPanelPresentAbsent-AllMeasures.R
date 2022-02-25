@@ -81,11 +81,14 @@ dati$kf = factor(dati$k)
 
 for (am in levels(factor(dati$Model))) {
 
+  for (kvf in levels(factor(dati$k))) {
+    kv = as.integer( kvf)
 	# solo per alpha = 0.10
-    dff <- filter(dati, dati$alpha == alphaTarget & dati$Model == am) # tutte le misure per uno specifico AM e valore di alpha
+    dff <- filter(dati, dati$alpha == alphaTarget & dati$Model == am & dati$k == kv) # tutte le misure per uno specifico AM e valore di alpha
 
-    sp <- ggplot( dff, aes( x = len, y = power, fill = kf, alpha=0.8)) +
+    sp <- ggplot( dff, aes( x = len, y = power, fill = kf, shape = kf, alpha=0.8)) +
           geom_point( aes( color = kf), alpha = 0.8, size = 1) +
+          scale_shape_manual(values = 1:8) +
           scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
                              labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
           scale_y_continuous(name = "Power", limits = c(0, 1)) +
@@ -99,7 +102,9 @@ for (am in levels(factor(dati$Model))) {
 	# dev.new(width = 9, height = 6)
 	# print(sp)
 	# stop("break")
-	outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f.pdf", dirname, str_replace(am, " ", ""), alphaTarget)
+	outfname <- sprintf( "%s/PanelPowerAnalysis-%s-k=%d-A=%.2f.pdf",
+                         dirname, str_replace(am, " ", ""), kv, alphaTarget)
 	ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
 	# dev.off() #only 129kb in size
+  }
 }

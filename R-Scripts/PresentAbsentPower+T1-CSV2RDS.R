@@ -69,6 +69,7 @@ altModels = levels(df$model)[1:2]
 
 alphaValues <- c( 0.01, 0.05, 0.10)
 
+write( "Len, K, Measure, Gamma, Alpha, Threshold\n", file = "Threshold=1.csv", append = FALSE)
 
 resultsDF <- data.frame( Measure = character(),  Model = character(), len = numeric(), gamma = double(),
                          k = numeric(), alpha=double(), threshold = double(),
@@ -77,17 +78,20 @@ resultsDF <- data.frame( Measure = character(),  Model = character(), len = nume
 for( len in lengths) {
   cat(sprintf("len = %d\n", len))
   for(kv in kValues)  {
-    cat(sprintf("\tk = %d\n\t\t", kv))
+    cat(sprintf("\tk = %d\n", kv))
     # Collect the Null-Model results
     nm <- filter( df, df$model == 'Uniform' & df$seqLen == len & df$k == kv)
     for( mes in measures) {
+      cat(sprintf("\t\t%s: ", mes))
       nmDistances <- sort(nm[[mes]])   # sort in ordine crescente sono tutte dissimilarità / distanze
       for( g in gValues) { # salta gamma == 0
         for(alpha in alphaValues) {
           ndx <- round(length(nmDistances) * alpha)
           threshold <- nmDistances[ndx]
           if (threshold == 1) {
-            cat(sprintf("\nmeasure: %s, threshold: %.3f\n", mes, threshold))
+            write( sprintf("%d, %d, %s, %.3f, %.3f, %.3f", len, kv, mes, g, alpha, threshold),
+                   file = "Threshold=1.csv", append = TRUE)
+#            cat(sprintf("\nmeasure: %s, threshold: %.3f\n", mes, threshold))
           }
 #          cat( sprintf("len = %d, k = %d, measure = %s,  gamma = %.3f, alpha = %.3f ndx = %d, threshold = %f\n",
 #                       len, kv, mes, g, alpha, ndx, threshold))
@@ -106,7 +110,7 @@ for( len in lengths) {
           }
         }
       }
-      cat('\n\t\t')
+      cat('\n')
     }
   }
 }

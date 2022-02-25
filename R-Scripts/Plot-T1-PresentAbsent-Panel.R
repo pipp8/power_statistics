@@ -3,7 +3,6 @@ library(dplyr)
 library(stringr)
 library(RColorBrewer)
 library(ggplot2)
-library(facetscales)
 
 
 
@@ -74,27 +73,29 @@ for( a in c( 0.01, 0.05, 0.10)) {
   MaxT1 <- switch( sprintf("%.2f", a), "0.01" = 0.050, "0.05" = 0.150, "0.10" = 0.3) # fattore di amplificazione del valore di T1
   cat(sprintf("%.3f - %.3f\n", a, MaxT1))
 
-  dff <- filter(dfAll, dfAll$alpha == a & dfAll$gamma == 0.10 & as.character(dfAll$Model) == 'Motif Replace-U') # T1 Error Check does not depend on gamma and Alternate Model
+  dff <- filter(dfAll, dfAll$alpha == a & dfAll$gamma == 0.10 & as.character(dfAll$Model) == 'MotifRepl-U') # T1 Error Check does not depend on gamma and Alternate Model
 
   dff$measure2 <- dff$Measure
   levels(dff$measure2) <- measure_names(levels(dff$measure))
+  dff$kf <- factor(dff$k)
   
-	sp <- ggplot( dff, aes(x = measure2, y = T1)) + 
-	  # geom_boxplot( aes(color = k, fill = k), alpha=0.7, outlier.size = 0.25) +
-	 	geom_boxplot( aes(fill = k), alpha=0.7, outlier.size = 0.25) +
-		scale_y_continuous(name = "T1 Value", limits = c(0, MaxT1)) +
-	  geom_hline(yintercept = a, linetype="dashed", color = "black") +
-	 	theme_bw() + theme(  axis.text.x = element_text(size = 11, angle = 45, hjust = 1),  # increase al font sizes
-							 axis.text.y = element_text(size = 12),
-							 legend.title = element_text(size = 14),
-							 legend.text = element_text(size = 13)) +
-	 	labs(x = "") + # theme(legend.position = "none") +
-	  scale_fill_grey(start = 0, end = .9)
-	 	# ggtitle("Pannello risultati T1-Check") 
+  sp <- ggplot( dff, aes(x = measure2, y = T1)) +
+	  geom_boxplot( aes( fill = kf), alpha=0.7, outlier.size = 0.25, lwd = 0) +
+      # geom_boxplot( aes(fill = k), alpha=0.7, outlier.size = 0.25) +
+      scale_y_continuous(name = "T1 Value", limits = c(0, MaxT1)) +
+      geom_hline(yintercept = a, linetype="dashed", color = "black") +
+      theme(  axis.text.x = element_text(size = 11, angle = 45, hjust = 1),  # increase al font sizes
+						 axis.text.y = element_text(size = 12),
+						 legend.title = element_text(size = 14),
+						 legend.text = element_text(size = 13)) +
+      theme_light(base_size = 10) + labs(x = "") + # theme(legend.position = "none") +
+      scale_colour_brewer(palette = "Dark2")
+      # scale_fill_grey(start = 0, end = .9)
+	  # ggtitle("Pannello risultati T1-Check")
 	
-	dev.new(width = 10, height = 5)
-    outfname <- sprintf( "%s/T1Box-alpha=%.2f.png", dirname, a)
-    # ggsave( outfname, width = 9, height = 4, device = png(), dpi = 300)
-    print( sp)
-    # dev.off() #only 129kb in size
+	# dev.new(width = 10, height = 5)
+  outfname <- sprintf( "%s/T1Box-alpha=%.2f.pdf", dirname, a)
+  ggsave( outfname, width = 9, height = 4, device = pdf(), dpi = 300)
+  # print( sp)
+  # dev.off() #only 129kb in size
 }

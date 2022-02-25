@@ -31,14 +31,24 @@ sketchSize = 1000
 outFile = 'PresentAbsentData'
 
 
+class EntropyData:
+    def __init__(self, nKeys, totalKmerCnt, Hk):
+        self.nKeys = nKeys
+        self.totalKmerCnt = totalKmerCnt;
+        self.Hk = Hk
 
+    def getDelta(self):
+        return float(self.nKeys) / (2 * self.totalKmerCnt)
+
+    def getError(self):
+        return self.getDelta() / self.Hk
 
 
 
 # calcola anche i valori dell'entropia per non caricare due volte l'istogramma
 def loadKmerList( file):
 
-    totalCnt = 0
+    totalKmerCnt = 0
     # ogni file contiene l'istogramma di una sola sequenza prodotto con kmc 3
     with open(file) as inFile:
         seqDict = dict()
@@ -56,7 +66,7 @@ def loadKmerList( file):
             else:
                 seqDict[kmer] = count
 
-            totalCnt = totalCnt + count
+            totalKmerCnt = totalKmerCnt + count
 
     totalKmers = 0 # this should be seqLen - k + 1
     totalKeys = 0  # this value should be len(seqDict.keys()) 
@@ -67,7 +77,7 @@ def loadKmerList( file):
     npArray = np.empty( aSize, np.object)
     for key in kList:
         cnt = seqDict[key]
-        prob = cnt / float(totalCnt)
+        prob = cnt / float(totalKmerCnt)
         npArray[totalKeys] = key
         totalKeys = totalKeys + 1
         totalProb = totalProb + prob
@@ -81,13 +91,13 @@ def loadKmerList( file):
     if (aSize != nKeys):
         raise ValueError( "TotalKeys = %d vs len(seqDict.keys()) = %d" % (nKeys, aSize))
 
-    if (totalKmers != totalCnt):
-        raise ValueError ( "k-mers count %d vs %d (should be = seqLen - k + 1)" % (totalKmers, totalCnt))
+    if (totalKmers != totalKmerCnt):
+        raise ValueError ( "k-mers count %d vs %d (should be = seqLen - k + 1)" % (totalKmers, totalKmerCnt))
 
     if (round(totalProb,0) != 1.0):
         raise ValueError("Somma(p) = %f must be 1.0. Aborting" % round(totalProb, 0))
 
-    return (nKeys, totalCnt, Hk, npArray)
+    return (nKeys, totalKmerCnt, Hk, npArray)
 
 
 
@@ -124,8 +134,10 @@ def extractKmers( dataset, k, seq):
 # run jaccard on sequence pair ds with kmer of length = k
 def runPresentAbsent( ds, model, seqId, seqLen, gamma, k):
 
-    (nKeys, totalCnt, Hk, leftKmers) = extractKmers(ds, k, 'A')
-    (nKeys, totalCnt, Hk, rightKmers) = extractKmers(ds, k, 'B')
+    (nKeys, kmerCnt, Hk, leftKmers) = extractKmers(ds, k, 'A')
+    entropySeqA = EntropyData( nKeys, kmerCnt, Hk)
+    (nKeys, kmerCnt, Hk, rightKmers) = extractKmers(ds, k, 'B')
+    entropySeqB = EntropyData( nKeys, kmerCnt, Hk)
     print("left: %d, right: %d" % (leftKmers.size, rightKmers.size))
 
     intersection = np.intersect1d( leftKmers, rightKmers)
@@ -256,19 +268,17 @@ def runPresentAbsent( ds, model, seqId, seqLen, gamma, k):
     mashPv = float(mashResults[2])
     mashDist = float(mashResults[3])
     mashAN = mashResults[4].decode('UTF-8')
-    # dati sull'entropia della sequenza B (non A)
-    delta = float(nKeys) / (2 * totalCnt)
 
     # salva il risultato nel file CSV
     data = [model, gamma, seqLen, seqId, k, A, B, C, str(D), str(NMax),
             anderberg, antidice, dice, gower, hamman, hamming, jaccard, jaccardDistance,
             kulczynski, matching, ochiai, phi, russel, sneath, tanimoto, yule,
             mashPv, mashDist, mashAN,
-            nKeys, 2 * totalCnt, delta, Hk, delta / Hk]
+            entropySeqA.nKeys, 2 * entropySeqA.totalKmerCnt, entropySeqA.getDelta(), entropySeqA.Hk, entropySeqA.getError(),
+            entropySeqB.nKeys, 2 * entropySeqB.totalKmerCnt, entropySeqB.getDelta(), entropySeqB.Hk, entropySeqB.getError()
+        ]
 
     # clean up remove kmc temporary files
-    # for f in glob.glob('%s/*%s-*' % (, ds)):
-    #        os.remove(f)
     os.remove(inputDS1 + '.msh')
     os.remove(inputDS2 + '.msh')
 
@@ -428,7 +438,9 @@ def main():
                 'Jaccard', 'jaccardDistance', 'Kulczynski', 'Matching', 'Ochiai',
                 'Phi', 'Russel', 'Sneath', 'Tanimoto', 'Yule',
                 'Mash Pv', 'Mash Distance', 'A/N',
-                'NKeys', '2*totalCnt', 'delta', 'Hk', 'error']
+                'NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
+                'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
+
     df = counts.toDF(columns)
     # df.show()
     # a = df.take(1)
