@@ -450,8 +450,8 @@ def main():
     columnsB = []
     for ss in sketchSizes:
         columnsB.append( 'Mash Pv (%d)' % ss)
-        columnsB.append( 'Mash Distance(%d)' %ss)
-        columnsB.append( 'A/N')
+        columnsB.append( 'Mash Distance(%d)' % ss)
+        columnsB.append( 'A/N (%d)' % ss)
 
     columnsC = ['NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
                 'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
