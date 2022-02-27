@@ -27,7 +27,7 @@ nTests = 500
 minK = 4
 maxK = 32
 stepK = 4
-sketchSize = 1000
+sketchSizes = [1000, 10000, 100000]
 outFile = 'PresentAbsentData'
 
 
@@ -250,39 +250,48 @@ def runPresentAbsent( ds, model, seqId, seqLen, gamma, k):
     inputDS1 = ds + '-A.fasta'
     inputDS2 = ds + '-B.fasta'
 
-    # extract mash sketch from the first sequence
-    cmd = "/usr/local/bin/mash sketch -s %d -k %d %s" % (sketchSize, k, inputDS1)
-    p = subprocess.Popen(cmd.split())
-    p.wait()
-    print("cmd: %s returned: %s" % (cmd, p.returncode))
+    mashPv = []
+    mashDist = []
+    mashAN = []
+    for i in range(len(sketchSizes)):
+        # extract mash sketch from the first sequence
+        cmd = "/usr/local/bin/mash sketch -s %d -k %d %s" % (sketchSizes[i], k, inputDS1)
+        p = subprocess.Popen(cmd.split())
+        p.wait()
 
-    cmd = "/usr/local/bin/mash sketch -s %d -k %d %s" % (sketchSize, k, inputDS2)
-    p = subprocess.Popen(cmd.split())
-    p.wait()
-    print("cmd: %s returned: %s" % (cmd, p.returncode))
+        cmd = "/usr/local/bin/mash sketch -s %d -k %d %s" % (sketchSizes[i], k, inputDS2)
+        p = subprocess.Popen(cmd.split())
+        p.wait()
 
-    cmd = "/usr/local/bin/mash dist %s.msh %s.msh" % (inputDS1, inputDS2)
-    out = subprocess.check_output(cmd.split())
-    print("cmd: %s returned: %s" % (cmd, out))
-    mashResults = out.split()
-    mashPv = float(mashResults[2])
-    mashDist = float(mashResults[3])
-    mashAN = mashResults[4].decode('UTF-8')
+        cmd = "/usr/local/bin/mash dist %s.msh %s.msh" % (inputDS1, inputDS2)
+        out = subprocess.check_output(cmd.split())
+
+        mashResults = out.split()
+        mashPv.append( float(mashResults[2]))
+        mashDist.append( float(mashResults[3]))
+        mashAN.append(mashResults[4].decode('UTF-8'))
 
     # salva il risultato nel file CSV
-    data = [model, gamma, seqLen, seqId, k, A, B, C, str(D), str(NMax),
+    # dati present / absent e distanze present absent
+    data1 = [model, gamma, seqLen, seqId, k, A, B, C, str(D), str(NMax),
             anderberg, antidice, dice, gower, hamman, hamming, jaccard, jaccardDistance,
-            kulczynski, matching, ochiai, phi, russel, sneath, tanimoto, yule,
-            mashPv, mashDist, mashAN,
-            entropySeqA.nKeys, 2 * entropySeqA.totalKmerCnt, entropySeqA.getDelta(), entropySeqA.Hk, entropySeqA.getError(),
-            entropySeqB.nKeys, 2 * entropySeqB.totalKmerCnt, entropySeqB.getDelta(), entropySeqB.Hk, entropySeqB.getError()
-        ]
+            kulczynski, matching, ochiai, phi, russel, sneath, tanimoto, yule]
+
+    # dati mash distance
+    data2 = []
+    for i in range(len(sketchSizes)):
+        data2.append( mashPv[i])
+        data2.append( mashDist[i])
+        data2.append( mashAN[i])
+    # dati errore entropia e rappresentazione present/absent
+    data3 = [entropySeqA.nKeys, 2 * entropySeqA.totalKmerCnt, entropySeqA.getDelta(), entropySeqA.Hk, entropySeqA.getError(),
+             entropySeqB.nKeys, 2 * entropySeqB.totalKmerCnt, entropySeqB.getDelta(), entropySeqB.Hk, entropySeqB.getError()]
 
     # clean up remove kmc temporary files
     os.remove(inputDS1 + '.msh')
     os.remove(inputDS2 + '.msh')
 
-    return data
+    return data1 + data2 + data3
 
 
 
@@ -433,15 +442,21 @@ def main():
     counts = pairs.flatMap(lambda x: processPair(x))
     print("**** counts number of Partitions: %d" % counts.getNumPartitions())
 
-    columns = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'A', 'B', 'C', 'D', 'N',
+    columnsA = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'A', 'B', 'C', 'D', 'N',
                'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming',
                 'Jaccard', 'jaccardDistance', 'Kulczynski', 'Matching', 'Ochiai',
-                'Phi', 'Russel', 'Sneath', 'Tanimoto', 'Yule',
-                'Mash Pv', 'Mash Distance', 'A/N',
-                'NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
+                'Phi', 'Russel', 'Sneath', 'Tanimoto', 'Yule']
+
+    columnsB = []
+    for ss in sketchSizes:
+        columnsB.append( 'Mash Pv (%d)' % ss)
+        columnsB.append( 'Mash Distance(%d)' %ss)
+        columnsB.append( 'A/N')
+
+    columnsC = ['NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
                 'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
 
-    df = counts.toDF(columns)
+    df = counts.toDF(columnsA + columnsB + columnsC)
     # df.show()
     # a = df.take(1)
     # print( a)

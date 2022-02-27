@@ -42,27 +42,27 @@ sp <- ggplot(df, aes(x=len, y=media)) +
   scale_x_continuous(name = 'seqLen', limits = c(1000, 10000000), trans='log10')
 
 outfname <- sprintf('LineplotEntropyError-%s.pdf', 'average')
-ggsave( outfname, device = pdf(), width = 9, height = 5, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 9, height = 4, units = "in", dpi = 300)
 
 sp <- ggplot(df, aes(x=len, y=varianza)) +
   geom_line(aes(color = k, linetype = k)) +
   scale_x_continuous(name = 'seqLen', limits = c(1000, 10000000), trans='log10')
 
 outfname <- sprintf('LineplotEntropyError-%s.pdf', 'varianza')
-ggsave( outfname, device = pdf(), width = 9, height = 5, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 9, height = 4, units = "in", dpi = 300)
 
-sp <- ggplot(df, aes(y=media)) +
-  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3)
+sp <- ggplot(df, aes(x = k, y = media)) +
+  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width = 0.35)
 
 outfname <- sprintf('BoxplotEntropyError-%s.pdf', 'average')
-ggsave( outfname, device = pdf(), width = 9, height = 5, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 9, height = 4, units = "in", dpi = 300)
 
-sp <- ggplot(df, aes(y=varianza)) +
-  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3)
+sp <- ggplot(df, aes(x = k, y = varianza)) +
+  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width = 0.35)
 
 outfname <- sprintf('BoxplotEntropyError-%s.pdf', 'varianza')
-ggsave( outfname, device = pdf(), width = 9, height = 5, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 9, height = 4, units = "in", dpi = 300)
 
 # dev.new(width = 9, height = 6)
 # print(sp)
-# dev.off() #only 129kb in size
+dev.off() #only 129kb in size
