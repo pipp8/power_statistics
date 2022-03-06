@@ -47,11 +47,17 @@ getT1error <- function( nm, threshold)
 
 columnClasses = c( "character", "numeric", "integer", "integer", "integer",
                    "numeric", "numeric", "numeric", "numeric", "numeric",
+                   # 15 x misure present absent
+                   "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
+                   "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
+                   # mash x 3
+                   "numeric", "numeric", "character", "numeric", "numeric", "character", "numeric", "numeric", "character",
+                   # dati entropia 5 x seq x 2 (A-B)
+                   # sequence-A
                    "numeric", "numeric", "numeric", "numeric", "numeric",
-                   "numeric", "numeric", "numeric", "numeric", "numeric",
-                   "numeric", "numeric", "numeric", "numeric", "numeric",
-                   "numeric", "numeric", "numeric", "character", "numeric",
-                   "numeric", "numeric", "numeric", "numeric")
+                   # sequence-B
+                   "numeric", "numeric", "numeric", "numeric", "numeric")
+
 df <-read.csv( file = csvFilename, colClasses = columnClasses)
 df$model = factor(df$model)
 # df$gamma = factor(df$gamma)
@@ -64,7 +70,7 @@ gValues = as.double(ll[2:length(ll)])
 kValues = as.integer(levels(factor(df$k)))
 lengths = as.integer(levels(factor(df$seqLen)))
 col <- colnames(df)
-measures <- c(col[11:26], col[28])
+measures <- c(col[11:25], col[28], col[31], col[34])
 altModels = levels(df$model)[1:2]
 
 alphaValues <- c( 0.01, 0.05, 0.10)

@@ -57,11 +57,9 @@ measure_names <- function( measure) {
   ris <- c()
   for( m in measure) {
     ris <- c(ris , str_to_title( switch( m,
-                                         'chisquare' = 'chi square',
-                                         'd2star' = 'd2*',
-                                         'harmonicmean' = 'harmonic mean',
-                                         'squaredchord' = 'squared chord',
-                                         'jensenshannon' = 'jensen shannon',
+                                         'Mash.Distance.1000.' = 'Mash(10^3)',
+                                         'Mash.Distance.10000.' = 'Mash(10^4)',
+                                         'Mash.Distance.100000.' = 'Mash(10^5)',
                                          m)))
   }
   return( ris)
@@ -76,19 +74,20 @@ for( a in c( 0.01, 0.05, 0.10)) {
   dff <- filter(dfAll, dfAll$alpha == a & dfAll$gamma == 0.10 & as.character(dfAll$Model) == 'MotifRepl-U') # T1 Error Check does not depend on gamma and Alternate Model
 
   dff$measure2 <- dff$Measure
-  levels(dff$measure2) <- measure_names(levels(dff$measure))
+  levels(dff$measure2) <- measure_names(levels(dff$Measure))
   dff$kf <- factor(dff$k)
   
   sp <- ggplot( dff, aes(x = measure2, y = T1)) +
-	  geom_boxplot( aes( fill = kf), alpha=0.7, outlier.size = 0.25, lwd = 0) +
+	    geom_boxplot( aes( fill = kf), alpha=0.7, outlier.size = 0.25, lwd = 0) +
       # geom_boxplot( aes(fill = k), alpha=0.7, outlier.size = 0.25) +
       scale_y_continuous(name = "T1 Value", limits = c(0, MaxT1)) +
       geom_hline(yintercept = a, linetype="dashed", color = "black") +
-      theme(  axis.text.x = element_text(size = 11, angle = 45, hjust = 1),  # increase al font sizes
-						 axis.text.y = element_text(size = 12),
-						 legend.title = element_text(size = 14),
-						 legend.text = element_text(size = 13)) +
-      theme_light(base_size = 10) + labs(x = "") + # theme(legend.position = "none") +
+      theme( axis.text.x = element_text(size = 11, angle = 45, hjust = 1),  # increase al font sizes
+             axis.text.y = element_text(size = 12),
+			legend.title = element_text(size = 14),
+			legend.text = element_text(size = 13)) +
+      labs( x = "") +
+      # theme_light(base_size = 10) + labs(x = "") + # theme(legend.position = "none") +
       scale_colour_brewer(palette = "Dark2")
       # scale_fill_grey(start = 0, end = .9)
 	  # ggtitle("Pannello risultati T1-Check")

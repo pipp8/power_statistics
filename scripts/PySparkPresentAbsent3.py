@@ -43,6 +43,20 @@ class EntropyData:
     def getError(self):
         return self.getDelta() / self.Hk
 
+class MashData:
+    def __init__(self, cmdResults):
+        mr = cmdResults.split()
+        mashAN = mr[4].decode('UTF-8')
+        self.Pv = float(mr[2])
+        self.dist = float(mr[3])
+        try:
+            ns = mashAN.index('/')
+            self.A = int(mr[:ns])
+            self.N = int(mr[ns+1:])
+        except ValueError:
+            self.A = 0
+            self.N = 0
+
 
 
 # calcola anche i valori dell'entropia per non caricare due volte l'istogramma
@@ -250,9 +264,7 @@ def runPresentAbsent( ds, model, seqId, seqLen, gamma, k):
     inputDS1 = ds + '-A.fasta'
     inputDS2 = ds + '-B.fasta'
 
-    mashPv = []
-    mashDist = []
-    mashAN = []
+    mashValues = []
     for i in range(len(sketchSizes)):
         # extract mash sketch from the first sequence
         cmd = "/usr/local/bin/mash sketch -s %d -k %d %s" % (sketchSizes[i], k, inputDS1)
@@ -266,23 +278,22 @@ def runPresentAbsent( ds, model, seqId, seqLen, gamma, k):
         cmd = "/usr/local/bin/mash dist %s.msh %s.msh" % (inputDS1, inputDS2)
         out = subprocess.check_output(cmd.split())
 
-        mashResults = out.split()
-        mashPv.append( float(mashResults[2]))
-        mashDist.append( float(mashResults[3]))
-        mashAN.append(mashResults[4].decode('UTF-8'))
+        mashValues.append( MashData( out))
 
     # salva il risultato nel file CSV
     # dati present / absent e distanze present absent
     data1 = [model, gamma, seqLen, seqId, k, A, B, C, str(D), str(NMax),
-            anderberg, antidice, dice, gower, hamman, hamming, jaccard, jaccardDistance,
+            anderberg, antidice, dice, gower, hamman, hamming, jaccard,
             kulczynski, matching, ochiai, phi, russel, sneath, tanimoto, yule]
 
     # dati mash distance
     data2 = []
     for i in range(len(sketchSizes)):
-        data2.append( mashPv[i])
-        data2.append( mashDist[i])
-        data2.append( mashAN[i])
+        data2.append( mashValues[i].Pv)
+        data2.append( mashValues[i].dist)
+        data2.append( mashValues[i].A)
+        data2.append( mashValues[i].N)
+
     # dati errore entropia e rappresentazione present/absent
     data3 = [entropySeqA.nKeys, 2 * entropySeqA.totalKmerCnt, entropySeqA.getDelta(), entropySeqA.Hk, entropySeqA.getError(),
              entropySeqB.nKeys, 2 * entropySeqB.totalKmerCnt, entropySeqB.getDelta(), entropySeqB.Hk, entropySeqB.getError()]
@@ -402,6 +413,67 @@ def splitPair(ds):
 
 
 
+# split a dataset build with datasetBuilder in a list of files (each with a sequemce pair) len nRun
+def splitDataset(ds, nRun):
+
+    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*).fasta', os.path.basename(ds[0]))
+    if (m is None):
+        raise ValueError("Malformed file name %s" % ds[0])
+    else:
+        model = m.group(1)
+        nPairs = int(m.group(2))
+        seqLen = int(m.group(3))
+        gamma = m.group(4)
+
+    seqLabel = "%s-%d.%d%s" % (model, nPairs, seqLen, gamma) #uguale per tutto il dataset
+    if (nTests > nPairs):
+        raise ValueError( 'For this dataset the max number of runs is %d.' % nPairs)
+
+    print("Splitting dataset: %s@%s" % (ds[0], os.uname()[1]))
+    dsContent = ds[1]
+    results = []
+    ids = [ '', 'A', 'B']
+    seqPair = [ 'name', [ 'header', 'sequenceA'], ['headerB', 'sequenceB']]
+    lookForHeader = True
+    (start, cnt, seq) = (0, 0, 0)
+    for ndx in range(len( dsContent)):
+        if (dsContent[ndx] == 10):  # end of line
+            if lookForHeader:
+                header = dsContent[start:ndx].decode('UTF-8') # senza il '\n'
+                start = ndx + 1
+                lookForHeader = False
+                seq = seq + 1 # trovata l'header della prima sequenza
+                m = re.search(r'^>(.+)\.(\d+)(.*)-([AB]$)', header)
+                if (m is not None):
+                    # seqName = m.group(1) e gValue = m.group(3) sono unici per l'intero file
+                    seqId = int(m.group(2))
+                    pairId =  m.group(4)
+                else:
+                    raise ValueError("Malformed sequence header: %s" % header)
+
+                seqPair[0] = seqLabel
+                seqPair[seq][0] = header
+                if (seqId != int(cnt / 2 + 1)):
+                    raise ValueError("sequence out of count %d vs %d" % (seqId, cnt / 2 + 1))
+                if (pairId != ids[seq]):
+                    raise ValueError("sequence out of order %s vs %s" % (pairId, ids[seq]))
+
+            else:
+                sequence = dsContent[start:ndx].decode('UTF-8') # senza il '\n'
+                start = ndx + 1
+                lookForHeader = True
+                seqPair[seq][1] = sequence
+                seq = seq % 2
+                if (seq == 0):
+                    results.append(copy.deepcopy(seqPair))
+                cnt = cnt + 1
+                if (seqId >= nRun):    # salva solo le prime nRun coppie che servono
+                    break
+
+    return results
+
+
+
 
 def main():
     global hdfsDataDir, outFile
@@ -444,14 +516,15 @@ def main():
 
     columnsA = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'A', 'B', 'C', 'D', 'N',
                'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming',
-                'Jaccard', 'jaccardDistance', 'Kulczynski', 'Matching', 'Ochiai',
+                'Jaccard', 'Kulczynski', 'Matching', 'Ochiai',
                 'Phi', 'Russel', 'Sneath', 'Tanimoto', 'Yule']
 
     columnsB = []
     for ss in sketchSizes:
         columnsB.append( 'Mash Pv (%d)' % ss)
         columnsB.append( 'Mash Distance(%d)' % ss)
-        columnsB.append( 'A/N (%d)' % ss)
+        columnsB.append( 'A (%d)' % ss)
+        columnsB.append( 'N (%d)' % ss)
 
     columnsC = ['NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
                 'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
