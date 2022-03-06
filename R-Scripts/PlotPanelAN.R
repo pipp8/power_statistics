@@ -76,7 +76,6 @@ if (!file.exists(dfFilename)) {
 altModels = levels(dati$model)[1:2]
 
 alphaValues <- c( 0.01, 0.05, 0.10)
-alphaTarget = 0.10
 
 # carica il dataframe dal file
 dati$kf = factor(dati$k)
@@ -115,8 +114,7 @@ for (kvf in levels(factor(dati$k))) {
 	# dev.new(width = 9, height = 6)
 	# print(sp)
 	# stop("break")
-	outfname <- sprintf( "%s/PanelAN-k=%d-A=%.2f.pdf",
-                         dirname, kv, alphaTarget)
+	outfname <- sprintf( "%s/PanelAN-k=%d.pdf", dirname, kv)
 	ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
 	dev.off() #only 129kb in size
 }

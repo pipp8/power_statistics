@@ -38,11 +38,9 @@ measure_names <- function( measure) {
   ris <- c()
   for( m in measure) {
     ris <- c(ris , str_to_title( switch( m,
-                                         'chisquare' = 'chi square',
-                                         'd2star' = 'd2*',
-                                         'harmonicmean' = 'harmonic\nmean',
-                                         'squaredchord' = 'squared\nchord',
-                                         'jensenshannon' = 'jensen\nshannon',
+                                         'Mash.Distance.1000.' = 'Mash (sz=10^3)',
+                                         'Mash.Distance.10000.' = 'Mash (sz=10^4)',
+                                         'Mash.Distance.100000.' = 'Mash (sz=10^5)',
                                          m)))
   }
   return( ris)
@@ -53,7 +51,7 @@ plot_labeller <- function(variable,value){
   if (variable=='gamma') {
     # N.B. len e' un factor
     return(sprintf("G = %.2f", value))
-  } else if (variable == 'measure') {
+  } else if (variable == 'Measure') {
     # N.B. Measure e' un factor
     tr <- measure_names(as.character(value))
     # cat(sprintf("pre: %s\npost: %s\n", as.character(value), tr))
@@ -86,8 +84,8 @@ for (am in levels(factor(dati$Model))) {
 	# solo per alpha = 0.10
     dff <- filter(dati, dati$alpha == alphaTarget & dati$Model == am & dati$k == kv) # tutte le misure per uno specifico AM e valore di alpha
 
-    sp <- ggplot( dff, aes( x = len, y = power, fill = kf, shape = kf, alpha=0.8)) +
-          geom_point( aes( color = kf), alpha = 0.8, size = 1) +
+    sp <- ggplot( dff, aes( x = len, y = power, fill = kf)) +
+          geom_point( alpha = 0.8, shape=23, fill="blue", color="darkred", size=1) +
           scale_shape_manual(values = 1:8) +
           scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
                              labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +

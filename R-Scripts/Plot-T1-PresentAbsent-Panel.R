@@ -57,14 +57,15 @@ measure_names <- function( measure) {
   ris <- c()
   for( m in measure) {
     ris <- c(ris , str_to_title( switch( m,
-                                         'Mash.Distance.1000.' = 'Mash(10^3)',
-                                         'Mash.Distance.10000.' = 'Mash(10^4)',
-                                         'Mash.Distance.100000.' = 'Mash(10^5)',
+                                         'Mash.Distance.1000.' = 'Mash (sz=10^3)',
+                                         'Mash.Distance.10000.' = 'Mash (sz=10^4)',
+                                         'Mash.Distance.100000.' = 'Mash (sz=10^5)',
                                          m)))
   }
   return( ris)
 }
 
+dfAll$Measure = factor(dfAll$Measure)
 
 for( a in c( 0.01, 0.05, 0.10)) { 
   

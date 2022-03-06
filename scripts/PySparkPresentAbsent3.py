@@ -51,8 +51,8 @@ class MashData:
         self.dist = float(mr[3])
         try:
             ns = mashAN.index('/')
-            self.A = int(mr[:ns])
-            self.N = int(mr[ns+1:])
+            self.A = int(mashAN[:ns])
+            self.N = int(mashAN[ns+1:])
         except ValueError:
             self.A = 0
             self.N = 0
