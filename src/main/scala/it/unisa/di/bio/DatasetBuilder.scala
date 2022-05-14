@@ -55,7 +55,7 @@ object DatasetBuilder {
 
     if (args.length < 2) {
       System.err.println("Errore nei parametri sulla command line")
-      System.err.println("Usage:\nit.unisa.di.bio.DatasetBuilder outputDir detailed|synthetic|mitocondri|shigella [local|yarn [start [end [step [#pairs]]]]]]")
+      System.err.println("Usage:\nit.unisa.di.bio.DatasetBuilder outputDir detailed|eColiShuffled|synthetic|mitocondri|shigella [local|yarn [start [end [step [#pairs]]]]]]")
       throw new IllegalArgumentException(s"illegal number of argouments. ${args.length} should be at least 2")
       return
     }
