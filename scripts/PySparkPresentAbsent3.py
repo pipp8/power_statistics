@@ -16,14 +16,15 @@ from pyspark.sql import SparkSession
 from pyspark import SparkFiles
 
 
-hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data/dataset9-1000'
+hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data/dataset10-1000'
 hdfsDataDir = ''
 inputRE = '*.fasta'
 
-models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
+# models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
+models = ['ShuffledEColi', 'MotifRepl-Sh', 'PatTransf-Sh', 'ShuffledEColi-T1']
 #lengths = range(1000, 50001, 1000) # small dataset
 #gVals = [10, 50, 100]
-nTests = 500
+nTests = 1000
 minK = 4
 maxK = 32
 stepK = 4
