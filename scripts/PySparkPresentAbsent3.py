@@ -322,7 +322,7 @@ def saveSingleSequence(prefix, seq, header, sequence):
 
 
 # processo una coppia del tipo (id, (hdrA, seqA), (hdrB, seqB))
-def processPair( seqPair):
+def processPairs(seqPair):
 
     dataset = seqPair[0]
     m = re.search(r'^(.*)-(\d+)\.(\d+)(.*)', dataset)
@@ -372,7 +372,7 @@ def processPair( seqPair):
 
 
 # produce a list of sequence pairs with len nSeq
-def splitPair(ds):
+def splitPairs(ds):
 
     m = re.search(r'^(.*)-(\d+)\.(\d+)(.*).fasta', os.path.basename(ds[0]))
     if (m is None):
@@ -509,10 +509,10 @@ def main():
 
     print("**** RDD number of Partitions: %d" % rdd.getNumPartitions())
 
-    pairs = rdd.map(lambda x: splitPair(x))
+    pairs = rdd.map(lambda x: splitPairs(x))
     print("**** pairs number of Partitions: %d" % pairs.getNumPartitions())
 
-    counts = pairs.flatMap(lambda x: processPair(x))
+    counts = pairs.flatMap(lambda x: processPairs(x))
     print("**** counts number of Partitions: %d" % counts.getNumPartitions())
 
     columnsA = ['model', 'gamma', 'seqLen', 'pairId', 'k', 'A', 'B', 'C', 'D', 'N',
