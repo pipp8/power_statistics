@@ -2,7 +2,7 @@
 <module org.jetbrains.idea.maven.project.MavenProjectsManager.isMavenModule="true" version="4">
   <component name="FacetManager">
     <facet type="Python" name="Python">
-      <configuration sdkName="Python 2.7" />
+      <configuration sdkName="Python 3.9" />
     </facet>
   </component>
   <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_1_8">
@@ -17,10 +17,10 @@
     <orderEntry type="jdk" jdkName="1.8" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="scala-sdk-2.12" level="application" />
-    <orderEntry type="library" name="Python 2.7 interpreter library" level="application" />
     <orderEntry type="library" exported="" name="scala-sdk-2.12.8" level="application" />
     <orderEntry type="library" name="it.unimi.dsi.fastutil" level="project" />
     <orderEntry type="library" name="scala-sdk-2.12.12" level="application" />
+    <orderEntry type="library" name="Python 3.9 interpreter library" level="application" />
     <orderEntry type="library" name="Maven: org.apache.spark:spark-core_2.12:3.1.2" level="project" />
     <orderEntry type="library" name="Maven: com.thoughtworks.paranamer:paranamer:2.8" level="project" />
     <orderEntry type="library" name="Maven: org.apache.avro:avro:1.8.2" level="project" />

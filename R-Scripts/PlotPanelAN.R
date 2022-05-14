@@ -43,14 +43,29 @@ scales_y <- list(
   '0.10' = scale_y_continuous(limits = c(0, 136)))
 
 if (!file.exists(dfFilename)) {
-  # converte il file CSV in datafgrame
-  columnClasses = c( "character", "numeric", "integer", "integer", "integer",
-                   "numeric", "numeric", "numeric", "numeric", "numeric",
-                   "numeric", "numeric", "numeric", "numeric", "numeric",
-                   "numeric", "numeric", "numeric", "numeric", "numeric",
-                   "numeric", "numeric", "numeric", "numeric", "numeric",
-                   "numeric", "numeric", "numeric", "character", "numeric",
-                   "numeric", "numeric", "numeric", "numeric")
+  # converte il file CSV in dataframe
+  columnClasses = c(
+                #   model	    gamma	    seqLen	   pairId	       k
+                "character", "numeric", "integer", "integer", "integer",
+                #   A	        B	         C	        D	        N
+                "numeric", "numeric", "numeric", "numeric", "numeric",
+                # 15 x misure present absent
+                # Anderberg	Antidice	 Dice	     Gower	    Hamman	  Hamming	   Jaccard	  Kulczynski
+                "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
+                # Matching	 Ochiai	     Phi	     Russel	   Sneath    	Tanimoto	  Yule
+                "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
+                # mash 4 x 3 (P value, Mash distance, A, N)
+                "numeric", "numeric", "numeric", "numeric", 
+                "numeric", "numeric", "numeric", "numeric",
+                "numeric", "numeric", "numeric", "numeric",
+                # dati entropia 5 x seq x 2 (A-B)
+                # sequence-A
+                # NKeysA	 2*totalCntA  deltaA	    HkA	       errorA
+                "numeric", "numeric", "numeric", "numeric", "numeric",
+                # sequence-B
+                # NKeysB	 2*totalCntB  deltaB	    HkB	      errorB
+                "numeric", "numeric", "numeric", "numeric", "numeric")
+  
   dati <-read.csv(file = csvFilename, colClasses = columnClasses)
   dati$model = factor(dati$model)
   # dati$gamma = factor(dati$gamma)
@@ -62,7 +77,7 @@ if (!file.exists(dfFilename)) {
   kValues = as.integer(levels(factor(dati$k)))
   lengths = as.integer(levels(factor(dati$seqLen)))
   col <- colnames(dati)
-  measures <- c(col[11:26], col[28])
+  measures <- c(col[11:25], col[27], col[31], col[35])
 
   saveRDS(dati, file = dfFilename)
   cat(sprintf("Dataset %s %d rows saved.", dfFilename, nrow(dati)))
@@ -96,19 +111,19 @@ for (kvf in levels(factor(dati$k))) {
 
     dff$model <- factor(dff$model, levels = c('Uniform', 'MotifRepl-U', 'PatTransf-U'))
 
-    cat(nrow(dff))
+    cat(sprintf("k = %d -> %d rows\n", kv, nrow(dff)))
 
     sp <- ggplot( dff, aes(x = lf, y = A/N, alpha=0.8)) +
           geom_boxplot( aes( color = model), alpha = 0.7, outlier.size = 0.3) +
-          # facet_grid(rows = vars(gamma)) +
-          facet_grid_sc(rows = vars( gamma), scales = 'free') +
+          facet_grid(rows = vars(gamma)) +
+          # facet_grid_sc(rows = vars( gamma), scales = 'free') +
           # scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
           #                   labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
           scale_y_continuous(name = "A/N") +
           theme_light() + theme(strip.text.x = element_text( size = 8, angle = 70),
                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                        panel.spacing=unit(0.1, "lines")) +
-          guides(colour = guide_legend(override.aes = list(size=3)))
+          guides(colour = guide_legend(override.aes = list(size=1)))
           # ggtitle( am)
     
 	# dev.new(width = 9, height = 6)

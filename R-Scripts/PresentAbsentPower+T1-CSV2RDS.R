@@ -45,18 +45,28 @@ getT1error <- function( nm, threshold)
   return (sum(nm < threshold) / length(nm))
 }
 
-columnClasses = c( "character", "numeric", "integer", "integer", "integer",
-                   "numeric", "numeric", "numeric", "numeric", "numeric",
-                   # 15 x misure present absent
-                   "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
-                   "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
-                   # mash x 3
-                   "numeric", "numeric", "character", "numeric", "numeric", "character", "numeric", "numeric", "character",
-                   # dati entropia 5 x seq x 2 (A-B)
-                   # sequence-A
-                   "numeric", "numeric", "numeric", "numeric", "numeric",
-                   # sequence-B
-                   "numeric", "numeric", "numeric", "numeric", "numeric")
+columnClasses = c(
+            #   model	    gamma	    seqLen	   pairId	       k
+            "character", "numeric", "integer", "integer", "integer",
+            #   A	        B	         C	        D	        N
+            "numeric", "numeric", "numeric", "numeric", "numeric",
+            # 15 x misure present absent
+            # Anderberg	Antidice	 Dice	     Gower	    Hamman	  Hamming	   Jaccard	  Kulczynski  
+            "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
+            # Matching	 Ochiai	     Phi	     Russel	   Sneath    	Tanimoto	  Yule
+            "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
+            # mash 4 x 3 (P value, Mash distance, A, N)
+            "numeric", "numeric", "numeric", "numeric", 
+            "numeric", "numeric", "numeric", "numeric",
+            "numeric", "numeric", "numeric", "numeric",
+            # dati entropia 5 x seq x 2 (A-B)
+            # sequence-A
+            # NKeysA	 2*totalCntA  deltaA	    HkA	       errorA
+            "numeric", "numeric", "numeric", "numeric", "numeric",
+            # sequence-B
+            # NKeysB	 2*totalCntB  deltaB	    HkB	      errorB
+            "numeric", "numeric", "numeric", "numeric", "numeric")
+
 
 df <-read.csv( file = csvFilename, colClasses = columnClasses)
 df$model = factor(df$model)
@@ -70,7 +80,7 @@ gValues = as.double(ll[2:length(ll)])
 kValues = as.integer(levels(factor(df$k)))
 lengths = as.integer(levels(factor(df$seqLen)))
 col <- colnames(df)
-measures <- c(col[11:25], col[28], col[31], col[34])
+measures <- c(col[11:25], col[27], col[31], col[35])
 altModels = levels(df$model)[1:2]
 
 alphaValues <- c( 0.01, 0.05, 0.10)
@@ -97,10 +107,7 @@ for( len in lengths) {
           if (threshold == 1) {
             write( sprintf("%d, %d, %s, %.3f, %.3f, %.3f", len, kv, mes, g, alpha, threshold),
                    file = "Threshold=1.csv", append = TRUE)
-#            cat(sprintf("\nmeasure: %s, threshold: %.3f\n", mes, threshold))
           }
-#          cat( sprintf("len = %d, k = %d, measure = %s,  gamma = %.3f, alpha = %.3f ndx = %d, threshold = %f\n",
-#                       len, kv, mes, g, alpha, ndx, threshold))
           for(altMod in altModels ) {  # 2 alternative models "MotifRepl-U" "PatTransf-U"
             am <- filter( df, df$model == altMod & df$gamma == g & df$seqLen == len & df$k == kv)
             power = getPower(am, mes, threshold)

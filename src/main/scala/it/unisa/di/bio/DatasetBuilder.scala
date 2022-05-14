@@ -20,6 +20,8 @@ import org.apache.spark.rdd.RDD
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io.BufferedSource
 import scala.math._
+import scala.util.control.Breaks._
+
 
 
 
@@ -115,6 +117,9 @@ object DatasetBuilder {
     hadoopConf.setInt("dfs.blocksize ", bs)
 
     datasetType match {
+      case x if (x.compareTo("eColiShuffled") == 0) => datasetEColi(
+        appProperties.getProperty("powerstatistics.datasetBuilder.ecoliPrefix"), 3, args)
+
       case x if (x.compareTo("detailed") == 0) => datasetDetailed(
         appProperties.getProperty("powerstatistics.datasetBuilder.uniformPrefix"), uniformDist, args)
 
@@ -133,8 +138,27 @@ object DatasetBuilder {
       case y if (y.compareTo("shigella") == 0) => semiSynthetic(
         appProperties.getProperty("powerstatistics.datasetBuilder.syntheticNullModelPrefix.shigella"), args)
 
-      case z => println(s"${z} must be in: detailed | synthetic | syntheticMitocondri | syntheticShigella | Mitocondri | Shigella");
+      case z => println(s"${z} must be in: detailed | eColiShuffled | synthetic | syntheticMitocondri | syntheticShigella | Mitocondri | Shigella");
         sc.stop()
+    }
+  }
+
+
+  def datasetEColi( nullModelPrefix: String, geneSize: Int, lengths: Array[String]) : Unit = {
+
+    val fromLen =   if (lengths.length > 3)   lengths(3).toInt else 100000
+    val maxSeqLen = if (lengths.length > 4)   lengths(4).toInt else
+      appProperties.getProperty("powerstatistics.datasetBuilder.maxSequenceLength").toInt
+    val step =      if (lengths.length > 5)   lengths(5).toInt else
+      appProperties.getProperty("powerstatistics.datasetBuilder.lengthStep").toInt
+
+    numberOfPairs = if (lengths.length > 6)   lengths(6).toInt else
+      appProperties.getProperty("powerstatistics.datasetBuilder.numberOfPairs").toInt
+
+    seqLen = fromLen
+    while (seqLen <= maxSeqLen ) {
+      buildEColiDataset(seqLen, nullModelPrefix, geneSize)
+      seqLen = seqLen + step;
     }
   }
 
@@ -186,6 +210,35 @@ object DatasetBuilder {
       }
     }
   }
+
+  //
+  // Build the NullModel shuffling a real sequence (EscherichiaColi) usign subsequence of length geneSize
+  //
+  def buildEColiDataset( targetLen: Int, nullModelPrefix: String, geneSize: Int) : Unit = {
+
+    val st = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now)
+    println(s"${st} *** Building Synthetic Dataset (Null Model + Alternate Model) <- ${nullModelPrefix} #pairs: ${numberOfPairs} for len: ${targetLen} ***")
+
+    seqLen = targetLen
+    // crea the NullModel
+    buildDatasetWithShuffle(numberOfPairs, seqLen, geneSize, nullModelPrefix)
+
+    // crea un altro dataset uniform per il type 1 check
+    buildDatasetWithShuffle(numberOfPairs, seqLen, geneSize,
+      nullModelPrefix + appProperties.getProperty("powerstatistics.datasetBuilder.Type1CheckSuffix"))
+
+    for (g <- gValues) {
+
+      // build both the Alternative Models from NullModel just created
+      buildDatasetMotifReplace(seqLen, motif, g, nullModelPrefix,
+        appProperties.getProperty("powerstatistics.datasetBuilder.altMotifPrefix"))
+
+      buildDatasetPatternTransfer(seqLen, g, nullModelPrefix,
+        appProperties.getProperty("powerstatistics.datasetBuilder.altPatTransfPrefix"))
+
+    }
+  }
+
 
   def buildSyntenthicDataset( targetLen: Int, nullModelPrefix: String, distribution: Array[Double]) : Unit = {
 
@@ -343,6 +396,68 @@ object DatasetBuilder {
 //  }
 
 
+  def buildDatasetWithShuffle(numberOfPairs: Int, sequenceLen: Int,
+                              geneSize: Int, prefix: String): Unit = {
+
+    val outputPath = getNullModelFilename( prefix, sequenceLen)
+
+    val writer = new BufferedWriter(
+      new OutputStreamWriter(FileSystem.get(URI.create(outputPath),
+        new Configuration()).create(new Path(outputPath))))
+
+    for( i <- 1 to numberOfPairs) {
+
+      val seq1 = buildShuffledSequence( sequenceLen, geneSize)
+      val seq2 = buildShuffledSequence( sequenceLen, geneSize)
+
+      if (debug) {
+        val st1 = getDistribution(seq1)
+        print(s"SEQ1(${i},${prefix}): ")
+        for (c <- 0 to 3)
+          printf("%c=%.1f%%, ", nucleotideRepr(c), st1(c) * 100.toDouble / sequenceLen)
+        println
+
+        val st2 = getDistribution(seq2)
+        print(s"SEQ2(${i},${prefix}): ")
+        for (c <- 0 to 3)
+          printf("%c=%.1f%%, ", nucleotideRepr(c), st1(c) * 100.toDouble / sequenceLen)
+        println
+      }
+
+      saveSequence( getSequenceName( prefix, i, 0.0, 1), seq1, writer)
+
+      saveSequence( getSequenceName( prefix, i, 0.0, 2), seq2, writer)
+    }
+    writer.close
+  }
+
+  // build a null model sequence randomly shuffling a real sequence powerstatistics.datasetBuilder.escherichiaColi
+  def buildShuffledSequence( sequenceLen: Int, geneSize: Int): Array[Char] = {
+
+    val seq: Array[Char] = new Array[Char](sequenceLen)
+    // initialize the random source
+    val rng: scala.util.Random = new scala.util.Random(System.currentTimeMillis / 1000)
+    var len = 0
+    val inSeq = appProperties.getProperty("powerstatistics.datasetBuilder.escherichiaColi")
+    val max = inSeq.length() / geneSize
+    var i = 0 : Int
+    var ndx = 0 : Int
+
+    while(len < sequenceLen) {
+      ndx = rng.nextInt(max) * geneSize
+      breakable {
+        for (i <- 0 until geneSize) {
+          val dst = len + i
+          if (dst >= sequenceLen)
+            break
+          else
+            seq(dst) = inSeq.charAt(ndx + i)
+        }
+      }
+      len = len + geneSize
+    }
+    return seq
+  }
 
 
   def buildDatasetWithDistribution(numberOfPairs: Int, sequenceLen: Int,
