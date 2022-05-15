@@ -13,8 +13,12 @@ library(dplyr)
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 # Defines the name of the file containing a copy of the dataframe created by this script
-dfFilename <- "PresentAbsent-Power+T1.RDS"
+dfFilename <- "PresentAbsentEC-Power+T1.RDS"
 csvFilename <- 'PresentAbsentData-all.csv'
+nullModel <- 'Uniform'
+csvFilename <- 'PresentAbsentECData.csv'
+nullModel <- 'ShuffledEColi'
+T1Model <- paste( sep='', nullModel, '-T1')
 
 ###### CODE
 
@@ -96,7 +100,7 @@ for( len in lengths) {
   for(kv in kValues)  {
     cat(sprintf("\tk = %d\n", kv))
     # Collect the Null-Model results
-    nm <- filter( df, df$model == 'Uniform' & df$seqLen == len & df$k == kv)
+    nm <- filter( df, df$model == nullModel & df$seqLen == len & df$k == kv)
     for( mes in measures) {
       cat(sprintf("\t\t%s: ", mes))
       nmDistances <- sort(nm[[mes]])   # sort in ordine crescente sono tutte dissimilarità / distanze
@@ -105,8 +109,8 @@ for( len in lengths) {
           ndx <- round(length(nmDistances) * alpha)
           threshold <- nmDistances[ndx]
           if (threshold == 1) {
-            write( sprintf("%d, %d, %s, %.3f, %.3f, %.3f", len, kv, mes, g, alpha, threshold),
-                   file = "Threshold=1.csv", append = TRUE)
+            logLine <- sprintf("%d, %d, %s, %.3f, %.3f, %.3f", len, kv, mes, g, alpha, threshold)
+            write( logLine, file = "Threshold=1.csv", append = TRUE)
           }
           for(altMod in altModels ) {  # 2 alternative models "MotifRepl-U" "PatTransf-U"
             am <- filter( df, df$model == altMod & df$gamma == g & df$seqLen == len & df$k == kv)
@@ -115,7 +119,7 @@ for( len in lengths) {
             cat('.')
             if(altMod == altModels[1]) {
               # calcola solo una volta T1 una per ciascun AM
-              nmT1 <- filter( df, df$model == 'Uniform-T1' & df$seqLen == len & df$k == kv)
+              nmT1 <- filter( df, df$model == T1Model & df$seqLen == len & df$k == kv)
               T1 <- getT1error(nmT1[[mes]], threshold)
 #              cat(sprintf("T1-error = %f  -  ", T1))
             }

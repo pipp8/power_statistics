@@ -118,7 +118,8 @@ object DatasetBuilder {
 
     datasetType match {
       case x if (x.compareTo("eColiShuffled") == 0) => datasetEColi(
-        appProperties.getProperty("powerstatistics.datasetBuilder.ecoliPrefix"), 3, args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.ecoliPrefix"),
+        appProperties.getProperty("powerstatistics.datasetBuilder.geneSize").toInt, args)
 
       case x if (x.compareTo("detailed") == 0) => datasetDetailed(
         appProperties.getProperty("powerstatistics.datasetBuilder.uniformPrefix"), uniformDist, args)

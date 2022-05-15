@@ -26,11 +26,16 @@ setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 # Sets the name of the file containing the input dataframe
 dfFilename <- "PresentAbsent-RawData.RDS"
+dfFilename <- "PresentAbsentEC-RawData.RDS"
 csvFilename <- 'PresentAbsentData-all.csv'
+nullModel <- 'Uniform'
+csvFilename <- 'PresentAbsentECData.csv'
+nullModel <- 'ShuffledEColi'
+T1Model <- paste( sep='', nullModel, '-T1')
 
 # Sets the output path for the images to be generated
 
-dirname <- "PlotAN"
+dirname <- "PlotAN2"
 if (!dir.exists(dirname)) {
   dir.create(dirname)
 }
@@ -99,8 +104,8 @@ dati$lf = factor(dati$seqLen)
 for (kvf in levels(factor(dati$k))) {
     kv = as.integer( kvf)
 	# solo per alpha = 0.10
-    NM <- filter(dati, dati$k == kv & dati$model == 'Uniform') # tutte le misure per uno specifico AM e valore di alpha
-    dff <- filter(dati, dati$k == kv & dati$model != 'Uniform-T1' & dati$model != 'Uniform') # tutte le misure per uno specifico AM e valore di alpha
+    NM <- filter(dati, dati$k == kv & dati$model == nullModel) # tutte le misure per uno specifico AM e valore di alpha
+    dff <- filter(dati, dati$k == kv & dati$model != T1Model & dati$model != nullModel) # tutte le misure per uno specifico AM e valore di alpha
 
     NM$gamma <- 0.01
     dff <- rbind( dff, NM)
@@ -109,7 +114,8 @@ for (kvf in levels(factor(dati$k))) {
     NM$gamma <- 0.10
     dff <- rbind( dff, NM)
 
-    dff$model <- factor(dff$model, levels = c('Uniform', 'MotifRepl-U', 'PatTransf-U'))
+    md = levels(dff$model)
+    dff$model <- factor(dff$model, levels = c( md[3], md[1], md[2])) # riordina le labels
 
     cat(sprintf("k = %d -> %d rows\n", kv, nrow(dff)))
 
