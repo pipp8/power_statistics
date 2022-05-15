@@ -22,7 +22,7 @@ tempDir = "tmp.%d" % os.getpid()
 models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
 hdfsDataDir = 'data/dataset5-1000'
 #lengths = range(1000, 50001, 1000) # small dataset
-lengths = [ 10000, 100000, 1000000, 10000000]
+lengths = [ 1000000, 10000000]
 gVals = [10, 50, 100]
 nPairs = 1000
 nTests = 500
@@ -328,7 +328,7 @@ def main():
                 
                 splitFasta.splitFastaSequences( dataset)
             
-                for seqId in range(1, nTests):
+                for seqId in range(1, nTests+1):
                     
                     ds = '%s-%04d.%d%s' % (model, seqId, seqLen, gamma)
                     for k in range(4, 33, 4):
