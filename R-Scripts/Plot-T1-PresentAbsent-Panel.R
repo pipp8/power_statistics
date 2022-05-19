@@ -23,10 +23,10 @@ setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 
 # Sets the output path for the images to be generated
-dirname <- "T1BoxPlot"
+dirname <- "T1BoxPlot2"
 
 # Sets the name of the file containing the input dataframe
-dfFilename <- "PresentAbsent-Power+T1.RDS"
+dfFilename <- "PresentAbsentEC-Power+T1.RDS"
 
 ###### CODE
 
@@ -66,13 +66,16 @@ measure_names <- function( measure) {
 }
 
 dfAll$Measure = factor(dfAll$Measure)
+dfAll$Model = factor(dfAll$Model)
+
+AM = levels(dfAll$Model)[1]
 
 for( a in c( 0.01, 0.05, 0.10)) { 
   
   MaxT1 <- switch( sprintf("%.2f", a), "0.01" = 0.050, "0.05" = 0.150, "0.10" = 0.3) # fattore di amplificazione del valore di T1
   cat(sprintf("%.3f - %.3f\n", a, MaxT1))
 
-  dff <- filter(dfAll, dfAll$alpha == a & dfAll$gamma == 0.10 & as.character(dfAll$Model) == 'MotifRepl-U') # T1 Error Check does not depend on gamma and Alternate Model
+  dff <- filter(dfAll, dfAll$alpha == a & dfAll$gamma == 0.10 & dfAll$Model == AM) # T1 Error Check does not depend on gamma and Alternate Model
 
   dff$measure2 <- dff$Measure
   levels(dff$measure2) <- measure_names(levels(dff$Measure))

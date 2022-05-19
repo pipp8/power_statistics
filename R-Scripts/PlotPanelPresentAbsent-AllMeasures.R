@@ -24,11 +24,11 @@ library(RColorBrewer)
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 # Sets the name of the file containing the input dataframe
-dfFilename <- "PresentAbsent-Power+T1.RDS"
+dfFilename <- "PresentAbsentEC-Power+T1.RDS"
 
 # Sets the output path for the images to be generated
 
-dirname <- "PowerBoxPlot"
+dirname <- "PowerBoxPlot2"
 
 
 ###### CODE

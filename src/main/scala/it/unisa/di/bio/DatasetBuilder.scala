@@ -22,7 +22,7 @@ import scala.io.BufferedSource
 import scala.math._
 import scala.util.control.Breaks._
 
-
+import com.concurrentthought.cla._
 
 
 object DatasetBuilder {
@@ -38,7 +38,11 @@ object DatasetBuilder {
   var numberOfPairs = 0
   var seqLen = 0
   var patternLen = 5
+  var geneSize = 3
+
   var motif = Array('A', 'C', 'C', 'C', 'G')
+
+  var parsed: Args = null
 
   var gValues: Array[Double] = null
   val uniformDist: Array[Double] = new Array[Double](4)
@@ -53,22 +57,37 @@ object DatasetBuilder {
 
   def main(args: Array[String]) {
 
-    if (args.length < 2) {
-      System.err.println("Errore nei parametri sulla command line")
-      System.err.println("Usage:\nit.unisa.di.bio.DatasetBuilder outputDir detailed|eColiShuffled|synthetic|mitocondri|shigella [local|yarn [start [end [step [#pairs]]]]]]")
-      throw new IllegalArgumentException(s"illegal number of argouments. ${args.length} should be at least 2")
-      return
-    }
+    val initialArgs: Args = """
+                              |target/powerstatistics-1.0-SNAPSHOT.jar -o destDir -g method -m yarn|local -f start -t last -s step -n numPairs [-b geneSize -p patternSize]
+                              |  -o | --output     string  Path to destination Directory
+                              |  -m | --mode       string  Spark cluster mode local|yarn
+                              |  -g | --generator  string  Generator selection detailed|eColiShuffled|synthetic|mitocondri|shigella
+                              |  -f | --from-len   int=10000 from sequence length
+                              |  -t | --to-len     int     to sequence length
+                              |  -s | --step       int     step size
+                              |  -n | --pairs      int     number of pairs
+                              |  [-b | --geneSize  int=3]  size of imported block from echerichiaColi
+                              |  [-p | --patternSize int]  size of pattern for both alrternative models
+                              |""".stripMargin.toArgs
 
-    savePath = args(0)
-    val datasetType = args(1)
+//    if (args.length < 2) {
+//      System.err.println("Errore nei parametri sulla command line")
+//      System.err.println("Usage:\nit.unisa.di.bio.DatasetBuilder outputDir detailed|eColiShuffled|synthetic|mitocondri|shigella [local|yarn [start [end [step [#pairs]]]]]]")
+//      throw new IllegalArgumentException(s"illegal number of argouments. ${args.length} should be at least 2")
+//      return
+//    }
+
+    parsed = initialArgs.process(args)
+
+    // If here, successfully parsed the args and none where "--help" or "-h".
+    parsed.printAllValues()
+
+    savePath = parsed.getOrElse( "output", "out")
+    val datasetType = parsed.getOrElse("generator", "detailed")
     // gamma = args(4).toDouble
     // motif = getMotif(args(4))
 
-    if (args.length > 2) {
-      local = (args(2).compareTo("local") == 0)
-    }
-
+    local = parsed.getOrElse("mode", "").compareTo("local") == 0
 
     appProperties = new Properties
     appProperties.load(this.getClass.getClassLoader.getResourceAsStream("PowerStatistics.properties"))
@@ -80,9 +99,14 @@ object DatasetBuilder {
 
     println(s"***App ${this.getClass.getCanonicalName} Started***")
 
-    numberOfPairs = appProperties.getProperty("powerstatistics.datasetBuilder.numberOfPairs").toInt
+    numberOfPairs = parsed.getOrElse( "pairs", appProperties.getProperty("powerstatistics.datasetBuilder.numberOfPairs").toInt)
 
-    patternLen = appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt
+    val params = Array[Int]( parsed.getOrElse("from-len", appProperties.getProperty("powerstatistics.datasetBuilder.startSequenceLength").toInt),
+                             parsed.getOrElse("to-len", appProperties.getProperty("powerstatistics.datasetBuilder.maxSequenceLength").toInt),
+                             parsed.getOrElse("step", appProperties.getProperty("powerstatistics.datasetBuilder.lengthStep").toInt))
+
+    patternLen = parsed.getOrElse("patternSize", appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt)
+    geneSize = parsed.getOrElse( "geneSize", appProperties.getProperty("powerstatistics.datasetBuilder.geneSize").toInt)
 
     // Array(0.25, 0.25, 0.25, 0.25) // P(A), P(C), P(G), P(T) probability
     var stVal = appProperties.getProperty("powerstatistics.datasetBuilder.uniformDistribution").split(",")
@@ -118,26 +142,25 @@ object DatasetBuilder {
 
     datasetType match {
       case x if (x.compareTo("eColiShuffled") == 0) => datasetEColi(
-        appProperties.getProperty("powerstatistics.datasetBuilder.ecoliPrefix"),
-        appProperties.getProperty("powerstatistics.datasetBuilder.geneSize").toInt, args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.ecoliPrefix"), geneSize, params)
 
       case x if (x.compareTo("detailed") == 0) => datasetDetailed(
-        appProperties.getProperty("powerstatistics.datasetBuilder.uniformPrefix"), uniformDist, args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.uniformPrefix"), uniformDist, params)
 
       case x if (x.compareTo("synthetic") == 0) => dataset2(
-        appProperties.getProperty("powerstatistics.datasetBuilder.uniformPrefix"), uniformDist, args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.uniformPrefix"), uniformDist, params)
 
       case x if (x.compareTo("syntheticMitocondri") == 0) => dataset2(
-        appProperties.getProperty("powerstatistics.datasetBuilder.synthMitocondriPrefix"), mitocondriDist, args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.synthMitocondriPrefix"), mitocondriDist, params)
 
       case x if (x.compareTo("syntheticShigella") == 0) => dataset2(
-        appProperties.getProperty("powerstatistics.datasetBuilder.synthShigellaPrefix"), shigellaDist, args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.synthShigellaPrefix"), shigellaDist, params)
 
       case y if (y.compareTo("mitocondri") == 0) => semiSynthetic(
-        appProperties.getProperty("powerstatistics.datasetBuilder.syntheticNullModelPrefix.mitocondri"), args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.syntheticNullModelPrefix.mitocondri"), params)
 
       case y if (y.compareTo("shigella") == 0) => semiSynthetic(
-        appProperties.getProperty("powerstatistics.datasetBuilder.syntheticNullModelPrefix.shigella"), args)
+        appProperties.getProperty("powerstatistics.datasetBuilder.syntheticNullModelPrefix.shigella"), params)
 
       case z => println(s"${z} must be in: detailed | eColiShuffled | synthetic | syntheticMitocondri | syntheticShigella | Mitocondri | Shigella");
         sc.stop()
@@ -145,16 +168,11 @@ object DatasetBuilder {
   }
 
 
-  def datasetEColi( nullModelPrefix: String, geneSize: Int, lengths: Array[String]) : Unit = {
+  def datasetEColi( nullModelPrefix: String, geneSize: Int, lengths: Array[Int]) : Unit = {
 
-    val fromLen =   if (lengths.length > 3)   lengths(3).toInt else 100000
-    val maxSeqLen = if (lengths.length > 4)   lengths(4).toInt else
-      appProperties.getProperty("powerstatistics.datasetBuilder.maxSequenceLength").toInt
-    val step =      if (lengths.length > 5)   lengths(5).toInt else
-      appProperties.getProperty("powerstatistics.datasetBuilder.lengthStep").toInt
-
-    numberOfPairs = if (lengths.length > 6)   lengths(6).toInt else
-      appProperties.getProperty("powerstatistics.datasetBuilder.numberOfPairs").toInt
+    val fromLen =   lengths(0)
+    val maxSeqLen = lengths(1)
+    val step =      lengths(2)
 
     seqLen = fromLen
     while (seqLen <= maxSeqLen ) {
@@ -164,16 +182,11 @@ object DatasetBuilder {
   }
 
 
-  def datasetDetailed( nullModelPrefix: String, distribution: Array[Double], lengths: Array[String]) : Unit = {
+  def datasetDetailed( nullModelPrefix: String, distribution: Array[Double], lengths: Array[Int]) : Unit = {
 
-    val fromLen =   if (lengths.length > 3)   lengths(3).toInt else 100000
-    val maxSeqLen = if (lengths.length > 4)   lengths(4).toInt else
-                            appProperties.getProperty("powerstatistics.datasetBuilder.maxSequenceLength").toInt
-    val step =      if (lengths.length > 5)   lengths(5).toInt else
-                            appProperties.getProperty("powerstatistics.datasetBuilder.lengthStep").toInt
-
-    numberOfPairs = if (lengths.length > 6)   lengths(6).toInt else
-                            appProperties.getProperty("powerstatistics.datasetBuilder.numberOfPairs").toInt
+    val fromLen =   lengths(0)
+    val maxSeqLen = lengths(1)
+    val step =      lengths(2)
 
     seqLen = fromLen
     while (seqLen <= maxSeqLen ) {
@@ -183,32 +196,28 @@ object DatasetBuilder {
   }
 
 
-  def dataset2( nullModelPrefix: String, distribution: Array[Double], lengths: Array[String]) : Unit = {
+  def dataset2( nullModelPrefix: String, distribution: Array[Double], lengths: Array[Int]) : Unit = {
 
-    if (lengths.length > 3) {
-      for( x <- lengths.drop(3)) {
-        buildSyntenthicDataset( x.toInt, nullModelPrefix, distribution)
-      }
-    }
-    else {
-      val meanValues = Array(10, 25, 50, 75)
-      // numberOfPairs viene letto dalla property powerstatistics.datasetBuilder.numberOfPairs
-      val maxSeqSize = appProperties.getProperty("powerstatistics.datasetBuilder.maxSequenceLength").toInt
-      var bl = 10000
-      while (bl <= maxSeqSize * 10) { // l'ultimo sarà il 10% del successore del maxSeqSize
+    val fromLen =   lengths(0)
+    val maxSeqLen = lengths(1)
+    val step =      lengths(2)
 
-        if (bl >= 1000000)
+    seqLen = fromLen
+    val meanValues = Array(10, 25, 50, 75)
+    var bl = 10000
+    while (bl <= maxSeqLen * 10) { // l'ultimo sarà il 10% del successore del maxSeqSize
+
+      if (bl >= 1000000)
           hadoopConf.setInt("dfs.blocksize", 67108864)
 
-        for (m <- meanValues) {
-          seqLen = bl / 100 * m // prima la divisione altrimenti va in overflow l'integer
+      for (m <- meanValues) {
+        seqLen = bl / 100 * m // prima la divisione altrimenti va in overflow l'integer
 
-          if (seqLen <= maxSeqSize) {
-            buildSyntenthicDataset(seqLen, nullModelPrefix, distribution)
-          }
+        if (seqLen <= maxSeqLen) {
+          buildSyntenthicDataset(seqLen, nullModelPrefix, distribution)
         }
-        bl = bl * 10;
       }
+      bl = bl * 10;
     }
   }
 
@@ -267,32 +276,27 @@ object DatasetBuilder {
   }
 
 
-  def semiSynthetic( nullModelPrefix: String, lengths: Array[String]) : Unit = {
+  def semiSynthetic( nullModelPrefix: String, lengths: Array[Int]) : Unit = {
 
-    if (lengths.length > 3) {
-      for (x <- lengths.drop(3)) {
-        buildAlternateModelsOnly(x.toInt, nullModelPrefix)
-      }
-    }
-    else {
-      val meanValues = Array(10, 25, 50, 75)
-      // numberOfPairs viene letto dalla property powerstatistics.datasetBuilder.numberOfPairs
-      val maxSeqSize = appProperties.getProperty("powerstatistics.datasetBuilder.maxSequenceLength").toInt
-      var bl = 10000
-      while (bl <= maxSeqSize * 10) { // l'ultimo sarà il 10% del successore del maxSeqSize
+    val fromLen =   lengths(0)
+    val maxSeqLen = lengths(1)
+    val step =      lengths(2)
 
-        if (bl >= 1000000)
-          hadoopConf.setInt("dfs.blocksize", 67108864)
+    val meanValues = Array(10, 25, 50, 75)
+    var bl = fromLen
+    while (bl <= maxSeqLen * 10) { // l'ultimo sarà il 10% del successore del maxSeqSize
 
-        for (m <- meanValues) {
-          seqLen = bl * m / 100
+      if (bl >= 1000000)
+        hadoopConf.setInt("dfs.blocksize", 67108864)
 
-          if (seqLen <= maxSeqSize) {
-            buildAlternateModelsOnly(seqLen: Int, nullModelPrefix)
-          }
+      for (m <- meanValues) {
+        seqLen = bl * m / 100
+
+        if (seqLen <= maxSeqLen) {
+          buildAlternateModelsOnly(seqLen: Int, nullModelPrefix)
         }
-        bl = bl * 10;
       }
+      bl = bl * 10;
     }
   }
 
@@ -554,7 +558,7 @@ object DatasetBuilder {
       // motifLen variabile in funzione della lunghezza della sequenza
       // val motifLen = kValueFromSeqlen(sequenceLen)
       // in alternativa motifLen costante >= del valore massimo di k utilizzato.
-      val motifLen = appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt
+      val motifLen = parsed.getOrElse("patternSize", appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt)
 
       var i = 1
       val it: Iterator[String] = reader.getLines()
@@ -692,7 +696,8 @@ object DatasetBuilder {
       // len variabile in funzione della lunghezza della sequennza
       // val patternLen = kValueFromSeqlen( sequenceLen)
       // in alternativa si puo' usare un valore costante per tutte le lunghezze >= del massimo valore di k utilizzato nei test
-      val patternLen = appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt
+      val patternLen = parsed.getOrElse("patternSize", appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt)
+
       var i = 1
       val it : Iterator[String] = reader.getLines()
       // per tutte le sequenze nel file input
@@ -822,9 +827,9 @@ object DatasetBuilder {
     return res
   }
 
-  def saveSequence(sequenzeName: String, seq: Array[Char], writer: BufferedWriter): Unit = {
+  def saveSequence(sequenceName: String, seq: Array[Char], writer: BufferedWriter): Unit = {
 
-    val header = s">${sequenzeName}\n"
+    val header = s">${sequenceName}\n"
 
     writer.write( header)
 
