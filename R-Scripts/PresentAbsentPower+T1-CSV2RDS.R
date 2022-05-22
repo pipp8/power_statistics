@@ -22,13 +22,13 @@ T1Model <- paste( sep='', nullModel, '-T1')
 
 ###### CODE
 
-# if (file.exists(dfFilename)) {
-#   cat( sprintf("Data file %s exists. Do you want to overwrite (Y/N) ?\n", dfFilename))
-#   res <- readline()
-#   if (res != "Y") {
-#     quit(save="ask")
-#   }
-# }
+if (file.exists(dfFilename)) {
+  cat( sprintf("Data file %s exists. Do you want to overwrite (Y/N) ?\n", dfFilename))
+  res <- readline()
+  if (res != "Y") {
+    quit(save="ask")
+  }
+}
 
 
 getPower <- function( am, mes, threshold)

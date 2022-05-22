@@ -28,7 +28,7 @@ dfFilename <- "PresentAbsentEC-Power+T1.RDS"
 
 # Sets the output path for the images to be generated
 
-dirname <- "PowerBoxPlot2"
+dirname <- "PowerBoxPlot3"
 
 
 ###### CODE
@@ -104,5 +104,6 @@ for (am in levels(factor(dati$Model))) {
                          dirname, str_replace(am, " ", ""), kv, alphaTarget)
 	ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
 	# dev.off() #only 129kb in size
+    cat(sprintf("AM = %s, k = %d completed.\n", am, kv))
   }
 }

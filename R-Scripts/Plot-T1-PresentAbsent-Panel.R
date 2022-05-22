@@ -23,7 +23,7 @@ setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 
 # Sets the output path for the images to be generated
-dirname <- "T1BoxPlot2"
+dirname <- "T1BoxPlot3"
 
 # Sets the name of the file containing the input dataframe
 dfFilename <- "PresentAbsentEC-Power+T1.RDS"
