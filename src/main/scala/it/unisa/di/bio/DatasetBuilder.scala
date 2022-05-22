@@ -10,7 +10,6 @@ import java.net.URI
 import java.time.LocalDateTime
 import java.util.Properties
 import java.time.format.DateTimeFormatter
-
 import org.apache.spark.{SparkConf, SparkContext}
 import it.unisa.di.bio.Misc._
 import org.apache.hadoop.conf.Configuration
@@ -21,14 +20,14 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io.BufferedSource
 import scala.math._
 import scala.util.control.Breaks._
-
 import com.concurrentthought.cla._
+
 
 
 object DatasetBuilder {
 
   var local = true
-  val debug = false
+  var debug = true
 
   var sc:  SparkContext = null
   val fileExt: String = "fasta"
@@ -52,30 +51,38 @@ object DatasetBuilder {
 
   var hadoopConf: org.apache.hadoop.conf.Configuration = null
 
+  var multifile : Boolean = false
+  var writer : BufferedWriter = null
+  var reader : BufferedSource = null
+  var inputIter : Iterator[String] = null
+  val rng: scala.util.Random = new scala.util.Random(System.currentTimeMillis / 1000)
 
 
 
   def main(args: Array[String]) {
 
-    val initialArgs: Args = """
-                              |target/powerstatistics-1.0-SNAPSHOT.jar -o destDir -g method -m yarn|local -f start -t last -s step -n numPairs [-b geneSize -p patternSize]
-                              |  -o | --output     string  Path to destination Directory
-                              |  -m | --mode       string  Spark cluster mode local|yarn
-                              |  -g | --generator  string  Generator selection detailed|eColiShuffled|synthetic|mitocondri|shigella
-                              |  -f | --from-len   int=10000 from sequence length
-                              |  -t | --to-len     int     to sequence length
-                              |  -s | --step       int     step size
-                              |  -n | --pairs      int     number of pairs
-                              |  [-b | --geneSize  int=3]  size of imported block from echerichiaColi
-                              |  [-p | --patternSize int]  size of pattern for both alrternative models
-                              |""".stripMargin.toArgs
+    val initialArgs: Args =
+      """
+        |powerstatistics-1.0-SNAPSHOT.jar -o destDir -g method -m yarn|local -f start -t last -s step -n numPairs [-b geneSize -p patternSize]
+        |  [-f | --multiFile flag]   specify the format of target dataset -f implies a file for each pair
+        |  [-d | --debug flag]    specify debug mode some statistical information are printed (slower)
+        |  -o | --output     string  Path to destination Directory
+        |  -m | --mode       string  Spark cluster mode local|yarn
+        |  -g | --generator  string  Generator selection detailed|eColiShuffled|synthetic|mitocondri|shigella
+        |  -f | --from-len   int=10000 from sequence length
+        |  -t | --to-len     int     to sequence length
+        |  -s | --step       int     step size
+        |  -n | --pairs      int     number of pairs
+        |  [-b | --geneSize  int=3]  size of imported block from echerichiaColi
+        |  [-p | --patternSize int]  size of pattern for both alrternative models
+        |""".stripMargin.toArgs
 
-//    if (args.length < 2) {
-//      System.err.println("Errore nei parametri sulla command line")
-//      System.err.println("Usage:\nit.unisa.di.bio.DatasetBuilder outputDir detailed|eColiShuffled|synthetic|mitocondri|shigella [local|yarn [start [end [step [#pairs]]]]]]")
-//      throw new IllegalArgumentException(s"illegal number of argouments. ${args.length} should be at least 2")
-//      return
-//    }
+    //    if (args.length < 2) {
+    //      System.err.println("Errore nei parametri sulla command line")
+    //      System.err.println("Usage:\nit.unisa.di.bio.DatasetBuilder outputDir detailed|eColiShuffled|synthetic|mitocondri|shigella [local|yarn [start [end [step [#pairs]]]]]]")
+    //      throw new IllegalArgumentException(s"illegal number of argouments. ${args.length} should be at least 2")
+    //      return
+    //    }
 
     parsed = initialArgs.process(args)
 
@@ -107,6 +114,8 @@ object DatasetBuilder {
 
     patternLen = parsed.getOrElse("patternSize", appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt)
     geneSize = parsed.getOrElse( "geneSize", appProperties.getProperty("powerstatistics.datasetBuilder.geneSize").toInt)
+    multifile = parsed.getOrElse( "multiFile", false)
+    debug = parsed.getOrElse("debug", false)
 
     // Array(0.25, 0.25, 0.25, 0.25) // P(A), P(C), P(G), P(T) probability
     var stVal = appProperties.getProperty("powerstatistics.datasetBuilder.uniformDistribution").split(",")
@@ -239,7 +248,7 @@ object DatasetBuilder {
 
     for (g <- gValues) {
 
-      // build both the Alternative Models from NullModel just created
+      // build both the Alternative Models using the NullModel just created
       buildDatasetMotifReplace(seqLen, motif, g, nullModelPrefix,
         appProperties.getProperty("powerstatistics.datasetBuilder.altMotifPrefix"))
 
@@ -404,12 +413,6 @@ object DatasetBuilder {
   def buildDatasetWithShuffle(numberOfPairs: Int, sequenceLen: Int,
                               geneSize: Int, prefix: String): Unit = {
 
-    val outputPath = getNullModelFilename( prefix, sequenceLen)
-
-    val writer = new BufferedWriter(
-      new OutputStreamWriter(FileSystem.get(URI.create(outputPath),
-        new Configuration()).create(new Path(outputPath))))
-
     for( i <- 1 to numberOfPairs) {
 
       val seq1 = buildShuffledSequence( sequenceLen, geneSize)
@@ -429,11 +432,11 @@ object DatasetBuilder {
         println
       }
 
-      saveSequence( getSequenceName( prefix, i, 0.0, 1), seq1, writer)
-
-      saveSequence( getSequenceName( prefix, i, 0.0, 2), seq2, writer)
+      val outputPath = getNullModelFilename( prefix, sequenceLen, i)
+      saveSequencePair( outputPath, getSequenceHeader( prefix, i, 0.0, 1), seq1,
+                                    getSequenceHeader( prefix, i, 0.0, 2), seq2)
     }
-    writer.close
+    closeOutput()
   }
 
   // build a null model sequence randomly shuffling a real sequence powerstatistics.datasetBuilder.escherichiaColi
@@ -441,7 +444,6 @@ object DatasetBuilder {
 
     val seq: Array[Char] = new Array[Char](sequenceLen)
     // initialize the random source
-    val rng: scala.util.Random = new scala.util.Random(System.currentTimeMillis / 1000)
     var len = 0
     val inSeq = appProperties.getProperty("powerstatistics.datasetBuilder.escherichiaColi")
     val max = inSeq.length() / geneSize
@@ -477,12 +479,6 @@ object DatasetBuilder {
 
     val rg = new randomNumberGenerator(distribution)
 
-    val outputPath = getNullModelFilename( prefix, sequenceLen)
-
-    val writer = new BufferedWriter(
-      new OutputStreamWriter(FileSystem.get(URI.create(outputPath),
-        new Configuration()).create(new Path(outputPath))))
-
     for( i <- 1 to numberOfPairs) {
 
       for (c <- 0 to sequenceLen - 1) {
@@ -507,11 +503,11 @@ object DatasetBuilder {
         println
       }
 
-      saveSequence( getSequenceName( prefix, i, 0.0, 1), seq1, writer)
-
-      saveSequence( getSequenceName( prefix, i, 0.0, 2), seq2, writer)
+      val outputPath = getNullModelFilename( prefix, sequenceLen, i)
+      saveSequencePair( outputPath, getSequenceHeader( prefix, i, 0.0, 1), seq1,
+                                    getSequenceHeader( prefix, i, 0.0, 2), seq2)
     }
-    writer.close
+    closeOutput()
   }
 
 
@@ -521,94 +517,49 @@ object DatasetBuilder {
 
     val rg = new randomNumberGenerator(probSubstitution)
 
-    var seq1: Array[Char] = new Array[Char](sequenceLen)
-    var seq2: Array[Char] = new Array[Char](sequenceLen)
-    var st1: Array[Int] = null // Array.fill(4)(0)
-    var st2: Array[Int] = null // Array.fill(4)(0)
-    var name: String = ""
+    // motifLen variabile in funzione della lunghezza della sequenza
+    // val motifLen = kValueFromSeqlen(sequenceLen)
+    // in alternativa motifLen costante >= del valore massimo di k utilizzato.
+    val motifLen = parsed.getOrElse("patternSize", appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt)
 
-    val outputPath = getAltModelFilename( outPrefix, sequenceLen, probSubstitution, inPrefix)
+    if (debug) println(f"Motif Replace, gamma=$probSubstitution%.3f\n")
 
-    val writer = new BufferedWriter(
-      new OutputStreamWriter(FileSystem.get(URI.create(outputPath),
-        new Configuration()).create(new Path(outputPath))))
+    // per tutte le coppie nel file input
+    for( i <- 1 to numberOfPairs) {
+      val sq = readSequencePair(inPrefix, sequenceLen, i)
+      val seq1Header = sq._1
+      if (debug) println(s"header: ${seq1Header.mkString("")}")
+      val seq1Body = sq._2
+      val seq2Header = sq._3
+      if (debug) println(s"header: ${seq2Header.mkString("")}")
+      val seq2Body = sq._4
 
-    // codice per leggere la directory savePath
-    // val files = FileSystem.get(sc.hadoopConfiguration).listStatus(new Path(savePath)).map(_.getPath().toString)
-    // files.foreach(println)
+      val ris = replaceMotif(seq1Body, seq2Body, motifLen, motif, rg)
 
-    var seqHeader : String = ""
-    val inputPath = getNullModelFilename(inPrefix, sequenceLen)
+      val AMseq1 = ris._1
+      val AMseq2 = ris._2
 
-    var reader: BufferedSource = null
+      if (debug) {
+        val st1 = getDistribution(AMseq1)
+        print(s"SEQ1(${i},${outPrefix}): ")
+        for (c <- 0 to 3)
+          printf("%c=%.1f%%, ", nucleotideRepr(c), st1(c) * 100.toDouble / sequenceLen)
+        println
 
-    try {
-      if (local) {
-        // legge dal filesystem locale
-        reader = scala.io.Source.fromFile(inputPath)
+        val st2 = getDistribution(AMseq2)
+        print(s"SEQ2(${i},${outPrefix}): ")
+        for (c <- 0 to 3)
+          printf("%c=%.1f%%, ", nucleotideRepr(c), st1(c) * 100.toDouble / sequenceLen)
+        println
       }
-      else {
-        // solo questo codice legge dal HDFS Source.fromFile legge solo da file system locali
-        // val hdfs = FileSystem.get(new URI("hdfs://master:8020/"), new Configuration())
-        val hdfs = FileSystem.get(sc.hadoopConfiguration)
-        val path = new Path(inputPath)
-        val stream = hdfs.open(path)
-        reader = scala.io.Source.fromInputStream(stream)
-      }
-      // motifLen variabile in funzione della lunghezza della sequenza
-      // val motifLen = kValueFromSeqlen(sequenceLen)
-      // in alternativa motifLen costante >= del valore massimo di k utilizzato.
-      val motifLen = parsed.getOrElse("patternSize", appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt)
-
-      var i = 1
-      val it: Iterator[String] = reader.getLines()
-      // per tutte le sequenze nel file input
-      while (it.hasNext) {
-        seqHeader = it.next();
-        if (debug) println(s"header: ${seqHeader}")
-        it.next().copyToArray(seq1)
-
-        seqHeader = it.next();
-        if (debug) println(s"header: ${seqHeader}")
-        it.next().copyToArray(seq2)
-
-        val ris = replaceMotif(seq1, seq2, motifLen, motif, rg)
-
-        seq1 = ris._1
-        seq2 = ris._2
-
-        if (debug) {
-          st1 = getDistribution(seq1)
-          print(s"SEQ1(${i},${outPrefix}): ")
-          for (c <- 0 to 3)
-            printf("%c=%.1f%%, ", nucleotideRepr(c), st1(c) * 100.toDouble / sequenceLen)
-          println
-
-          st2 = getDistribution(seq2)
-          print(s"SEQ2(${i},${outPrefix}): ")
-          for (c <- 0 to 3)
-            printf("%c=%.1f%%, ", nucleotideRepr(c), st1(c) * 100.toDouble / sequenceLen)
-          println
-        }
-
-        saveSequence(getSequenceName(outPrefix, i, probSubstitution, 1), seq1, writer)
-
-        saveSequence(getSequenceName(outPrefix, i, probSubstitution, 2), seq2, writer)
-        i = i + 1
-      }
+      val outputPath = getAltModelFilename( outPrefix, sequenceLen, i, probSubstitution, inPrefix)
+      saveSequencePair( outputPath, getSequenceHeader(outPrefix, i, probSubstitution, 1), AMseq1,
+                                    getSequenceHeader(outPrefix, i, probSubstitution, 2), AMseq2)
     }
-    catch {
-        // Case statement-1
-        case x: FileNotFoundException => {
-          println(s"Exception: ${inputPath} File missing")
-        }
-        case x: IOException   => {
-          println("Input/output Exception")
-        }
-    }
-    reader.close
-    writer.close
+    closeInput()
+    closeOutput()
   }
+
 
 
   def replaceMotif( inputSeq1: Array[Char], inputSeq2: Array[Char], motifLen: Int, motif: Array[Char],
@@ -663,85 +614,45 @@ object DatasetBuilder {
 
     val rg = new randomNumberGenerator(probSubstitution)
 
-    var seq1: Array[Char] = new Array[Char](sequenceLen)
-    var seq2: Array[Char] = new Array[Char](sequenceLen)
-    var st1: Array[Int] = null // Array.fill(4)(0)
-    var st2: Array[Int] = null // Array.fill(4)(0)
 
-    val outputPath = getAltModelFilename( outPrefix, sequenceLen, probSubstitution, inPrefix)
+    // len variabile in funzione della lunghezza della sequennza
+    // val patternLen = kValueFromSeqlen( sequenceLen)
+    // in alternativa si puo' usare un valore costante per tutte le lunghezze >= del massimo valore di k utilizzato nei test
+    val patternLen = parsed.getOrElse("patternSize", appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt)
 
-    val writer = new BufferedWriter(
-      new OutputStreamWriter(FileSystem.get(URI.create(outputPath),
-        new Configuration()).create(new Path(outputPath))))
+    if (debug) println(f"Pattern Transfer, gamma = $probSubstitution%.3f\n")
+    // per tutte le coppie
+    for( i <- 1 to numberOfPairs) {
 
-    var seqHeader : String = ""
-    val inputPath = getNullModelFilename(inPrefix, sequenceLen)
+      val sq = readSequencePair(inPrefix, sequenceLen, i)
+      val seq1Header = sq._1
+      if (debug) println(s"header: ${seq1Header.mkString("")}")
+      val seq1Body = sq._2
+      val seq2Header = sq._3
+      if (debug) println(s"header: ${seq2Header.mkString("")}")
+      val seq2Body = sq._4
 
-    var reader: BufferedSource = null
+      val AMseq2 = patternTransfer(seq1Body, seq2Body, patternLen, rg)
 
-    try {
-      if (local) {
-        // legge dal filesystem locale
-        reader = scala.io.Source.fromFile(inputPath)
+      if (debug) {
+        val st1 = getDistribution(seq1Body)
+        print(s"SEQ1(${i},${outPrefix}): ")
+        for (c <- 0 to 3)
+          printf("%c=%.1f%%, ", nucleotideRepr(c), st1(c) * 100.toDouble / sequenceLen)
+        println
+
+        val st2 = getDistribution(AMseq2)
+        print(s"SEQ2(${i},${outPrefix}): ")
+        for (c <- 0 to 3)
+          printf("%c=%.1f%%, ", nucleotideRepr(c), st1(c) * 100.toDouble / sequenceLen)
+        println
       }
-      else {
-        // solo questo codice legge dal HDFS Source.fromFile legge solo da file system locali
-        // val hdfs = FileSystem.get(new URI("hdfs://master:8020/"), new Configuration())
-        val hdfs = FileSystem.get(sc.hadoopConfiguration)
-        val path = new Path(inputPath)
-        val stream = hdfs.open(path)
-        reader = scala.io.Source.fromInputStream(stream)
-      }
-
-      // len variabile in funzione della lunghezza della sequennza
-      // val patternLen = kValueFromSeqlen( sequenceLen)
-      // in alternativa si puo' usare un valore costante per tutte le lunghezze >= del massimo valore di k utilizzato nei test
-      val patternLen = parsed.getOrElse("patternSize", appProperties.getProperty("powerstatistics.datasetBuilder.replacePatternLength").toInt)
-
-      var i = 1
-      val it : Iterator[String] = reader.getLines()
-      // per tutte le sequenze nel file input
-      while (it.hasNext) {
-        seqHeader = it.next();
-        if (debug)  println(s"header: ${seqHeader}")
-        it.next().copyToArray( seq1)
-
-        seqHeader = it.next();
-        if (debug)  println(s"header: ${seqHeader}")
-        it.next().copyToArray( seq2)
-
-        seq2 = patternTransfer(seq1, seq2, patternLen, rg)
-
-        if (debug) {
-          st1 = getDistribution(seq1)
-          print(s"SEQ1(${i},${outPrefix}): ")
-          for (c <- 0 to 3)
-            printf("%c=%.1f%%, ", nucleotideRepr(c), st1(c) * 100.toDouble / sequenceLen)
-          println
-
-          st2 = getDistribution(seq2)
-          print(s"SEQ2(${i},${outPrefix}): ")
-          for (c <- 0 to 3)
-            printf("%c=%.1f%%, ", nucleotideRepr(c), st1(c) * 100.toDouble / sequenceLen)
-          println
-        }
-        saveSequence(getSequenceName( outPrefix, i, probSubstitution, 1), seq1, writer)
-        saveSequence(getSequenceName( outPrefix, i, probSubstitution, 2), seq2, writer)
-
-        i = i +1
-      }
+      val outputPath = getAltModelFilename( outPrefix, sequenceLen, i, probSubstitution, inPrefix)
+      saveSequencePair( outputPath, getSequenceHeader(outPrefix, i, probSubstitution, 1), seq1Body,
+        getSequenceHeader(outPrefix, i, probSubstitution, 2), AMseq2)
     }
-    catch {
-      // Case statement-1
-      case x: FileNotFoundException => {
-        println(s"Exception: ${inputPath} File missing")
-      }
-      case x: IOException   => {
-        println("Input/output Exception")
-      }
-    }
-    reader.close
-    writer.close
+    closeInput()
+    closeOutput()
   }
 
 
@@ -774,7 +685,7 @@ object DatasetBuilder {
 
 
   def getDistribution(seq: Array[Char]) : Array[Int] = {
-    var dist: Array[Int] = Array.fill(4)(0)
+    var dist: Array[Int] = Array.fill(5)(0)
 
     for( b <- seq) {
       b match {
@@ -782,6 +693,8 @@ object DatasetBuilder {
         case 'C' => dist(1) = dist(1) +1
         case 'G' => dist(2) = dist(2) +1
         case 'T' => dist(3) = dist(3) +1
+        case 'N' => dist(4) = dist(4) +1
+        case x => print(s"unknown character: ${x}")
       }
     }
     return dist
@@ -789,56 +702,108 @@ object DatasetBuilder {
 
 
 
-  def readSequences(prefix: String, sequenceLen: Int): ArrayBuffer[ Array[Char]] = {
+  //
+  // legge una coppia di sequenze
+  //
+  def readSequencePair(prefix: String, sequenceLen: Int, seqId : Int) :
+                            (Array[Char], Array[Char], Array[Char], Array[Char]) = {
 
-    var res = ArrayBuffer[ Array[Char]]()
+    var retVal : (Array[Char], Array[Char], Array[Char], Array[Char]) = null
+    val inputPath: String = getNullModelFilename(prefix, sequenceLen, seqId)
 
-    var seqHeader : String = ""
-
-    val inputPath = getNullModelFilename(prefix, sequenceLen)
-
-    var reader: BufferedSource = null
-
-    if (local) {
-      // legge dal filesystem locale
-      reader = scala.io.Source.fromFile(inputPath)
+    try {
+      if (multifile || reader == null) {
+        if (local) {
+          // legge dal filesystem locale
+          reader = scala.io.Source.fromFile(inputPath)
+        }
+        else {
+          // solo questo codice legge dal HDFS Source.fromFile legge solo da file system locali
+          // val hdfs = FileSystem.get(new URI("hdfs://master:8020/"), new Configuration())
+          val hdfs = FileSystem.get(sc.hadoopConfiguration)
+          val path = new Path(inputPath)
+          val stream = hdfs.open(path)
+          reader = scala.io.Source.fromInputStream(stream)
+        }
+        inputIter = reader.getLines()
+      }
     }
-    else {
-      // solo questo codice legge dal HDFS Source.fromFile legge solo da file system locali
-      // val hdfs = FileSystem.get(new URI("hdfs://master:8020/"), new Configuration())
-      val hdfs = FileSystem.get(sc.hadoopConfiguration)
-      val path = new Path(inputPath)
-      val stream = hdfs.open(path)
-      reader = scala.io.Source.fromInputStream(stream)
+    catch {
+      // Case statement-1
+      case x: FileNotFoundException => {
+        println(s"Exception: ${inputPath} File missing")
+      }
+      case x: IOException   => {
+        println("Input/output Exception")
+      }
     }
-    // reader.getLines.foreach( x => println( x))
-    // reader.reset
-    val it : Iterator[String] = reader.getLines()
+    if (inputIter.hasNext) {
+      val s1 = inputIter.next
+      val seq1Header = new Array[Char](s1.length)
+      s1.copyToArray(seq1Header)
+      val seq1Body = new Array[Char](sequenceLen)
+      inputIter.next.copyToArray(seq1Body)
 
-    while (it.hasNext) {
-      seqHeader = it.next();
-      println(s"header: ${seqHeader}")
-      val seq: Array[Char] = new Array[Char](sequenceLen)
-      it.next().copyToArray( seq)
-      res += seq
-    }
+      val s2 = inputIter.next
+      val seq2Header = new Array[Char](s2.length)
+      s2.copyToArray(seq2Header)
+      val seq2Body = new Array[Char](sequenceLen)
+      inputIter.next.copyToArray(seq2Body)
 
-    reader.close()
-    return res
+      retVal = (seq1Header, seq1Body, seq2Header, seq2Body)
+      }
+
+    if (multifile)
+      closeInput()
+
+    return retVal
   }
 
-  def saveSequence(sequenceName: String, seq: Array[Char], writer: BufferedWriter): Unit = {
 
-    val header = s">${sequenceName}\n"
+  def saveSequencePair(outputPath: String, sequenceHeader1: String, seq1: Array[Char],
+                                            sequenceHeader2: String, seq2: Array[Char]): Unit = {
 
-    writer.write( header)
-
-    writer.write( seq.mkString)
+    if (multifile || writer == null) {
+      openOutput( outputPath)
+    }
+    writer.write( s">${sequenceHeader1}\n")
+    writer.write( seq1.mkString)
     writer.newLine()
+
+    writer.write( s">${sequenceHeader2}\n")
+    writer.write( seq2.mkString)
+    writer.newLine()
+
+    if (multifile) {
+      closeOutput
+    }
   }
 
 
-  def getSequenceName( prefix: String, ndx: Int, g: Double, c: Int) : String = {
+  def openOutput( outputPath: String) {
+    writer = new BufferedWriter(
+      new OutputStreamWriter(FileSystem.get(URI.create(outputPath),
+        new Configuration()).create(new Path(outputPath))))
+  }
+
+
+  def closeOutput() : Unit = {
+    if (writer != null) {
+      writer.close
+      writer = null
+    }
+  }
+
+
+  def closeInput() : Unit = {
+    if (reader != null) {
+      reader.close
+      reader = null
+    }
+  }
+
+
+  def getSequenceHeader(prefix: String, ndx: Int, g: Double, c: Int) : String = {
 
     val pair = if (c == 1) 'A' else 'B'
     val pg = if (g > 0) ".G=" + "%.3f".format( g).substring(2) else ""
@@ -849,14 +814,19 @@ object DatasetBuilder {
   }
 
 
-  def getNullModelFilename(dataSetName: String, seqLength: Int) : String = {
+  def getNullModelFilename(dataSetName: String, seqLength: Int, seqId: Int) : String = {
 
-    val outputPath = s"${savePath}/${dataSetName}-${numberOfPairs}.${seqLength}.${fileExt}"
+    val fld2 =  if (multifile) seqId else numberOfPairs
+    val outputPath =  f"$savePath%s/$dataSetName%s-$fld2%04d.$seqLength%d.$fileExt%s"
+
     return outputPath
   }
 
-  def  getAltModelFilename(alternateModel: String, seqLength: Int, g: Double, nullModel: String) : String = {
 
+
+  def  getAltModelFilename(alternateModel: String, seqLength: Int, seqId: Int, g: Double, nullModel: String) : String = {
+
+    val fld2 =  if (multifile) seqId else numberOfPairs
     val pg = ".G=%.3f".format( g).replace(',','.')
     var sfx: String = null
 
@@ -872,7 +842,7 @@ object DatasetBuilder {
 
     val dataset = alternateModel + "-" + sfx
 
-    val outputPath = s"${savePath}/${dataset}-${numberOfPairs}.${seqLength}${pg}.${fileExt}"
+    val outputPath = f"$savePath%s/$dataset%s-$fld2%04d.$seqLength%d$pg%s.$fileExt%s"
     return outputPath
   }
 

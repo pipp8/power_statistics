@@ -5,6 +5,8 @@
 
 package it.unisa.di.bio
 
+
+
 package object Misc {
 
   val nucleotideRepr = new Array[Char](4) //char representation of nucleotides
