@@ -18,10 +18,10 @@ library(facetscales)
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 # Sets the name of the file containing the input dataframe
-dfFilename <- "PresentAbsent-RawData.RDS"
+# dfFilename <- "PresentAbsent-RawData.RDS"
+# nullModel <- 'Uniform'
+#csvFilename <- 'PresentAbsentData-all.csv'
 dfFilename <- "PresentAbsentEC-RawData.RDS"
-csvFilename <- 'PresentAbsentData-all.csv'
-nullModel <- 'Uniform'
 csvFilename <- 'PresentAbsentECData.csv'
 nullModel <- 'ShuffledEColi'
 T1Model <- paste( sep='', nullModel, '-T1')

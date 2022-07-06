@@ -27,13 +27,15 @@ setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 # Sets the name of the file containing the input dataframe
 dfFilename <- "PresentAbsent-RawData.RDS"
 dfFilename <- "PresentAbsentEC-RawData.RDS"
+csvFilename <- 'PresentAbsentData-all.csv'
 nullModel <- 'Uniform'
+csvFilename <- 'PresentAbsentECData.csv'
 nullModel <- 'ShuffledEColi'
 T1Model <- paste( sep='', nullModel, '-T1')
 
 # Sets the output path for the images to be generated
 
-dirname <- "PlotAN3"
+dirname <- "PlotAN2"
 if (!dir.exists(dirname)) {
   dir.create(dirname)
 }
@@ -45,8 +47,50 @@ scales_y <- list(
   '0.05' = scale_y_continuous(limits = c(0, 136)),
   '0.10' = scale_y_continuous(limits = c(0, 136)))
 
-# carica il dataframe esistente
-dati <- readRDS(file = dfFilename)
+if (!file.exists(dfFilename)) {
+  # converte il file CSV in dataframe
+  columnClasses = c(
+                #   model	    gamma	    seqLen	   pairId	       k
+                "character", "numeric", "integer", "integer", "integer",
+                #   A	        B	         C	        D	        N
+                "numeric", "numeric", "numeric", "numeric", "numeric",
+                # 15 x misure present absent
+                # Anderberg	Antidice	 Dice	     Gower	    Hamman	  Hamming	   Jaccard	  Kulczynski
+                "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
+                # Matching	 Ochiai	     Phi	     Russel	   Sneath    	Tanimoto	  Yule
+                "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
+                # mash 4 x 3 (P value, Mash distance, A, N)
+                "numeric", "numeric", "numeric", "numeric", 
+                "numeric", "numeric", "numeric", "numeric",
+                "numeric", "numeric", "numeric", "numeric",
+                # dati entropia 5 x seq x 2 (A-B)
+                # sequence-A
+                # NKeysA	 2*totalCntA  deltaA	    HkA	       errorA
+                "numeric", "numeric", "numeric", "numeric", "numeric",
+                # sequence-B
+                # NKeysB	 2*totalCntB  deltaB	    HkB	      errorB
+                "numeric", "numeric", "numeric", "numeric", "numeric")
+  
+  dati <-read.csv(file = csvFilename, colClasses = columnClasses)
+  dati$model = factor(dati$model)
+  # dati$gamma = factor(dati$gamma)
+  # dati$k = factor(dati$k)
+
+
+  ll = levels(factor(dati$gamma))
+  gValues = as.double(ll[2:length(ll)])
+  kValues = as.integer(levels(factor(dati$k)))
+  lengths = as.integer(levels(factor(dati$seqLen)))
+  col <- colnames(dati)
+  measures <- c(col[11:25], col[27], col[31], col[35])
+
+  saveRDS(dati, file = dfFilename)
+  cat(sprintf("Dataset %s %d rows saved.", dfFilename, nrow(dati)))
+
+} else {
+  # carica il dataframe esistente
+  dati <- readRDS(file = dfFilename)
+}
 
 ###### CODE
 altModels = levels(dati$model)[1:2]

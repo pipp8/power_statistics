@@ -65,8 +65,8 @@ object DatasetBuilder {
 
     val initialArgs: Args =
       """
-        |powerstatistics-1.0-SNAPSHOT.jar -o destDir -g method -m yarn|local -f start -t last -s step -n numPairs [-b geneSize -p patternSize]
-        |  [-f | --multiFile flag]   specify the format of target dataset -f implies a file for each pair
+        |powerstatistics-1.3-SNAPSHOT.jar -o destDir -g method -m yarn|local -f start -t last -s step -n numPairs [-b geneSize -p patternSize]
+        |  [-f | --multiFile flag]   specify the format of target dataset -f implies one file for each pair
         |  [-d | --debug flag]    specify debug mode some statistical information are printed (slower)
         |  -o | --output     string  Path to destination Directory
         |  -m | --mode       string  Spark cluster mode local|yarn
@@ -76,7 +76,7 @@ object DatasetBuilder {
         |  -s | --step       int     step size
         |  -n | --pairs      int     number of pairs
         |  [-b | --geneSize  int=3]  size of imported block from echerichiaColi
-        |  [-p | --patternSize int]  size of pattern for both alrternative models
+        |  [-p | --patternSize int]  size of pattern for both alternative models
         |""".stripMargin.toArgs
 
     //    if (args.length < 2) {

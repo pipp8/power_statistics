@@ -13,9 +13,10 @@ library(dplyr)
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 # Defines the name of the file containing a copy of the dataframe created by this script
+# dfFilename <- "PresentAbsent-Power+T1.RDS"
+# csvFilename <- 'PresentAbsentData-all.csv'
+# nullModel <- 'Uniform'
 dfFilename <- "PresentAbsentEC-Power+T1.RDS"
-csvFilename <- 'PresentAbsentData-all.csv'
-nullModel <- 'Uniform'
 csvFilename <- 'PresentAbsentECData.csv'
 nullModel <- 'ShuffledEColi'
 T1Model <- paste( sep='', nullModel, '-T1')
@@ -108,10 +109,10 @@ for( len in lengths) {
         for(alpha in alphaValues) {
           ndx <- round(length(nmDistances) * alpha)
           threshold <- nmDistances[ndx]
-          if (threshold == 1) {
-            logLine <- sprintf("%d, %d, %s, %.3f, %.3f, %.3f", len, kv, mes, g, alpha, threshold)
-            write( logLine, file = "Threshold=1.csv", append = TRUE)
-          }
+          # if (threshold == 1) {
+          logLine <- sprintf("%d, %d, %s, %.3f, %.3f, %.3f", len, kv, mes, g, alpha, threshold)
+          write( logLine, file = "Thresholds.csv", append = TRUE)
+          # }
           for(altMod in altModels ) {  # 2 alternative models "MotifRepl-U" "PatTransf-U"
             am <- filter( df, df$model == altMod & df$gamma == g & df$seqLen == len & df$k == kv)
             power = getPower(am, mes, threshold)
