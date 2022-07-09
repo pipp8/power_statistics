@@ -16,8 +16,7 @@ from pyspark.sql import SparkSession
 from pyspark import SparkFiles
 
 
-hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data/dataset10-1000'
-hdfsDataDir = ''
+hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data/dataset'
 inputRE = '*.fasta'
 
 # models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
@@ -29,7 +28,7 @@ minK = 4
 maxK = 32
 stepK = 4
 sketchSizes = [1000, 10000, 100000]
-outFile = 'PresentAbsentData'
+outFilePrefix = 'PresentAbsentECData'
 
 
 class EntropyData:
@@ -477,15 +476,18 @@ def splitDataset(ds, nRun):
 
 
 def main():
-    global hdfsDataDir, outFile
-
-    if (len(sys.argv) != 2):
+    global hdfsDataDir, hdfsPrefixPath,  outFilePrefix
+    
+    argNum = len(sys.argv)
+    if (argNum < 2 or argNum > 3):
         """
-            Usage: PySparkPresentAbsent [partitions]
+            Usage: PySparkPresentAbsent3 seqLength [dataMode]
         """
     else:
         seqLen = int(sys.argv[1])
-        hdfsDataDir = '%s/len=%d' % (hdfsPrefixPath, seqLen)
+        dataMode = sys.argv[2] if (argNum > 2) else ""
+        hdfsDataDir = '%s-%s-1000/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
+        outFile = '%s-%s-1000/%s-%s.%d.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen)
 
     spark = SparkSession \
         .builder \
@@ -496,11 +498,10 @@ def main():
 
     sc2 = spark._jsc.sc()
     nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) -1
-
-    print(nWorkers)
-    # partitions = int(sys.argv[1]) if len(sys.argv) > 1 else 10
-    #
     inputDataset = '%s/%s' % (hdfsDataDir, inputRE)
+
+    print("%d workers, hdfsDataDir: %s, dataMode: %s" % (nWorkers, hdfsDataDir, dataMode))
+
     rdd = sc.wholeTextFiles( inputDataset, minPartitions = 48*100) # 100 tasks per 48 executors
     # print("Number of Partitions: " + str(rdd.getNumPartitions()))
     #
@@ -531,12 +532,7 @@ def main():
                 'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
 
     df = counts.toDF(columnsA + columnsB + columnsC)
-    # df.show()
-    # a = df.take(1)
-    # print( a)
-    # a = df.take(5)
-    # print( a)
-    outFile = '%s-%d.csv' %( outFile, seqLen)
+
     # df.write.format("csv").save(outFile)
     df.write.option("header",True).csv(outFile)
     spark.stop()
