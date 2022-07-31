@@ -6,7 +6,7 @@
 
     <groupId>it.unisa.di.bio</groupId>
     <artifactId>powerstatistics</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.3-SNAPSHOT</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -21,21 +21,25 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_${scala.version.major}</artifactId>
             <version>${spark.version}</version>
+	    <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_${scala.version.major}</artifactId>
             <version>${spark.version}</version>
+	    <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-streaming_${scala.version.major}</artifactId>
             <version>${spark.version}</version>
+	    <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-mllib_${scala.version.major}</artifactId>
             <version>${spark.version}</version>
+	    <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.jmockit</groupId>
@@ -47,27 +51,31 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-csv</artifactId>
             <version>1.8</version>
+	    <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.googlecode.json-simple</groupId>
             <artifactId>json-simple</artifactId>
             <version>1.1.1</version>
+	    <scope>compile</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/javax.json/javax.json-api -->
         <dependency>
             <groupId>javax.json</groupId>
             <artifactId>javax.json-api</artifactId>
             <version>1.1.4</version>
+	    <scope>compile</scope>
         </dependency>
         <dependency>
           <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil</artifactId>
             <version>8.5.6</version>
+	    <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>com.concurrentthought.cla</groupId>
             <artifactId>command-line-arguments_2.12</artifactId>
             <version>0.6.0</version>
+	    <scope>compile</scope>
         </dependency>
 
     </dependencies>
