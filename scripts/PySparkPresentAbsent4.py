@@ -619,7 +619,7 @@ def main():
         columns2.append( 'A (%d)' % ss)
         columns2.append( 'N (%d)' % ss)
 
-    columns3 = [ 'D2, Euclidean']
+    columns3 = [ 'D2', 'Euclidean']
 
     columns4 = ['NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
                 'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
