@@ -24,7 +24,8 @@ library(RColorBrewer)
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 # Sets the name of the file containing the input dataframe
-dfFilename <- "PresentAbsentEC-Power+T1.RDS"
+bs = 32
+dfFilename <- sprintf("%d,%d/PresentAbsentEC-Power+T1-%d,%d.RDS", bs, 32, bs,32)
 
 # Sets the output path for the images to be generated
 

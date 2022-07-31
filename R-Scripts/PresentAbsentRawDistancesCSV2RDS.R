@@ -21,8 +21,10 @@ setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 # dfFilename <- "PresentAbsent-RawData.RDS"
 # nullModel <- 'Uniform'
 #csvFilename <- 'PresentAbsentData-all.csv'
-dfFilename <- "PresentAbsentEC-RawData.RDS"
-csvFilename <- 'PresentAbsentECData.csv'
+bs =11
+
+dfFilename <- sprintf("%d,32/PresentAbsentEC-RawData-%d,32.RDS", bs, bs)
+csvFilename <- sprintf( "%d,32/PresentAbsentECData-%d-32.csv", bs, bs)
 nullModel <- 'ShuffledEColi'
 T1Model <- paste( sep='', nullModel, '-T1')
 
