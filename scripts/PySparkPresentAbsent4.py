@@ -198,10 +198,10 @@ def runProcessLocalPair( ds, model, seqId, seqLen, gamma, k):
     data0 = [model, gamma, seqLen, seqId, k]
 
     # load kmers statistics from histogram files
-    dati3 = runCountBasedMeasures(histFileA, histFileB)
+    dati3 = runCountBasedMeasures(histFileA, histFileB, k)
 
     # load kmers from histogram files
-    (dati1, dati4)  = runPresentAbsent(histFileA, histFileB)
+    (dati1, dati4) = runPresentAbsent(histFileA, histFileB, k)
 
     dati2 = runMash(histFileA, histFileB, k)
 
@@ -217,7 +217,7 @@ def runProcessLocalPair( ds, model, seqId, seqLen, gamma, k):
 
 
 
-def runCountBasedMeasures(histFileA, histFileB):
+def runCountBasedMeasures(histFileA, histFileB, k):
 
     kmerDict = loadHistogram(histFileA, histFileB)
     D2totValue = 0
@@ -234,7 +234,7 @@ def runCountBasedMeasures(histFileA, histFileB):
 
 
 # run jaccard on sequence pair ds with kmer of length = k
-def runPresentAbsent( histFileA, histFileB):
+def runPresentAbsent( histFileA, histFileB, k):
 
     (nKeys, kmerCnt, Hk, leftKmers) = loadKmerList(histFileA)
     entropySeqA = EntropyData( nKeys, kmerCnt, Hk)
