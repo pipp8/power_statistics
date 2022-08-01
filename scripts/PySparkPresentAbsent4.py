@@ -187,12 +187,12 @@ def runProcessLocalPair( ds, model, seqId, seqLen, gamma, k):
 
     inputDatasetA = '%s-A.fasta' % (ds)
     kmcOutputPrefixA = "%s/k=%d-%s-A" % (tempDir, k, baseDS)
-    histFileA = "%s/histk=%d-%s-A.hist" % (tempDir, k, baseDS)
+    histFileA = "%s/k=%d-%s-A.hist" % (tempDir, k, baseDS)
     extractKmers(inputDatasetA, k, tempDir, kmcOutputPrefixA, histFileA)
 
     inputDatasetB = '%s-B.fasta' % (ds)
     kmcOutputPrefixB = "%s/k=%d-%s-B" % (tempDir, k, baseDS)
-    histFileB = "%s/histk=%d-%s-B.hist" % (tempDir, k, baseDS)
+    histFileB = "%s/k=%d-%s-B.hist" % (tempDir, k, baseDS)
     extractKmers(inputDatasetB, k, tempDir, kmcOutputPrefixB, histFileB)
 
     data0 = [model, gamma, seqLen, seqId, k]
@@ -203,7 +203,7 @@ def runProcessLocalPair( ds, model, seqId, seqLen, gamma, k):
     # load kmers from histogram files
     (dati1, dati4) = runPresentAbsent(histFileA, histFileB, k)
 
-    dati2 = runMash(histFileA, histFileB, k)
+    dati2 = runMash(inputDatasetA, inputDatasetB, k)
 
     os.remove(histFileA) # remove histogram file
     os.remove(kmcOutputPrefixA+'.kmc_pre') # remove kmc output prefix file
