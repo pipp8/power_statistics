@@ -136,7 +136,7 @@ def loadKmerList( histFile):
 
     kmer = kmc.KmerAPI( kmcFile.KmerLength())
     cnt  = kmc.Count()
-    totalDistinct = kmcFile.KmerCount
+    totalDistinct = kmcFile.KmerCount()
     npArray = np.empty( totalDistinct, np.object)
 
     i = 0
