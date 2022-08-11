@@ -86,7 +86,7 @@ def loadHistogram(kmerDict, histFile, pairId):
         totalDistinct += 1
 
         if strKmer in kmerDict:
-            cntTuple = kmerDict[kmer]
+            cntTuple = kmerDict[strKmer]
             kmerDict[strKmer] = (cntTuple[0] + count, 0) if ndx == 0 else (cntTuple[0], cntTuple[1] + count)
         else:
             kmerDict[strKmer] = (count, 0) if ndx == 0 else (0, count) # # first time meet or kmer not present in sequence A
