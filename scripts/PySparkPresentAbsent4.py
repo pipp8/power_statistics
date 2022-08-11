@@ -70,8 +70,7 @@ def loadHistogram(kmerDict, histFile, pairId):
     if (kmcFile.OpenForListing(histFile)):
         print("file: %s Opened." % histFile)
     else:
-        print("OpenForListing failed for %s DB." % histFile)
-        exit(-1)
+        raise IOError( "OpenForListing failed for %s DB." % histFile)
 
     kmer = kmc.KmerAPI( kmcFile.KmerLength())
     cnt  = kmc.Count()
@@ -93,8 +92,7 @@ def loadHistogram(kmerDict, histFile, pairId):
             kmerDict[strKmer] = (count, 0) if ndx == 0 else (0, count) # # first time meet or kmer not present in sequence A
 
     if (kmcFile.KmerCount != totalDistinct):
-        print("Loaded %d distinct kmers vs %d" % (totalDistinct, kmcFile.KmerCount))
-        exit(1)
+        raise ValueError( "Loaded %d distinct kmers vs %d" % (totalDistinct, kmcFile.KmerCount()))
 
     kmcFile.Close()
     HkA = sequenceEntropy( kmerDict, 'A', totalKmerCnt)
@@ -134,8 +132,7 @@ def loadKmerList( histFile):
     if (kmcFile.OpenForListing(histFile)):
         print("file: %s Opened." % histFile)
     else:
-        print("OpenForListing failed for %s DB." % histFile)
-        exit(-1)
+        raise IOError( "OpenForListing failed for %s DB." % histFile)
 
     kmer = kmc.KmerAPI( kmcFile.KmerLength())
     cnt  = kmc.Count()
