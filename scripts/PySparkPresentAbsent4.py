@@ -160,7 +160,7 @@ def loadKmerList( histFile):
 
 
 
-def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix, histFile):
+def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
 
     # run kmc on the first sequence
     # -v - verbose mode (shows all parameter settings); default: false
