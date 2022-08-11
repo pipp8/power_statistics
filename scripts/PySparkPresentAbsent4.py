@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 import re
 import os
+import os.path
 import sys
 import glob
 import tempfile
@@ -8,7 +9,9 @@ import shutil
 import copy
 import subprocess
 import math
+
 import numpy as np
+import py_kmc_api as kmc
 
 from operator import add
 import pyspark
@@ -60,101 +63,98 @@ class MashData:
 
 
 # load histogram for both sequences (for ordinary measures such as D2)
-def loadHistogram(histFileA, histFileB):
-    totalKmerCnt = 0
-    # ogni file contiene l'istogramma di una sola sequenza prodotto con kmc 3
-    kmerDict = dict()
-    # first sequence
-    with open(histFileA) as inFile:
-        for line in inFile:
-            s = line.split()   # molto piu' veloce della re
-            if (len(s) != 2):
-                print( "%sMalformed histogram file (%d token)" % (line, len(s)))
-                exit()
-            else:
-                kmer = s[0]
-                count = int(s[1])
+def loadHistogram(kmerDict, histFile, pairId):
 
-            if kmer in kmerDict:
-                cnt = kmerDict[kmer]
-                kmerDict[kmer] = (cnt[0] + count, 0)
-            else:
-                kmerDict[kmer] = (count, 0) # first time meet
+    ndx = 0 if pairId == 'A' else 1
+    kmcFile = kmc.KMCFile()
+    if (kmcFile.OpenForListing(histFile)):
+        print("file: %s Opened." % histFile)
+    else:
+        print("OpenForListing failed for %s DB." % histFile)
+        exit(-1)
 
-    # second sequence
-    with open(histFileB) as inFile:
-        for line in inFile:
-            s = line.split()   # molto piu' veloce della re
-            if (len(s) != 2):
-                print( "%sMalformed histogram file (%d token)" % (line, len(s)))
-                exit()
-            else:
-                kmer = s[0]
-                count = int(s[1])
-
-            if kmer in kmerDict:
-                cnt = kmerDict[kmer]
-                kmerDict[kmer] = (cnt[0], cnt[1] + count)
-            else:
-                kmerDict[kmer] = (0, count) # kmer not present in sequence A
-
-    return kmerDict
-
-
-
-# calcola anche i valori dell'entropia per non caricare due volte l'istogramma
-def loadKmerList( file):
+    kmer = kmc.KmerAPI( kmcFile.KmerLength())
+    cnt  = kmc.Count()
 
     totalKmerCnt = 0
-    # ogni file contiene l'istogramma di una sola sequenza prodotto con kmc 3
-    with open(file) as inFile:
-        seqDict = dict()
-        for line in inFile:
-            s = line.split()   # molto piu' veloce della re
-            if (len(s) != 2):
-                print( "%sMalformed histogram file (%d token)" % (line, len(s)))
-                exit()
-            else:
-                kmer = s[0]
-                count = int(s[1])
+    totalDistinct = 0
+    # histFile contiene il DB con l'istogramma di una sola sequenza prodotto con kmc 3
+    kmcFile.RestartListing()
+    while(kmcFile.ReadNextKmer( kmer, cnt)):
+        strKmer = kmer.__str__()
+        count = cnt.value
+        totalKmerCnt += count
+        totalDistinct += 1
 
-            if kmer in seqDict:
-                seqDict[kmer] = seqDict[kmer] + count
-            else:
-                seqDict[kmer] = count
+        if strKmer in kmerDict:
+            cntTuple = kmerDict[kmer]
+            kmerDict[strKmer] = (cntTuple[0] + count, 0) if ndx == 0 else (cntTuple[0], cntTuple[1] + count)
+        else:
+            kmerDict[strKmer] = (count, 0) if ndx == 0 else (0, count) # # first time meet or kmer not present in sequence A
 
-            totalKmerCnt = totalKmerCnt + count
+    if (kmcFile.KmerCount != totalDistinct):
+        print("Loaded %d distinct kmers vs %d" % (totalDistinct, kmcFile.KmerCount))
+        exit(1)
 
+    kmcFile.Close()
+    HkA = sequenceEntropy( kmerDict, 'A', totalKmerCnt)
+
+    return (totalDistinct, totalKmerCnt, HkA)
+
+
+
+
+# calcola i valori dell'entropia per non caricare due volte l'istogramma
+def sequenceEntropy( seqDict, pairID, totalKmerCnt):
+
+    ndx = 0 if pairID == 'A' else 1
     totalKmers = 0 # this should be seqLen - k + 1
-    totalKeys = 0  # this value should be len(seqDict.keys()) 
+    totalKeys = 0  # this value should be len(seqDict.keys())
     totalProb = 0.0
     Hk = 0.0
-    kList = seqDict.keys()
-    aSize = len(kList)
-    npArray = np.empty( aSize, np.object)
-    for key in kList:
-        cnt = seqDict[key]
+    for key, cntTuple in seqDict.items():
+        cnt = cntTuple[ndx]
         prob = cnt / float(totalKmerCnt)
-        npArray[totalKeys] = key
-        totalKeys = totalKeys + 1
         totalProb = totalProb + prob
-        totalKmers = totalKmers + cnt
         Hk = Hk + prob * math.log(prob, 2)
         # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
-
-    Hk = Hk * -1
-    # arr = np.array(list(seqDict.keys())) => out of memory double allocation of the k-mer list
-    nKeys = npArray.size
-    if (aSize != nKeys):
-        raise ValueError( "TotalKeys = %d vs len(seqDict.keys()) = %d" % (nKeys, aSize))
-
-    if (totalKmers != totalKmerCnt):
-        raise ValueError ( "k-mers count %d vs %d (should be = seqLen - k + 1)" % (totalKmers, totalKmerCnt))
 
     if (round(totalProb,0) != 1.0):
         raise ValueError("Somma(p) = %f must be 1.0. Aborting" % round(totalProb, 0))
 
-    return (nKeys, totalKmerCnt, Hk, npArray)
+    return Hk * -1
+
+
+
+
+# carica i k-mers in un array numpy
+def loadKmerList( histFile):
+
+    kmcFile = kmc.KMCFile()
+    if (kmcFile.OpenForListing(histFile)):
+        print("file: %s Opened." % histFile)
+    else:
+        print("OpenForListing failed for %s DB." % histFile)
+        exit(-1)
+
+    kmer = kmc.KmerAPI( kmcFile.KmerLength())
+    cnt  = kmc.Count()
+    totalDistinct = kmcFile.KmerCount
+    npArray = np.empty( totalDistinct, np.object)
+
+    i = 0
+    kmcFile.RestartListing()
+    while(kmcFile.ReadNextKmer( kmer, cnt)):
+        strKmer = kmer.__str__()
+        npArray[i] = strKmer
+        i += 1
+
+    kmcFile.Close()
+    nKeys = npArray.size
+    if (totalDistinct != nKeys):
+        raise ValueError( "TotalDistinct = %d vs npArray.size = %d" % (totalDistinct, nKeys))
+
+    return npArray
 
 
 
@@ -163,16 +163,34 @@ def loadKmerList( file):
 def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix, histFile):
 
     # run kmc on the first sequence
-    cmd = "/usr/local/bin/kmc -b -k%d -m2 -fm -ci0 -cs1000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
+    # -v - verbose mode (shows all parameter settings); default: false
+    # -k<len> - k-mer length (k from 1 to 256; default: 25)
+    # -m<size> - max amount of RAM in GB (from 1 to 1024); default: 12
+    # -sm - use strict memory mode (memory limit from -m<n> switch will not be exceeded)
+    # -p<par> - signature length (5, 6, 7, 8, 9, 10, 11); default: 9
+    # -f<a/q/m/bam/kmc> - input in FASTA format (-fa), FASTQ format (-fq), multi FASTA (-fm) or BAM (-fbam) or KMC(-fkmc); default: FASTQ
+    # -ci<value> - exclude k-mers occurring less than <value> times (default: 2)
+    # -cs<value> - maximal value of a counter (default: 255)
+    # -cx<value> - exclude k-mers occurring more of than <value> times (default: 1e9)
+    # -b - turn off transformation of k-mers into canonical form
+    # -r - turn on RAM-only mode
+    # -n<value> - number of bins
+    # -t<value> - total number of threads (default: no. of CPU cores)
+    # -sf<value> - number of FASTQ reading threads
+    # -sp<value> - number of splitting threads
+    # -sr<value> - number of threads for 2nd stage
+    # -hp - hide percentage progress (default: false)
+
+    cmd = "/usr/local/bin/kmc -b -hp -k%d -m2 -fm -ci0 -cs1.048.576 -cx1000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
     p = subprocess.Popen(cmd.split())
     p.wait()
     print("cmd: %s returned: %s" % (cmd, p.returncode))
 
-    # dump the result -> kmer histogram
-    cmd = "/usr/local/bin/kmc_dump %s %s" % ( kmcOutputPrefix, histFile)
-    p = subprocess.Popen(cmd.split())
-    p.wait()
-    print("cmd: %s returned: %s" % (cmd, p.returncode))
+    # dump the result -> kmer histogram (no longer needed)
+    # cmd = "/usr/local/bin/kmc_dump %s %s" % ( kmcOutputPrefix, histFile)
+    # p = subprocess.Popen(cmd.split())
+    # p.wait()
+    # print("cmd: %s returned: %s" % (cmd, p.returncode))
 
     return
 
@@ -187,29 +205,34 @@ def runProcessLocalPair( ds, model, seqId, seqLen, gamma, k):
 
     inputDatasetA = '%s-A.fasta' % (ds)
     kmcOutputPrefixA = "%s/k=%d-%s-A" % (tempDir, k, baseDS)
-    histFileA = "%s/k=%d-%s-A.hist" % (tempDir, k, baseDS)
-    extractKmers(inputDatasetA, k, tempDir, kmcOutputPrefixA, histFileA)
+    extractKmers(inputDatasetA, k, tempDir, kmcOutputPrefixA)
 
     inputDatasetB = '%s-B.fasta' % (ds)
     kmcOutputPrefixB = "%s/k=%d-%s-B" % (tempDir, k, baseDS)
-    histFileB = "%s/k=%d-%s-B.hist" % (tempDir, k, baseDS)
-    extractKmers(inputDatasetB, k, tempDir, kmcOutputPrefixB, histFileB)
+    extractKmers(inputDatasetB, k, tempDir, kmcOutputPrefixB)
 
     data0 = [model, gamma, seqLen, seqId, k]
 
     # load kmers statistics from histogram files
-    dati3 = runCountBasedMeasures(histFileA, histFileB, k)
+    kmerDict = dict()
+    (totalDistinctA, totalKmerCntA, HkA) = loadHistogram(kmerDict, kmcOutputPrefixA, 'A')
+    entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
+
+    (totalDistinctB, totalKmerCntB, HkB) = loadHistogram(kmerDict, kmcOutputPrefixB, 'B')
+    entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
+
+    dati3 = runCountBasedMeasures(kmerDict, k)
+    kmerDict = None
 
     # load kmers from histogram files
-    (dati1, dati4) = runPresentAbsent(histFileA, histFileB, k)
+    (dati1, dati4) = runPresentAbsent(kmcOutputPrefixA, entropySeqA,
+                                      kmcOutputPrefixB, entropySeqB, k)
 
     dati2 = runMash(inputDatasetA, inputDatasetB, k)
 
-    os.remove(histFileA) # remove histogram file
     os.remove(kmcOutputPrefixA+'.kmc_pre') # remove kmc output prefix file
     os.remove(kmcOutputPrefixA+'.kmc_suf') # remove kmc output suffix file
 
-    os.remove(histFileB) # remove histogram file
     os.remove(kmcOutputPrefixB+'.kmc_pre') # remove kmc output prefix file
     os.remove(kmcOutputPrefixB+'.kmc_suf') # remove kmc output suffix file
 
@@ -217,9 +240,7 @@ def runProcessLocalPair( ds, model, seqId, seqLen, gamma, k):
 
 
 
-def runCountBasedMeasures(histFileA, histFileB, k):
-
-    kmerDict = loadHistogram(histFileA, histFileB)
+def runCountBasedMeasures(kmerDict, k):
     D2totValue = 0
     EuclideanTotValue = 0
     for kmer in kmerDict:
@@ -233,13 +254,12 @@ def runCountBasedMeasures(histFileA, histFileB, k):
 
 
 
-# run jaccard on sequence pair ds with kmer of length = k
-def runPresentAbsent( histFileA, histFileB, k):
 
-    (nKeys, kmerCnt, Hk, leftKmers) = loadKmerList(histFileA)
-    entropySeqA = EntropyData( nKeys, kmerCnt, Hk)
-    (nKeys, kmerCnt, Hk, rightKmers) = loadKmerList(histFileB)
-    entropySeqB = EntropyData( nKeys, kmerCnt, Hk)
+# run jaccard on sequence pair ds with kmer of length = k
+def runPresentAbsent( histFileA, entropySeqA, histFileB, entropySeqB, k):
+
+    leftKmers = loadKmerList(histFileA)
+    rightKmers = loadKmerList(histFileB)
     print("left: %d, right: %d" % (leftKmers.size, rightKmers.size))
 
     intersection = np.intersect1d( leftKmers, rightKmers)
@@ -581,7 +601,7 @@ def main():
 
     spark = SparkSession \
         .builder \
-        .appName("PresentAbsent3 %d" % seqLen) \
+        .appName("%s %d" % (os.path.basename( sys.argv[0]), seqLen)) \
         .getOrCreate()
 
     sc = spark.sparkContext

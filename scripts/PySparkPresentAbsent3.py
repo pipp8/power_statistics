@@ -480,9 +480,9 @@ def main():
     
     argNum = len(sys.argv)
     if (argNum < 2 or argNum > 3):
-        """
+        print( """
             Usage: PySparkPresentAbsent3 seqLength [dataMode]
-        """
+        """)
     else:
         seqLen = int(sys.argv[1])
         dataMode = sys.argv[2] if (argNum > 2) else ""

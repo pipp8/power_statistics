@@ -36,7 +36,7 @@ def addKColumn( k, inputFile):
             exit(-1)
         else:
             model = m.group(2)
-            seqLen = m.group(3)
+            seqLen = int(m.group(3))
             gamma = 0. if (len( m.group(4)) == 0) else float("0." + m.group(4)[3:])
             print( "model = %s, seqLen = %d, k = %d, gamma = %f" % (model, seqLen, k, gamma))
 
