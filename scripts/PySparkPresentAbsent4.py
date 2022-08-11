@@ -91,7 +91,7 @@ def loadHistogram(kmerDict, histFile, pairId):
         else:
             kmerDict[strKmer] = (count, 0) if ndx == 0 else (0, count) # # first time meet or kmer not present in sequence A
 
-    if (kmcFile.KmerCount != totalDistinct):
+    if (kmcFile.KmerCount() != totalDistinct):
         raise ValueError( "Loaded %d distinct kmers vs %d" % (totalDistinct, kmcFile.KmerCount()))
 
     kmcFile.Close()
