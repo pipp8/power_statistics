@@ -95,9 +95,9 @@ def loadHistogram(kmerDict, histFile, pairId):
         raise ValueError( "Loaded %d distinct kmers vs %d" % (totalDistinct, kmcFile.KmerCount()))
 
     kmcFile.Close()
-    HkA = sequenceEntropy( kmerDict, 'A', totalKmerCnt)
+    Hk = sequenceEntropy( kmerDict, pairId, totalKmerCnt)
 
-    return (totalDistinct, totalKmerCnt, HkA)
+    return (totalDistinct, totalKmerCnt, Hk)
 
 
 
@@ -112,10 +112,11 @@ def sequenceEntropy( seqDict, pairID, totalKmerCnt):
     Hk = 0.0
     for key, cntTuple in seqDict.items():
         cnt = cntTuple[ndx]
-        prob = cnt / float(totalKmerCnt)
-        totalProb = totalProb + prob
-        Hk = Hk + prob * math.log(prob, 2)
-        # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
+        if (cnt > 0):
+            prob = cnt / float(totalKmerCnt)
+            totalProb = totalProb + prob
+            Hk = Hk + prob * math.log(prob, 2)
+            # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
 
     if (round(totalProb,0) != 1.0):
         raise ValueError("Somma(p) = %f must be 1.0. Aborting" % round(totalProb, 0))
