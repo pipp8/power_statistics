@@ -14,12 +14,9 @@ import numpy as np
 import py_kmc_api as kmc
 
 from operator import add
-import pyspark
-from pyspark.sql import SparkSession
-from pyspark import SparkFiles
 
 
-hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data/dataset'
+hdfsPrefixPath = '/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/PresentAbsent/8,32/tt'
 inputRE = '*.fasta'
 
 # models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
@@ -84,8 +81,8 @@ def loadHistogram(kmerDict, histFile, pairId):
         count = cnt.value
         totalKmerCnt += count
         totalDistinct += 1
-
         if strKmer in kmerDict:
+
             cntTuple = kmerDict[strKmer]
             kmerDict[strKmer] = (cntTuple[0] + count, 0) if ndx == 0 else (cntTuple[0], cntTuple[1] + count)
         else:
@@ -220,7 +217,7 @@ def runProcessLocalPair( ds, model, seqId, seqLen, gamma, k):
     dati3 = runCountBasedMeasures(kmerDict, k)
     kmerDict = None # free dictionary memory (=> counting are no longer necessary)
 
-    # load kmers from histogram files
+    # load kmers only from histogram files
     (dati1, dati4) = runPresentAbsent(kmcOutputPrefixA, entropySeqA,
                                       kmcOutputPrefixB, entropySeqB, k)
 
@@ -426,95 +423,41 @@ def saveSingleSequence(prefix, seq, header, sequence):
 
 
 # processo una coppia del tipo (id, (hdrA, seqA), (hdrB, seqB))
-def processPairs(seqPair):
-
-    dataset = seqPair[0]
-    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*)', dataset)
+def processPairs( pair):
+    dataset = pair[0]   # sequenza A
+    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*)-A.fasta', dataset)
     if (m is None):
         raise ValueError("Malformed sequences pair (name=<%s>)" % dataset)
     else:
-        model = m.group(1)
-        nPairs = int(m.group(2))
+        model = os.path.basename(m.group(1))
+        pairId = int(m.group(2))
         seqLen = int(m.group(3))
         gamma = m.group(4)
 
-    header = seqPair[1][0]
-    m = re.search(r'^>(.+)\.(\d+)(.*)-([AB]$)', header)
-    if (m is not None):
-        # seqName = m.group(1)
-        seqId = int(m.group(2))
-        # gValue = m.group(3)
-        pairId = m.group(4)
 
     # process local file system temporary directory
-    tempDir = tempfile.mkdtemp()
+    # tempDir = tempfile.mkdtemp()
+    tempDir = os.path.dirname( dataset)
 
     # common prefix
-    fileNamePrefix = "%s/%s-%04d.%d%s" % (tempDir, model, seqId, seqLen, gamma)
-    # save sequence seqId-A
-    saveSingleSequence(fileNamePrefix, 'A', seqPair[1][0], seqPair[1][1])
-    # save sequence seqId-B
-    saveSingleSequence(fileNamePrefix, 'B', seqPair[2][0], seqPair[2][1])
+    fileNamePrefix = "%s/%s-%04d.%d%s" % (tempDir, model, pairId, seqLen, gamma)
 
     results = []
     for k in range( minK, maxK+1, stepK):
         # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
         g = float(gamma[3:]) if (len(gamma) > 0) else 0.0
-        results.append(runProcessLocalPair(fileNamePrefix, model, seqId, seqLen, g, k))
+        results.append(runProcessLocalPair(fileNamePrefix, model, pairId, seqLen, g, k))
 
     # clean up
     # do not remove dataset on hdfs
     # remove histogram files (A & B) + mash sketch file and kmc temporary files
-    try:
-        print("Cleaning temporary directory %s" % (tempDir))
-        shutil.rmtree(tempDir)
-    except OSError as e:
-        print("Error removing: %s: %s" % (tempDir, e.strerror))
+    # try:
+    #     print("Cleaning temporary directory %s" % (tempDir))
+    #     shutil.rmtree(tempDir)
+    # except OSError as e:
+    #     print("Error removing: %s: %s" % (tempDir, e.strerror))
 
     return results
-
-
-
-# produce a list of sequence pairs with len nSeq
-def splitPairs(ds):
-
-    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*).fasta', os.path.basename(ds[0]))
-    if (m is None):
-        raise ValueError("Malformed file name <%s>" % ds[0])
-    else:
-        model = m.group(1)
-        nPair = int(m.group(2))
-        seqLen = int(m.group(3))
-        gamma = m.group(4)
-
-    # print("Splitting dataset: %s@%s" % (ds[0], os.uname()[1]))
-
-    lines = ds[1].split()
-    if (len(lines) != 4):
-        raise ValueError("missing sequence data (len = %d)" % len(lines))
-
-    ids = ['A', 'B']
-    seqPair = [ 'name', [ 'header', 'sequenceA'], ['headerB', 'sequenceB']]
-    seqLabel = "%s-%d.%d%s" % (model, nPair, seqLen, gamma) #uguale per tutto il dataset
-    seqPair[0] = seqLabel
-    for seq in range(2):
-        header = lines[2*seq]
-        m = re.search(r'^>(.+)\.(\d+)(.*)-([AB]$)', header)
-        if (m is not None):
-            # seqName = m.group(1) e gValue = m.group(3) sono unici per l'intero file
-            seqId = int(m.group(2))
-            pairId =  m.group(4)
-        else:
-            raise ValueError("Malformed sequence header: %s" % header)
-
-        seqPair[seq+1][0] = header
-        if (pairId != ids[seq]):
-            raise ValueError("sequence out of order %s vs %s" % (pairId, ids[seq]))
-
-        sequence = lines[2*seq + 1]
-        seqPair[seq+1][1] = sequence
-
-    return seqPair
 
 
 
@@ -524,43 +467,25 @@ def splitPairs(ds):
 def main():
     global hdfsDataDir, hdfsPrefixPath,  outFilePrefix
     
-    argNum = len(sys.argv)
-    if (argNum < 2 or argNum > 3):
-        """
-            Usage: PySparkPresentAbsent4 seqLength [dataMode]
-        """
-    else:
-        seqLen = int(sys.argv[1])
-        dataMode = sys.argv[2] if (argNum > 2) else ""
-        hdfsDataDir = '%s-%s-1000/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
-        outFile = '%s-%s-1000/%s-%s.%d.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen)
+    # argNum = len(sys.argv)
+    # if (argNum < 2 or argNum > 3):
+    #     """
+    #         Usage: LocalPresentAbsent4 seqLength [dataMode]
+    #     """
+    # else:
+    seqLen = 1000 # int(sys.argv[1])
+    # dataMode = sys.argv[2] if (argNum > 2) else ""
+    hdfsDataDir = hdfsPrefixPath # '%s-%s-1000/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
+    # outFile = '%s-%s-1000/%s-%s.%d.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen)
 
-    spark = SparkSession \
-        .builder \
-        .appName("%s %d" % (os.path.basename( sys.argv[0]), seqLen)) \
-        .getOrCreate()
+    recs = []
+    inputDataset = glob.glob( '%s/%s' % (hdfsDataDir, inputRE))
+    inputDataset.sort() # necessario perchè glob produce un output disordinato
+    a = iter(inputDataset)
+    for pair in zip(a, a):    # processa la lista a coppie
+        recs.append( processPairs(pair))
 
-    sc = spark.sparkContext
-
-    sc2 = spark._jsc.sc()
-    nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) -1
-    inputDataset = '%s/%s' % (hdfsDataDir, inputRE)
-
-    print("%d workers, hdfsDataDir: %s, dataMode: %s" % (nWorkers, hdfsDataDir, dataMode))
-
-    rdd = sc.wholeTextFiles( inputDataset, minPartitions = 48*100) # 100 tasks per 48 executors
-    # print("Number of Partitions: " + str(rdd.getNumPartitions()))
-    #
-    # .map(lambda x: (x[0], x[1][0], x[1][1], x[2][0], x[2][1]))
-    # columns = ['name', 'seqA', 'contentA', 'seqB', 'contentB']
-
-    print("**** RDD number of Partitions: %d" % rdd.getNumPartitions())
-
-    pairs = rdd.map(lambda x: splitPairs(x))
-    print("**** pairs number of Partitions: %d" % pairs.getNumPartitions())
-
-    counts = pairs.flatMap(lambda x: processPairs(x))
-    print("**** counts number of Partitions: %d" % counts.getNumPartitions())
+    print(recs)
 
     columns0 = ['model', 'gamma', 'seqLen', 'pairId', 'k'] # dati 0
     columns1 = [ 'A', 'B', 'C', 'D', 'N',
@@ -580,11 +505,7 @@ def main():
     columns4 = ['NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
                 'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
 
-    df = counts.toDF(columns0 + columns1 + columns2 + columns3 + columns4)
 
-    # df.write.format("csv").save(outFile)
-    df.write.option("header",True).csv(outFile)
-    spark.stop()
 
 
 
