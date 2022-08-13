@@ -288,7 +288,7 @@ def NormalizedSquaredEuclideanDistance( vector):
     # D = 2 * m * (1 - (np.dot(vector[0], vector[1]) - m * avg[0] * avg[1]) / (m * std[0] * std[1]))
     var = np.var( vector, axis=1)
 
-    NED = 0.5 * np.var(vector[0] - vector[1]) / (var[0] + var[1])
+    NED = float(0.5 * np.var(vector[0] - vector[1]) / (var[0] + var[1]))
     return NED
 
 
