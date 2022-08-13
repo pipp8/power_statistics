@@ -62,7 +62,8 @@ class MashData:
 
 
 
-# load histogram for both sequences (for ordinary measures such as D2)
+
+# load histogram for both sequences (for counter based measures such as D2)
 def loadHistogram(kmerDict, histFile, pairId):
 
     ndx = 0 if pairId == 'A' else 1
@@ -84,8 +85,8 @@ def loadHistogram(kmerDict, histFile, pairId):
         count = cnt.value
         totalKmerCnt += count
         totalDistinct += 1
-
         if strKmer in kmerDict:
+
             cntTuple = kmerDict[strKmer]
             kmerDict[strKmer] = (cntTuple[0] + count, 0) if ndx == 0 else (cntTuple[0], cntTuple[1] + count)
         else:
@@ -124,33 +125,24 @@ def sequenceEntropy( seqDict, pairID, totalKmerCnt):
 
 
 
-# carica i k-mers in un array numpy
-def loadKmerList( histFile):
 
-    kmcFile = kmc.KMCFile()
-    if (kmcFile.OpenForListing(histFile)):
-        print("file: %s Opened." % histFile)
-    else:
-        raise IOError( "OpenForListing failed for %s DB." % histFile)
+def extractStatistics(cnts):
 
-    kmer = kmc.KmerAPI( kmcFile.KmerLength())
-    cnt  = kmc.Count()
-    totalDistinct = kmcFile.KmerCount()
-    npArray = np.empty( totalDistinct, object)
+    (left, right, both ) = (0,0,0)
+    for i in range(cnts.shape[1]):
+        if (cnts[0, i] == 0):
+            if (cnts[1,i] > 0):
+                right += 1  # presente solo a destra
+            else:
+                raise ValueError("double 0 in kmer histogram")
+        else:
+            if (cnts[1,i] == 0):
+                left += 1   # solo a sinistra
+            else:
+                both += 1   # in entrambi
 
-    i = 0
-    kmcFile.RestartListing()
-    while(kmcFile.ReadNextKmer( kmer, cnt)):
-        strKmer = kmer.__str__()
-        npArray[i] = strKmer
-        i += 1
+    return( both, left, right)
 
-    kmcFile.Close()
-    nKeys = i # = npArray.size
-    if (totalDistinct != nKeys):
-        raise ValueError( "TotalDistinct = %d vs npArray.size = %d" % (totalDistinct, nKeys))
-
-    return npArray
 
 
 
@@ -192,8 +184,9 @@ def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
 
 
 
+
 # run jaccard on sequence pair ds with kmer of length = k
-def runProcessLocalPair( ds, model, seqId, seqLen, gamma, k):
+def processLocalPair( ds, model, seqId, seqLen, gamma, k):
 
     # first extract kmer statistics for both sequences
     tempDir = os.path.dirname( ds)
@@ -217,14 +210,27 @@ def runProcessLocalPair( ds, model, seqId, seqLen, gamma, k):
     (totalDistinctB, totalKmerCntB, HkB) = loadHistogram(kmerDict, kmcOutputPrefixB, 'B')
     entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
 
-    dati3 = runCountBasedMeasures(kmerDict, k)
+    i = 0
+    cnts = np.empty( shape=(2, len( kmerDict.values())), dtype='int32')
+    for v in kmerDict.values():
+        cnts[0, i] = v[0]
+        cnts[1, i] = v[1]
+        i += 1
+
     kmerDict = None # free dictionary memory (=> counting are no longer necessary)
 
-    # load kmers from histogram files
-    (dati1, dati4) = runPresentAbsent(kmcOutputPrefixA, entropySeqA,
-                                      kmcOutputPrefixB, entropySeqB, k)
+    dati3 = runCountBasedMeasures(cnts, k)
+
+    (bothCnt, leftCnt, rightCnt) = extractStatistics(cnts)
+
+    cnts = None # free ndarray with kmer counting
+
+    # load kmers only from histogram files
+    dati1 = runPresentAbsent(bothCnt, leftCnt, rightCnt, k)
 
     dati2 = runMash(inputDatasetA, inputDatasetB, k)
+
+    dati4 = entropyData(entropySeqA, entropySeqB)
 
     os.remove(kmcOutputPrefixA+'.kmc_pre') # remove kmc output prefix file
     os.remove(kmcOutputPrefixA+'.kmc_suf') # remove kmc output suffix file
@@ -236,35 +242,66 @@ def runProcessLocalPair( ds, model, seqId, seqLen, gamma, k):
 
 
 
-def runCountBasedMeasures(kmerDict, k):
+def runCountBasedMeasures(cnts, k):
     D2totValue = 0
     EuclideanTotValue = 0
-    for kmer in kmerDict:
-        v = kmerDict[kmer]
-        D2totValue = D2totValue + v[0] * v[1]
-        d = v[0] - v[1]
+    for i in range(cnts.shape[1]):
+        D2totValue = D2totValue + cnts[0,i] * cnts[1,i]
+        d = cnts[0,i] - cnts[1,i]
         EuclideanTotValue = EuclideanTotValue + d * d
 
-    return [D2totValue, math.sqrt(EuclideanTotValue)]
+    NED = NormalizedSquaredEuclideanDistance( cnts)
+    return [D2totValue, math.sqrt(EuclideanTotValue), NED]
+
+
+
+
+# we use numpy to not reimplment z-score stndardization from scratch
+def NormalizedSquaredEuclideanDistance( vector):
+    # (tot1, tot2) = (0, 0)
+    # for x in vector:
+    #     tot1 += x[0]
+    #     tot2 += x[1]
+    # n = len(vector)
+    # mean1 = tot1 / n
+    # mean2 = tot2 / n
+    # (totDifferences1,totDifferences2) = (0,0)
+    # for v in [((value[0] - mean1)**2, (value[1] - mean2)**2)  for value in vector]:
+    #     totDifferences1 += v[0]
+    #     totDifferences2 += v[1]
+    # standardDeviation1 = (totDifferences1 / n) ** 0.5
+    # standardDeviation2 = (totDifferences2 / n) ** 0.5
+    # zscores = [((v[0] - mean1) / standardDeviation1, (v[1] - mean2) / standardDeviation2) for v in vector]
+
+    # avg = np.mean( vector, axis=1)
+    # std = np.std( vector, axis=1)
+    #
+    # z0_np = (vector[0] - avg[0]) / std[0]
+    # z1_np = (vector[1] - avg[1]) / std[1]
+    # tot = 0
+    # for i in range(vector.shape[1]):
+    #     tot += ((z0_np[i] - z1_np[i]) ** 2)
+    #
+    # ZEu = tot ** 0.5
+    #
+    # m = vector.shape[1]
+    # D = 2 * m * (1 - (np.dot(vector[0], vector[1]) - m * avg[0] * avg[1]) / (m * std[0] * std[1]))
+    var = np.var( vector, axis=1)
+
+    NED = 0.5 * np.var(vector[0] - vector[1]) / (var[0] + var[1])
+    return NED
 
 
 
 
 # run jaccard on sequence pair ds with kmer of length = k
-def runPresentAbsent( histFileA, entropySeqA, histFileB, entropySeqB, k):
+def runPresentAbsent(  bothCnt, leftCnt, rightCnt, k):
 
-    leftKmers = loadKmerList(histFileA)
-    rightKmers = loadKmerList(histFileB)
-    print("left: %d, right: %d" % (leftKmers.size, rightKmers.size))
-
-    intersection = np.intersect1d( leftKmers, rightKmers)
-    bothCnt = intersection.size
+    print("left: %d, right: %d" % (leftCnt, rightCnt))
     A = bothCnt
-    leftCnt = leftKmers.size - bothCnt
     B = leftCnt
-    rightCnt = rightKmers.size - bothCnt
     C = rightCnt
-    
+
     NMax = pow(4, k)
     M01M10 = leftCnt + rightCnt
     M01M10M11 = bothCnt + M01M10
@@ -369,11 +406,8 @@ def runPresentAbsent( histFileA, entropySeqA, histFileB, entropySeqB, k):
              anderberg, antidice, dice, gower, hamman, hamming, jaccard,
              kulczynski, matching, ochiai, phi, russel, sneath, tanimoto, yule]
 
-    # dati errore entropia e rappresentazione present/absent
-    data4 = [entropySeqA.nKeys, 2 * entropySeqA.totalKmerCnt, entropySeqA.getDelta(), entropySeqA.Hk, entropySeqA.getError(),
-             entropySeqB.nKeys, 2 * entropySeqB.totalKmerCnt, entropySeqB.getDelta(), entropySeqB.Hk, entropySeqB.getError()]
+    return data1
 
-    return (data1, data4)
 
 
 
@@ -408,6 +442,16 @@ def runMash(inputDS1, inputDS2, k):
     os.remove(inputDS2 + '.msh')
 
     return data2
+
+
+
+
+
+def entropyData(entropySeqA, entropySeqB):
+    # dati errore entropia e rappresentazione present/absent
+    return  [entropySeqA.nKeys, 2 * entropySeqA.totalKmerCnt, entropySeqA.getDelta(), entropySeqA.Hk, entropySeqA.getError(),
+             entropySeqB.nKeys, 2 * entropySeqB.totalKmerCnt, entropySeqB.getDelta(), entropySeqB.Hk, entropySeqB.getError()]
+
 
 
 
@@ -460,7 +504,7 @@ def processPairs(seqPair):
     for k in range( minK, maxK+1, stepK):
         # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
         g = float(gamma[3:]) if (len(gamma) > 0) else 0.0
-        results.append(runProcessLocalPair(fileNamePrefix, model, seqId, seqLen, g, k))
+        results.append(processLocalPair(fileNamePrefix, model, seqId, seqLen, g, k))
 
     # clean up
     # do not remove dataset on hdfs
@@ -575,7 +619,7 @@ def main():
         columns2.append( 'A (%d)' % ss)
         columns2.append( 'N (%d)' % ss)
 
-    columns3 = [ 'D2', 'Euclidean']
+    columns3 = [ 'D2', 'Euclidean', 'Euclid_norm']
 
     columns4 = ['NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
                 'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
