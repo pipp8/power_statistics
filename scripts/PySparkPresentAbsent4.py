@@ -251,7 +251,7 @@ def runCountBasedMeasures(cnts, k):
         EuclideanTotValue = EuclideanTotValue + d * d
 
     NED = NormalizedSquaredEuclideanDistance( cnts)
-    return [D2totValue, math.sqrt(EuclideanTotValue), NED]
+    return [int(D2totValue), math.sqrt(EuclideanTotValue), float(NED)]
 
 
 
@@ -288,7 +288,7 @@ def NormalizedSquaredEuclideanDistance( vector):
     # D = 2 * m * (1 - (np.dot(vector[0], vector[1]) - m * avg[0] * avg[1]) / (m * std[0] * std[1]))
     var = np.var( vector, axis=1)
 
-    NED = float(0.5 * np.var(vector[0] - vector[1]) / (var[0] + var[1]))
+    NED = 0.5 * np.var(vector[0] - vector[1]) / (var[0] + var[1])
     return NED
 
 
@@ -298,9 +298,9 @@ def NormalizedSquaredEuclideanDistance( vector):
 def runPresentAbsent(  bothCnt, leftCnt, rightCnt, k):
 
     print("left: %d, right: %d" % (leftCnt, rightCnt))
-    A = bothCnt
-    B = leftCnt
-    C = rightCnt
+    A = int(bothCnt)
+    B = int(leftCnt)
+    C = int(rightCnt)
 
     NMax = pow(4, k)
     M01M10 = leftCnt + rightCnt

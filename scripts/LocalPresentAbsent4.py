@@ -244,7 +244,7 @@ def runCountBasedMeasures(cnts, k):
         EuclideanTotValue = EuclideanTotValue + d * d
 
     NED = NormalizedSquaredEuclideanDistance( cnts)
-    return [D2totValue, math.sqrt(EuclideanTotValue), NED]
+    return [int(D2totValue), math.sqrt(EuclideanTotValue), float(NED)]
 
 
 
@@ -484,6 +484,8 @@ def processPairs( pair):
         # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
         g = float(gamma[3:]) if (len(gamma) > 0) else 0.0
         row = processLocalPair(fileNamePrefix, model, pairId, seqLen, g, k)
+        # for i in range(len(row)):
+        #     print(i, type(row[i]))
         results.append(row)
 
     # clean up
