@@ -21,7 +21,7 @@ setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 # dfFilename <- "PresentAbsent-RawData.RDS"
 # nullModel <- 'Uniform'
 #csvFilename <- 'PresentAbsentData-all.csv'
-bs =11
+bs = 1
 
 dfFilename <- sprintf("%d,32/PresentAbsentEC-RawData-%d,32.RDS", bs, bs)
 csvFilename <- sprintf( "%d,32/PresentAbsentECData-%d-32.csv", bs, bs)
@@ -39,25 +39,27 @@ if (file.exists(dfFilename)) {
 
 # otherwise convert the  CSV file to dataframe
 columnClasses = c(
-              #   model	    gamma	    seqLen	   pairId	       k
+              # 1  model	   2 gamma	  3 seqLen	 4 pairId	   5 k
               "character", "numeric", "integer", "integer", "integer",
-              #   A	        B	         C	        D	        N
+              # 6  A	        B	         C	        D	        N
               "numeric", "numeric", "numeric", "numeric", "numeric",
               # 15 x misure present absent
-              # Anderberg	Antidice	 Dice	     Gower	    Hamman	  Hamming	   Jaccard	  Kulczynski
+              # 11 Anderberg	Antidice	 Dice	     Gower	    Hamman	  Hamming	   Jaccard	  Kulczynski
               "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
               # Matching	 Ochiai	     Phi	     Russel	   Sneath    	Tanimoto	  Yule
               "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
-              # mash 4 x 3 (P value, Mash distance, A, N)
+              # 26 mash 4 x 3 (P value, Mash distance, A, N)
               "numeric", "numeric", "numeric", "numeric",
               "numeric", "numeric", "numeric", "numeric",
               "numeric", "numeric", "numeric", "numeric",
-              # dati entropia 5 x seq x 2 (A-B)
+              # 38 D2, Euclidean, NormalizedEuclidean
+              "numeric", "numeric", "numeric",
+              #  dati entropia 5 x seq x 2 (A-B)
               # sequence-A
-              # NKeysA	 2*totalCntA  deltaA	    HkA	       errorA
+              # 41 NKeysA 2*totalCntA deltaA	   HkA	      errorA
               "numeric", "numeric", "numeric", "numeric", "numeric",
               # sequence-B
-              # NKeysB	 2*totalCntB  deltaB	    HkB	      errorB
+              # 46 NKeysB	2*totalCntB deltaB	   HkB	      errorB
               "numeric", "numeric", "numeric", "numeric", "numeric")
 
 dati <-read.csv(file = csvFilename, colClasses = columnClasses)

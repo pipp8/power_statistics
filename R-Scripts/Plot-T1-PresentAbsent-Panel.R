@@ -94,7 +94,7 @@ for( a in c( 0.01, 0.05, 0.10)) {
       # theme_light(base_size = 10) + labs(x = "") + # theme(legend.position = "none") +
       scale_colour_brewer(palette = "Dark2")
       # scale_fill_grey(start = 0, end = .9)
-	  # ggtitle("Pannello risultati T1-Check")
+	    # ggtitle("Pannello risultati T1-Check")
 	
 	# dev.new(width = 10, height = 5)
   outfname <- sprintf( "%s/T1Box-alpha=%.2f.pdf", dirname, a)
