@@ -16,7 +16,7 @@ plot_labeller <- function(variable,value){
   if (variable == 'len') {
     # N.B. len e' un factor
     return(len_names[as.character(value)])
-  } else if (variable == 'kf') {
+  } else if (variable == 'k') {
     return(sprintf("k = %s", as.character(value)))
   }  else {
     return(as.character(value))
@@ -77,6 +77,7 @@ columnClasses1 = c(
 
 
 plotCombinatorics <- function(geneSize, patternLen) {
+
   # Sets the path of the directory containing the output of FADE
   setwd( sprintf("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent/%d,%d",
    geneSize, patternLen))
@@ -111,12 +112,12 @@ plotCombinatorics <- function(geneSize, patternLen) {
     altModels = levels(df$model)[1:2]
 
     outDF <- data.frame(Model = character(), len = numeric(), k = numeric(), A = numeric(), N = numeric(),
-                        stringsAsFactors=FALSE)
+                        sqm = numeric(), stringsAsFactors=FALSE)
 
     for( modello in levels(df$model)[1:3]) {
       for( len in lengths) {
         for(kv in kValues)  {
-          cat(sprintf("Modello = %s, len = %d\tk = %d\n", modello, len, kv))
+          cat(sprintf("Modello = %s, len = %d\tk = %d ... ", modello, len, kv))
           if (modello == "ShuffledEColi") {
             nm <- filter( df, df$model == modello & df$seqLen == len & df$k == kv)
             modKey = modello
@@ -127,11 +128,12 @@ plotCombinatorics <- function(geneSize, patternLen) {
           if (nrow(nm) != 1000) { # 3 valori di gamma
             stop("errore estrazione dati")
           }
-          outDF[nrow(outDF)+1,] <- list(modKey, len, kv, mean(nm$A), mean(nm$N))
+          outDF[nrow(outDF)+1,] <- list(modKey, len, kv, mean(nm$A), mean(nm$N), sd(nm$A/nm$N))
+          cat(sprintf("dev std = %f (%f)\n", outDF[nrow(outDF),]$sqm, sd(nm$A/nm$N)))
         }
       }
     }
-    outDF$kf = factor(outDF$k)
+    outDF$k = factor(outDF$k)
     outDF$Model = factor(outDF$Model)
     saveRDS(outDF, file = dfFilename)
     cat(sprintf("Dataset %s %d rows saved.\n", dfFilename, nrow(outDF)))
@@ -140,24 +142,21 @@ plotCombinatorics <- function(geneSize, patternLen) {
   title <- sprintf("A/N values for model %s gs=%s pl = %d", levels(outDF$model), geneSize, patternLen)
 
   sp <- ggplot( outDF, aes(x = len, y = A/N, label = sprintf("%.3f", A/N))) +
-    # geom_bar(stat = "identity") +
-    geom_line( aes(color=kf))  +
+    geom_line(aes(color = k))  +
     geom_point() + geom_text(hjust=0, vjust=0, size=2) +
-    facet_grid( rows = vars( kf), cols = vars( Model), labeller = labeller( kf = label_both)) +
+    facet_grid( rows = vars( k), cols = vars( Model), labeller = labeller( k = label_both)) +
     theme(legend.position = "none") +
     labs(y = sprintf("A/N (gs = %d)", geneSize), x = "len") + scale_x_continuous(trans='log10')
 
   # scale_shape_manual(values = 1:17) +
 
-  # dev.new(width = 16, height = 9)
+  # dev.new(width = 6, height = 9)
   outfname <- sprintf("../Combinatorics/Combinatorics-EC-%d,%d.pdf", geneSize, patternLen)
   ggsave( outfname, device = pdf(), width = 6, height = 9, dpi = 300)
-  # print(sp)
+  #print(sp)
   # dev.off() #only 129kb in size
-  return(TRUE)
+  return(outDF)
 }
-
-
 
 for( gs in c(1, 3, 5, 7, 9, 11, 16, 32)) {
   plotCombinatorics(gs, 32)
