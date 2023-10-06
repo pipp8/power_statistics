@@ -21,6 +21,7 @@ def ModifySequence():
         print("Errore nei parametri:\nUsage: %s sequenceName #lenToAdd base1 base2 ")
         exit(-1)
 
+    outFile = "%s-mod.fasta" % (os.path.splitext( inputFile)[0])
     seq = 0
     newSeq = []
     with open(inputFile) as inFile:
@@ -32,12 +33,11 @@ def ModifySequence():
                 newSeq.append(seq1)
                 seq += 1
 
-    fileName = "%s-mod.fasta" % (os.path.splitext( inputFile)[0])
-    with open(fileName, "w") as outText:
+    with open(outFile, "w") as outText:
         outText.write("%s%s\n" % (newSeq[0], newSeq[1])) # \n are in the original strings
         outText.write("%s%s\n" % (newSeq[2], newSeq[3])) # \n are in the original strings
 
-
+    print("%s -> %s" % (inputFile, outFile))
 
 if __name__ == "__main__":
     ModifySequence()
