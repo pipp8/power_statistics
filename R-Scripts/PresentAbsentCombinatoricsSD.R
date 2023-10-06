@@ -88,7 +88,7 @@ nullModel <- 'ShuffledEColi'
 T1Model <- paste( sep='', nullModel, '-T1')
 
 
-if (FALSE) { # (file.exists(dfFilename)) {
+if (file.exists(dfFilename)) {
   cat( sprintf("Loading existing data file: %s\n", dfFilename))
   outDF <- readRDS(file = dfFilename)
 } else {
@@ -142,62 +142,69 @@ if (FALSE) { # (file.exists(dfFilename)) {
 }
 
 title <- sprintf("A/N values for model %s gs=%s pl = %d", levels(outDF$model), geneSize, patternLen)
+# dev.new(width = 6, height = 9)
+# print(sp1)
+# dev.off() #only 129kb in size
 
+# Plot valori A/N
 sp1 <- ggplot( outDF, aes(x = len, y = A/N, label = sprintf("%.3f", A/N))) +
   geom_line(aes(color=k)) +
   geom_point() +
   geom_text( hjust=0, vjust=0, size=2) +
   facet_grid( rows = vars( k), cols = vars( Model), labeller = labeller( k = label_both)) +
   theme(legend.position = "none") +
-  labs(y = sprintf("A/N (gs = %d)", geneSize), x = "len") + scale_x_continuous(trans='log10')
+  labs(y = "A/N", x = "len") + scale_x_continuous(trans='log10')
 
-outfname <- sprintf("../Combinatorics/Combinatorics-EC-%d,%d.pdf", geneSize, patternLen)
+outfname <- sprintf("../Combinatorics/Combinatorics-EC-AN.pdf")
 ggsave( outfname, device = pdf(), width = 6, height = 9, dpi = 300)
 
-sp1 <- ggplot( outDF, aes(x = len, y = sqm, label = sprintf("%.3f", sqm))) +
+# Plot valori Deviazione Standard
+sp1 <- ggplot( outDF, aes(x = len, y = sqm, label = sprintf("%.5f", sqm))) +
+  geom_line(aes(color=k)) +
+  geom_point() +
+  geom_text( hjust=0, vjust=0, size=1.8) +
+  facet_grid( rows = vars( k), cols = vars( Model), labeller = labeller( k = label_both)) +
+  theme(legend.position = "none") +
+  labs(y = "Std Dev(A/N)", x = "len") + scale_x_continuous(trans='log10')
+
+outfname <- sprintf("../Combinatorics/Combinatorics-EC-SD.pdf")
+ggsave( outfname, device = pdf(), width = 6, height = 9, dpi = 300)
+
+# Plot valori distanza euclidea normalizzata
+sp1 <- ggplot( outDF, aes(x = len, y = normEuclidean, label = sprintf("%.3f", normEuclidean))) +
   geom_line(aes(color=k)) +
   geom_point() +
   geom_text( hjust=0, vjust=0, size=2) +
   facet_grid( rows = vars( k), cols = vars( Model), labeller = labeller( k = label_both)) +
   theme(legend.position = "none") +
-  labs(y = sprintf("Std Dev(A/N) (gs = %d)", geneSize), x = "len") + scale_x_continuous(trans='log10')
+  labs(y = "Normalized Euclidean Distance", x = "len") + scale_x_continuous(trans='log10')
 
-outfname <- sprintf("../Combinatorics/Combinatorics-EC-SD-%d,%d.pdf", geneSize, patternLen)
+outfname <- sprintf("../Combinatorics/Combinatorics-EC-NormEuclid.pdf")
 ggsave( outfname, device = pdf(), width = 6, height = 9, dpi = 300)
-# dev.new(width = 6, height = 9)
-# print(sp1)
-# dev.off() #only 129kb in size
 
-sp1 <- ggplot( outDF, aes(x = len, y = normEuclidean, label = sprintf("%.3f", sqm))) +
+# Plot valori distanza di Jaccard
+sp1 <- ggplot( outDF, aes(x = len, y = jaccard, label = sprintf("%.3f", jaccard))) +
   geom_line(aes(color=k)) +
   geom_point() +
   geom_text( hjust=0, vjust=0, size=2) +
   facet_grid( rows = vars( k), cols = vars( Model), labeller = labeller( k = label_both)) +
   theme(legend.position = "none") +
-  labs(y = sprintf("Normalized Euclidean Distance (gs = %d)", geneSize), x = "len") + scale_x_continuous(trans='log10')
+  labs(y = "Jaccard Distance", x = "len") + scale_x_continuous(trans='log10')
 
-outfname <- sprintf("../Combinatorics/Combinatorics-EC-NormEuclid-%d,%d.pdf", geneSize, patternLen)
+outfname <- sprintf("../Combinatorics/Combinatorics-EC-Jaccard.pdf")
 ggsave( outfname, device = pdf(), width = 6, height = 9, dpi = 300)
 
-sp1 <- ggplot( outDF, aes(x = len, y = jaccard, label = sprintf("%.3f", sqm))) +
-  geom_line(aes(color=k)) +
-  geom_point() +
-  geom_text( hjust=0, vjust=0, size=2) +
-  facet_grid( rows = vars( k), cols = vars( Model), labeller = labeller( k = label_both)) +
-  theme(legend.position = "none") +
-  labs(y = sprintf("Jaccard Distance (gs = %d)", geneSize), x = "len") + scale_x_continuous(trans='log10')
-
-outfname <- sprintf("../Combinatorics/Combinatorics-EC-Jaccard-%d,%d.pdf", geneSize, patternLen)
-ggsave( outfname, device = pdf(), width = 6, height = 9, dpi = 300)
-
+# Plot valori distanze NED e Jaccard
 sp1 <- ggplot( outDF, aes(x = len)) +
   geom_line(aes(y = normEuclidean, colour="normEuclid")) +
   geom_point(aes(y = normEuclidean)) +
+  # geom_text( aes(y = normEuclidean, label = sprintf("%.3f", normEuclidean)), hjust=0, vjust=0, size=2) +
   geom_line(aes(y = jaccard, colour="jaccard")) +
   geom_point(aes(y = jaccard)) +
+  # geom_text( aes(y = jaccard, label = sprintf("%.3f", jaccard)), hjust=0, vjust=0, size=2) +
   facet_grid( rows = vars( k), cols = vars( Model), labeller = labeller( k = label_both)) +
   # theme(legend.position = "none") +
-  labs(y = sprintf("Distance (gs = %d)", geneSize), x = "len") + scale_x_continuous(trans='log10')
+  labs(y = "Jaccard vs Norm Euclidean Distances", x = "len") + scale_x_continuous(trans='log10')
 
-outfname <- sprintf("../Combinatorics/Combinatorics-EC-Distances-%d,%d.pdf", geneSize, patternLen)
+outfname <- sprintf("../Combinatorics/Combinatorics-EC-Distances.pdf")
 ggsave( outfname, device = pdf(), width = 6, height = 9, dpi = 300)

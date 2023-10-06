@@ -19,7 +19,7 @@ from pyspark.sql import SparkSession
 from pyspark import SparkFiles
 
 
-hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data/dataset'
+hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data'
 inputRE = '*.fasta'
 
 # models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
@@ -576,7 +576,7 @@ def main():
     else:
         seqLen = int(sys.argv[1])
         dataMode = sys.argv[2] if (argNum > 2) else ""
-        hdfsDataDir = '%s-%s-1000/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
+        hdfsDataDir = '%s/%s-1000/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
         outFile = '%s-%s-1000/%s-%s.%d.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen)
 
     spark = SparkSession \
