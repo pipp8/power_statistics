@@ -79,12 +79,6 @@ object DatasetBuilder {
         |  [-p | --patternSize int]  size of pattern for both alternative models
         |""".stripMargin.toArgs
 
-    //    if (args.length < 2) {
-    //      System.err.println("Errore nei parametri sulla command line")
-    //      System.err.println("Usage:\nit.unisa.di.bio.DatasetBuilder outputDir detailed|eColiShuffled|synthetic|mitocondri|shigella [local|yarn [start [end [step [#pairs]]]]]]")
-    //      throw new IllegalArgumentException(s"illegal number of argouments. ${args.length} should be at least 2")
-    //      return
-    //    }
 
     parsed = initialArgs.process(args)
 
@@ -92,7 +86,7 @@ object DatasetBuilder {
     parsed.printAllValues()
 
     savePath = parsed.getOrElse( "output", "out")
-    val datasetType = parsed.getOrElse("generator", "detailed")
+    val datasetType = parsed.getOrElse("generator", "uniform")
     // gamma = args(4).toDouble
     // motif = getMotif(args(4))
 
@@ -155,7 +149,7 @@ object DatasetBuilder {
       case x if (x.compareTo("eColiShuffled") == 0) => datasetEColi(
         appProperties.getProperty("powerstatistics.datasetBuilder.ecoliPrefix"), geneSize, params)
 
-      case x if (x.compareTo("detailed") == 0) => datasetDetailed(
+      case x if (x.compareTo("uniform") == 0) => datasetUniform(
         appProperties.getProperty("powerstatistics.datasetBuilder.uniformPrefix"), uniformDist, params)
 
       case x if (x.compareTo("synthetic") == 0) => dataset2(
@@ -193,7 +187,7 @@ object DatasetBuilder {
   }
 
 
-  def datasetDetailed( nullModelPrefix: String, distribution: Array[Double], lengths: Array[Int]) : Unit = {
+  def datasetUniform(nullModelPrefix: String, distribution: Array[Double], lengths: Array[Int]) : Unit = {
 
     val fromLen =   lengths(0)
     val maxSeqLen = lengths(1)
