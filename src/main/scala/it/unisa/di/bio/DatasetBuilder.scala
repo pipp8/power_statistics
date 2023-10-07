@@ -238,7 +238,7 @@ object DatasetBuilder {
   def buildEColiDataset( targetLen: Int, nullModelPrefix: String, geneSize: Int) : Unit = {
 
     val st = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now)
-    println(s"${st} *** Building Synthetic Dataset (Null Model + Alternate Model) <- ${nullModelPrefix} #pairs: ${numberOfPairs} for len: ${targetLen} ***")
+    println(s"${st} *** Building EColi Derived Dataset (Null Model + Alternate Model) <- ${nullModelPrefix} #pairs: ${numberOfPairs} for len: ${targetLen} ***")
 
     seqLen = targetLen
     // crea the NullModel
