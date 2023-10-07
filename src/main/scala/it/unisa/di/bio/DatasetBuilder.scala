@@ -70,7 +70,7 @@ object DatasetBuilder {
         |  [-d | --debug flag]    specify debug mode some statistical information are printed (slower)
         |  -o | --output     string  Path to destination Directory
         |  -m | --mode       string  Spark cluster mode local|yarn
-        |  -g | --generator  string  Generator selection detailed|eColiShuffled|synthetic|mitocondri|shigella
+        |  -g | --generator  string  Generator selection uniform|eColiShuffled|synthetic|mitocondri|shigella
         |  -f | --from-len   int=10000 from sequence length
         |  -t | --to-len     int     to sequence length
         |  -s | --step       int     step size
