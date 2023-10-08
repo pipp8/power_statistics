@@ -21,6 +21,7 @@ from pyspark import SparkFiles
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data'
 inputRE = '*.fasta'
+spark = []
 
 # models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
 models = ['ShuffledEColi', 'MotifRepl-Sh', 'PatTransf-Sh', 'ShuffledEColi-T1']
@@ -61,6 +62,14 @@ class MashData:
             self.N = 0
 
 
+def checkPathExists(path):
+    global hdfsDataDir, spark
+    # spark is a SparkSession
+    sc = spark.sparkContext
+    fs = sc._jvm.org.apache.hadoop.fs.FileSystem.get(
+        sc._jvm.java.net.URI.create(hdfsDataDir),
+        sc._jsc.hadoopConfiguration(),)
+    return fs.exists(sc._jvm.org.apache.hadoop.fs.Path(path))
 
 
 # load histogram for both sequences (for counter based measures such as D2)
@@ -567,7 +576,7 @@ def splitPairs(ds):
 
 
 def main():
-    global hdfsDataDir, hdfsPrefixPath,  outFilePrefix
+    global hdfsDataDir, hdfsPrefixPath,  outFilePrefix, spark
     
     argNum = len(sys.argv)
     if (argNum < 2 or argNum > 3):
@@ -592,6 +601,10 @@ def main():
     sc2 = spark._jsc.sc()
     nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) -1
     inputDataset = '%s/%s' % (hdfsDataDir, inputRE)
+
+    if (not checkPathExists( hdfsDataDir)):
+        print("Data dir: %s does not exist. Program terminated." % hdfsDataDir)
+        exit( -1)
 
     print("%d workers, hdfsDataDir: %s, dataMode: %s" % (nWorkers, hdfsDataDir, dataMode))
 
