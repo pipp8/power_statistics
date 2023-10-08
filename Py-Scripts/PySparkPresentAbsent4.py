@@ -502,6 +502,7 @@ def processPairs(seqPair):
 
     results = []
     for k in range( minK, maxK+1, stepK):
+        print("**** starting local computation for k = %d *****" % k)
         # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
         g = float(gamma[3:]) if (len(gamma) > 0) else 0.0
         results.append(processLocalPair(fileNamePrefix, model, seqId, seqLen, g, k))
