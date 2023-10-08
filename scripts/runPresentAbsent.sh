@@ -1,8 +1,16 @@
 #! /bin/bash
 
+if (( $# != 2)); then
+    echo "Usage: $0 seqLen mainDataDir"
+    exit -1
+else
+    seqLen=$1
+    dataDir=$2
+fi
+
 
 spark-submit --master yarn --deploy-mode client --driver-memory 27g \
 	     --num-executors 48 --executor-memory 27g --executor-cores 7 \
-	     PySparkPresentAbsent4.py 10000 8-32
+	     Py-Scripts/PySparkPresentAbsent4.py $seqLen $dataDir
 
 

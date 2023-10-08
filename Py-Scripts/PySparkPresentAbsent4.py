@@ -577,8 +577,10 @@ def main():
         seqLen = int(sys.argv[1])
         dataMode = sys.argv[2] if (argNum > 2) else ""
         hdfsDataDir = '%s/%s/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
-        outFile = '%s-%s/%s-%s.%d.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen)
+        outFile = '%s/%s/%s-%s.%d.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen)
 
+    print("hdfsDataDir = %s" % hdfsDataDir)
+    
     spark = SparkSession \
         .builder \
         .appName("%s %d" % (os.path.basename( sys.argv[0]), seqLen)) \
