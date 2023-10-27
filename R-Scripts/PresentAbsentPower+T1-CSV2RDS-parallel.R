@@ -30,6 +30,7 @@ dfFilename <- sprintf( "%d,32/PresentAbsentEC-Power+T1-%d,32.RDS", bs, bs)
 csvFilename <- sprintf("%d,32/PresentAbsentECData-%d-32.csv", bs, bs)
 trsh <- sprintf("%d,32/Thresholds.csv", bs)
 
+# nullModel <- 'Uniform'
 nullModel <- 'ShuffledEColi'
 T1Model <- paste( sep='', nullModel, '-T1')
 
@@ -86,6 +87,10 @@ T1Power <- function( len) {
     cat(sprintf("\tk = %d\n", kv))
     # Collect the Null-Model results
     nm <- filter( df, df$model == nullModel & df$seqLen == len & df$k == kv)
+    if (nrow(nm) == 0) {
+      cat(sprintf("Wrong nullModel: %s no row found\n", nullModel))
+      stop("bad data")
+    }
     for( mes in measures) {
       similarityP <- mes %in% similarities 
       cat(sprintf("\t\t%s (%s): ", mes, if (similarityP) 'similarity' else 'distance'))
@@ -169,8 +174,8 @@ alphaValues <- c( 0.01, 0.05, 0.10)
 write( "Len, K, Measure, Gamma, Alpha, Threshold\n", file = trsh, append = FALSE)
 
 
-# r <- lapply(lengths, T1Power) 
-r <- mclapply( lengths, T1Power, mc.cores = 6)
+# r <- lapply(lengths, T1Power) # sequential
+r <- mclapply( lengths, T1Power, mc.cores = 6) # concurrent
 
 resultsDF <- r[[1]]
 for( i in 2:length(r)) { 
