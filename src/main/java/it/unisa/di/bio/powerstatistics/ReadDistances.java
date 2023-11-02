@@ -283,13 +283,13 @@ public class ReadDistances {
 
         if (distances.isDistance(measureNames[refMeasure])) {
             for (DistanceValues dist : alternateModelValues) {
-                if (dist.v[refMeasure] <= threshold)     // distanza => risultato migliore della soglia
+                if (dist.v[refMeasure] < threshold)     // distanza => risultato migliore della soglia
                     tot++;
             }
         }
         else {
             for (DistanceValues dist : alternateModelValues) {
-                if (dist.v[refMeasure] >= threshold)     // similarità => risultato migliore della soglia
+                if (dist.v[refMeasure] > threshold)     // similarità => risultato migliore della soglia
                     tot++;
             }
         }
@@ -373,13 +373,13 @@ public class ReadDistances {
 
         if (distances.isDistance(measureNames[refMeasure])) {
             for (DistanceValues dist : type1CheckValues) {
-                if (dist.v[refMeasure] <= threshold)     // distanza => risultato inferiore alla soglia
+                if (dist.v[refMeasure] < threshold)     // distanza => risultato inferiore alla soglia
                     tot++;
             }
         }
         else {
             for (DistanceValues dist : type1CheckValues) {
-                if (dist.v[refMeasure] >= threshold)     // similarità => risultato superiore alla soglia
+                if (dist.v[refMeasure] > threshold)     // similarità => risultato superiore alla soglia
                     tot++;
             }
         }
