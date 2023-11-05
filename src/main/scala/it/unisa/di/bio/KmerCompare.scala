@@ -47,12 +47,13 @@ object KmerCompare {
 
   def main(args: Array[String]) {
 
-    val initialArgs: Args = """
-                              |target/powerstatistics-1.0-SNAPSHOT.jar -m yarn|local kmerFile1 kmerFile2
-                              | -m  | --mode      string  Spark cluster mode local|yarn
-                              | [-p | --path      string] hdfs common prefix path
-                              |                   inputfiles (two)
-                              |""".stripMargin.toArgs
+    val initialArgs: Args =
+      """
+        |target/powerstatistics-1.0-SNAPSHOT.jar -m yarn|local kmerFile1 kmerFile2
+        | -m  | --mode      string  Spark cluster mode local|yarn
+        | [-p | --path      string] hdfs common prefix path
+        |                   inputfiles (two)
+        |""".stripMargin.toArgs
 
     parsed = initialArgs.process(args)
 
@@ -66,11 +67,11 @@ object KmerCompare {
     prefixPath = parsed.getOrElse("path", "")
     inputFile1 = prefixPath + "/" + parsed.remaining(0)
     inputFile2 = prefixPath + "/" + parsed.remaining(1)
-    savePath = parsed.getOrElse( "output", "out")
+    savePath = parsed.getOrElse("output", "out")
 
     local = parsed.getOrElse("mode", "").compareTo("local") == 0
 
-    val sparkConf = new SparkConf().setAppName( "kmercompare").setMaster(if (local) "local" else "yarn")
+    val sparkConf = new SparkConf().setAppName("kmercompare").setMaster(if (local) "local" else "yarn")
     sc = new SparkContext(sparkConf)
     hadoopConf = sc.hadoopConfiguration
 
@@ -81,12 +82,13 @@ object KmerCompare {
 
     val is = seq1.intersection(seq2)
 
-    val cnt = is.count()
-
+    // val cnt = is.count()
+    var cnt = 0
+    is.foreach(x => {
+      println(x.split("\t")(0))
+      cnt = cnt + 1
+    })
     println(s"${cnt} common kmers")
-
-    is.foreach( x => println(x.split("\t")(0)))
   }
-
 }
 
