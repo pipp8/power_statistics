@@ -88,10 +88,14 @@ object KmerCompare {
     val file2 = FilenameUtils.getBaseName(parsed.remaining(1))
     val outputFile = prefixPath + "/CMP" + file1 + "-" + file2 + ".txt"
 
-    is.saveAsTextFile( outputFile)
+    val counterAccum = sc.longAccumulator("Counter Accumulator")
 
-    val cnt = is.count()
-    println(s"${cnt} common kmers")
+    is.map({ x =>
+      counterAccum.add(1)
+      x
+    }).saveAsTextFile( outputFile)
+
+    println(s"${counterAccum.value} common kmers")
 
 //    is.foreach(x => {
 //      println(x)
