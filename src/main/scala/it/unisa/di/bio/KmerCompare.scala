@@ -77,18 +77,19 @@ object KmerCompare {
 
     println(s"***App ${this.getClass.getCanonicalName} Started***")
 
-    val seq1 = sc.textFile(inputFile1)
-    val seq2 = sc.textFile(inputFile2)
+    val seq1 = sc.textFile(inputFile1).map( line => line.split('\t')(0))
+    val seq2 = sc.textFile(inputFile2).map( line => line.split('\t')(0))
 
     val is = seq1.intersection(seq2)
 
     // val cnt = is.count()
-    var cnt = 0
+    var cnt = is.count()
+    println(s"${cnt} common kmers")
+
     is.foreach(x => {
-      println(x.split("\t")(0))
+      println(x)
       cnt = cnt + 1
     })
-    println(s"${cnt} common kmers")
   }
 }
 
