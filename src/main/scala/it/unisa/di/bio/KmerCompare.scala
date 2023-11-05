@@ -10,6 +10,7 @@ import java.net.URI
 import java.time.LocalDateTime
 import java.util.Properties
 import java.time.format.DateTimeFormatter
+import java.nio.file.Paths
 
 import org.apache.spark.{SparkConf, SparkContext}
 import it.unisa.di.bio.Misc._
@@ -82,14 +83,17 @@ object KmerCompare {
 
     val is = seq1.intersection(seq2)
 
-    // val cnt = is.count()
-    var cnt = is.count()
+    val outputFile = prefixPath+"/CMP" + parsed.remaining(0).split(".")(0) + "-" +
+                                    parsed.remaining(1).split(".")(0) + ".txt"
+    is.saveAsTextFile( outputFile)
+
+    val cnt = is.count()
     println(s"${cnt} common kmers")
 
-    is.foreach(x => {
-      println(x)
-      cnt = cnt + 1
-    })
+//    is.foreach(x => {
+//      println(x)
+//      cnt = cnt + 1
+//    })
   }
 }
 
