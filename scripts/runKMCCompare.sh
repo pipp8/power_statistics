@@ -12,7 +12,7 @@ inFile2=$2
 spark-submit --class it.unisa.di.bio.KmerCompare \
 	     --master yarn --deploy-mode client --driver-memory 16g \
 	     --num-executors 48 --executor-memory 27g --executor-cores 7 \
-	     target/powerstatistics-1.0-SNAPSHOT.jar \
+	     target/PowerStatistics-1.3-SNAPSHOT-jar-with-dependencies.jar \
 	     --mode yarn --path data/huge $inFile1 $inFile2
 
 
