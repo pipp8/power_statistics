@@ -62,7 +62,7 @@ class MashData:
             self.N = 0
 
 
-def checkPathExists(path):
+def checkPathExists(path: str) -> bool:
     global hdfsDataDir, spark
     # spark is a SparkSession
     sc = spark.sparkContext
@@ -72,8 +72,15 @@ def checkPathExists(path):
     return fs.exists(sc._jvm.org.apache.hadoop.fs.Path(path))
 
 
+def hamming_distance(seq1: str, seq2: str) -> int:
+    return sum(c1 != c2 for c1, c2 in zip(seq1, seq2))
+
+def hamming_distance2(seq1: str, seq2: str) -> int:
+    return len(list(filter(lambda x : ord(x[0])^ord(x[1]), zip(seq1, seq2))))
+
+
 # load histogram for both sequences (for counter based measures such as D2)
-def loadHistogram(kmerDict, histFile, pairId):
+def loadHistogram(kmerDict: dict, histFile: str, pairId: str):
 
     ndx = 0 if pairId == 'A' else 1
     kmcFile = kmc.KMCFile()

@@ -76,11 +76,36 @@ getT1error <- function( nm, threshold, similarityP)
 }
 
 
+# calcola la media dei valori di A/N di tutte le sequenze posizionate prima (<=) della soglia
+getDensity <- function( df, measure, index)
+{
+  intersection = "A"  # column A (count of k-mers common to seq1 e seq2)
+  totalCount = "N"    # total number of possible k-mers 4^K
+  # index == 1000 => prendili tutti
+  start = if (index == nrow(df)) 0 else index
+
+  while( start > 0) {
+    if (df[[measure]][start] != df[[measure]][index]) {
+      break
+    }
+    start <- start - 1
+  }
+  start = start + 1
+  # mean value of all values with distance == measure[index] index included
+  # (index = position of the threshold value)
+  a = df[[intersection]][start:index]
+  b = df[[totalCount]][start:index]
+  return ( mean( a / b))
+}
+
+
 T1Power <- function( len) {
   
   resultsDF <- data.frame( Measure = character(),  Model = character(), len = numeric(), gamma = double(),
                            k = numeric(), alpha=double(), threshold = double(),
-                           power = double(), T1 = double(), stringsAsFactors=FALSE)
+                           power = double(), T1 = double(),
+                           nmDensity = double(), amDensity = double(),
+                           stringsAsFactors=FALSE)
   
   cat(sprintf("len = %d\n", len))
   for(kv in kValues)  {
@@ -91,14 +116,23 @@ T1Power <- function( len) {
       cat(sprintf("Wrong nullModel: %s no row found\n", nullModel))
       stop("bad data")
     }
+
     for( mes in measures) {
       similarityP <- mes %in% similarities 
       cat(sprintf("\t\t%s (%s): ", mes, if (similarityP) 'similarity' else 'distance'))
-      nmDistances <- sort(nm[[mes]], decreasing = similarityP) # distances are sorted in ascending order, similarities in descending  
+
+      # we sort all the dataframe instead of the distance values vector for measure mes
+      # sort(nm[[mes]], decreasing = similarityP) # distances are sorted in ascending order, similarities like D2 in descending
+      nmSrt <- if (similarityP) arrange(nm, desc(.data[[mes]])) else arrange(nm, .data[[mes]])
+
       for( g in gValues) { # salta gamma == 0
         for(alpha in alphaValues) {
-          ndx <- round(length(nmDistances) * alpha)
-          threshold <- nmDistances[ndx]
+          # ndx <- round(length(nmDistances) * alpha)
+          # threshold <- nmDistances[ndx] # solo vettore delle distanze
+          ndx <- round(nrow(nmSrt) * alpha)
+          threshold <- nmSrt[ndx, mes] # row = ndx, col = measure mes
+          nmDensity = getDensity(nmSrt, mes, ndx)
+
           # if (threshold == 1) {
           lck = lock( trsh, exclusive = TRUE, timeout = Inf)
           if (!is.null(lck)) {
@@ -109,6 +143,8 @@ T1Power <- function( len) {
           for(altMod in altModels ) {  # 2 alternative models "MotifRepl-U" "PatTransf-U"
             am <- filter( df, df$model == altMod & df$gamma == g & df$seqLen == len & df$k == kv)
             power = getPower(am, mes, threshold, similarityP)
+            amDensity = getDensity(am, mes, nrow(am)) # per gli alternate model prende tutte ???
+
             #            cat(sprintf("AM: %s, power = %f  -  ", altMod, power))
             cat('.')
             if(altMod == altModels[1]) {
@@ -117,7 +153,8 @@ T1Power <- function( len) {
               T1 <- getT1error(nmT1[[mes]], threshold, similarityP)
               #              cat(sprintf("T1-error = %f  -  ", T1))
             }
-            resultsDF[nrow( resultsDF)+1,] <- list(mes, altMod, len, g, kv, alpha, threshold, power, T1)
+            resultsDF[nrow( resultsDF)+1,] <- list(mes, altMod, len, g, kv, alpha,
+                                                    threshold, power, T1, nmDensity, amDensity)
           }
         }
       }
@@ -172,7 +209,6 @@ altModels = levels(df$model)[1:2]
 alphaValues <- c( 0.01, 0.05, 0.10)
 
 write( "Len, K, Measure, Gamma, Alpha, Threshold\n", file = trsh, append = FALSE)
-
 
 # r <- lapply(lengths, T1Power) # sequential
 r <- mclapply( lengths, T1Power, mc.cores = 6) # concurrent

@@ -79,12 +79,14 @@ levels(dff$Measure2) <- measure_names(levels(dff$Measure))
 sp <- ggplot(dff, aes(x = Measure2, y = power, fill = k, alpha = 0.7)) +
   geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3) +
   facet_grid(rows = vars(gamma), cols = vars(Model)) +
-  labs(y = 'Power') + theme_bw() + 
-  theme(axis.title.x = element_blank(), 
+  labs(y = 'Power') + theme_bw() +
+  scale_x_continuous(trans='log10') +
+  theme(axis.title.x = element_blank(),
         axis.text.x = element_text( size = rel(0.8), angle = 45, hjust = 1))
 
-# dev.new(width = 9, height = 6)
-# print(sp)
+dev.new(width = 9, height = 6)
+print(sp)
+stop("break")
 outfname <- sprintf( "%s/SinotticoPowerAllMeasures-AllK-AllLength-A=%.2f.png", dirname, alphaTarget)
 ggsave( outfname, device = png(), width = 9, height = 6, units = "in", dpi = 300)
 # dev.off() #only 129kb in size
