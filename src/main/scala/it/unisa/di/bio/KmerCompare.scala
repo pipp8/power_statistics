@@ -79,8 +79,18 @@ object KmerCompare {
 
     println(s"***App ${this.getClass.getCanonicalName} Started***")
 
-    val seq1 = sc.textFile(inputFile1).map( line => line.split('\t')(0))
-    val seq2 = sc.textFile(inputFile2).map( line => line.split('\t')(0))
+    val tot1Acc = sc.longAccumulator("TotA")
+    tot1Acc.reset()
+    val seq1 = sc.textFile(inputFile1).map({ line =>
+      tot1Acc.add(1)
+      line.split('\t')(0)
+    })
+
+    val tot2Acc = sc.longAccumulator("TotB")
+    val seq2 = sc.textFile(inputFile2).map({ line =>
+      tot2Acc.add(1)
+      line.split('\t')(0)
+    })
 
     val is = seq1.intersection(seq2)
 
@@ -88,19 +98,14 @@ object KmerCompare {
     val file2 = FilenameUtils.getBaseName(parsed.remaining(1))
     val outputFile = prefixPath + "/CMP" + file1 + "-" + file2 + ".txt"
 
-    val counterAccum = sc.longAccumulator("Counter Accumulator")
-
+    val AcntAccum = sc.longAccumulator("Counter Common Kmers")
+    AcntAccum.reset()
     is.map({ x =>
-      counterAccum.add(1)
+      AcntAccum.add(1)
       x
     }).saveAsTextFile( outputFile)
 
-    println(s"${counterAccum.value} common kmers")
-
-//    is.foreach(x => {
-//      println(x)
-//      cnt = cnt + 1
-//    })
+    println(s"A = ${AcntAccum.value} common kmers / B = ${tot1Acc.value-AcntAccum.value}, C = ${tot2Acc.value-AcntAccum.value}")
   }
 }
 
