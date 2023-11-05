@@ -5,18 +5,19 @@
 
 package it.unisa.di.bio
 
+import it.unisa.di.bio.Misc._
+
 import java.io.{BufferedWriter, File, FileNotFoundException, IOException, OutputStreamWriter}
 import java.net.URI
 import java.time.LocalDateTime
 import java.util.Properties
 import java.time.format.DateTimeFormatter
-import java.nio.file.Paths
 
 import org.apache.spark.{SparkConf, SparkContext}
-import it.unisa.di.bio.Misc._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.rdd.RDD
+import org.apache.commons.io.FilenameUtils
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io.BufferedSource
@@ -83,8 +84,10 @@ object KmerCompare {
 
     val is = seq1.intersection(seq2)
 
-    val outputFile = prefixPath+"/CMP" + parsed.remaining(0).split(".")(0) + "-" +
-                                    parsed.remaining(1).split(".")(0) + ".txt"
+    val file1 = FilenameUtils.getBaseName(parsed.remaining(0))
+    val file2 = FilenameUtils.getBaseName(parsed.remaining(1))
+    val outputFile = prefixPath + "/CMP" + file1 + "-" + file2 + ".txt"
+
     is.saveAsTextFile( outputFile)
 
     val cnt = is.count()
