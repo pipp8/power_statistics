@@ -323,6 +323,34 @@ def entropyData(entropySeqA, entropySeqB):
 
 
 
+# load histogram for both sequences (for counter based measures such as D2)
+# and calculate Entropy of the sequence
+# dest file è la path sull'HDFS già nel formato hdfs://host:port/xxx/yyy
+def loadHistogramOnHDFS2(histFile: str, destFile: str, totKmer: int):
+
+    tmp = histFile + '.txt'
+    print("KMC db file: %s opened, k = %d, totalDistinct = %d" % (histFile, k, totalDistinct))
+    # dump the result -> kmer histogram (no longer needed)
+    cmd = "/usr/local/bin/kmc_dump %s %s" % (histFile, tmp)
+    p = subprocess.Popen(cmd.split())
+    p.wait()
+    # print("cmd: %s returned: %s" % (cmd, p.returncode))
+
+    # trasferisce sull'HDFS il file testuale
+    cmd = "hdfs dfs -put %s %s" % (tmp, destFile)
+    p = subprocess.Popen(cmd.split())
+    p.wait()
+
+    totalDistinct = 0
+    totalKmerCnt = 0
+    totDistinct = 0
+    totalProb = 0.0
+    Hk = 0.0
+
+    return (totalDistinct, totalKmerCnt, Hk)
+
+
+
 
 # load histogram for both sequences (for counter based measures such as D2)
 # and calculate Entropy of the sequence
@@ -425,7 +453,7 @@ def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
     # print("cmd: %s returned: %s" % (cmd, p.returncode))
 
     # dump the result -> kmer histogram (no longer needed)
-    # cmd = "/usr/local/bin/kmc_dump %s %s" % ( kmcOutputPrefix, histFile)
+    #cmd = "/usr/local/bin/kmc_dump %s %s" % ( kmcOutputPrefix, histFile)
     # p = subprocess.Popen(cmd.split())
     # p.wait()
     # print("cmd: %s returned: %s" % (cmd, p.returncode))
@@ -463,11 +491,11 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
 
     # load kmers statistics from histogram files
     destFilenameA = '%s/k=%d-%s.txt' % (hdfsDataDir, k, baseSeq1)
-    (totalDistinctA, totalKmerCntA, HkA) = loadHistogramOnHDFS(kmcOutputPrefixA, destFilenameA, totKmerA)
+    (totalDistinctA, totalKmerCntA, HkA) = loadHistogramOnHDFS2(kmcOutputPrefixA, destFilenameA, totKmerA)
     entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
 
     destFilenameB = '%s/k=%d-%s.txt' % (hdfsDataDir,k, baseSeq2)
-    (totalDistinctB, totalKmerCntB, HkB) = loadHistogramOnHDFS(kmcOutputPrefixB, destFilenameB, totKmerB)
+    (totalDistinctB, totalKmerCntB, HkB) = loadHistogramOnHDFS2(kmcOutputPrefixB, destFilenameB, totKmerB)
     entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
 
         
@@ -507,9 +535,11 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
 
     os.remove(kmcOutputPrefixA+'.kmc_pre') # remove kmc output prefix file
     os.remove(kmcOutputPrefixA+'.kmc_suf') # remove kmc output suffix file
+    os.remove(kmcOutputPrefixA+'.txt') # remove kmc output suffix file
 
     os.remove(kmcOutputPrefixB+'.kmc_pre') # remove kmc output prefix file
     os.remove(kmcOutputPrefixB+'.kmc_suf') # remove kmc output suffix file
+    os.remove(kmcOutputPrefixB+'.txt') # remove kmc output suffix file
 
     return data0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
 
