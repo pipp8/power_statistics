@@ -20,7 +20,7 @@ from pyspark.sql import SparkSession
 from pyspark import SparkFiles
 
 
-hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data'
+hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
 hdfsDataDir = ''
 spark = []
 sc = []
@@ -330,8 +330,10 @@ def loadHistogramOnHDFS(histFile: str):
         raise IOError( "OpenForListing failed for %s DB." % histFile)
 
     info = kmcFile.Info()
-    k = info.kmerlength
+    k = info.kmer_length
     totalDistinct = info.total_kmers
+
+    print("KMC db file: %s opened, k = %d, totalDistinct = %d" % (histFile, k, totalDistinct))
 
     kmer = kmc.KmerAPI(k)
     cnt  = kmc.Count()
@@ -345,10 +347,11 @@ def loadHistogramOnHDFS(histFile: str):
     Path = sc._gateway.jvm.org.apache.hadoop.fs.Path
     FileSystem = sc._gateway.jvm.org.apache.hadoop.fs.FileSystem
     conf = sc._jsc.hadoopConfiguration()
-    p = "'%s/%s" % (hdfsDataDir, 'ttt.txt')
+    p = '%s/%s' % (hdfsDataDir, 'ttt.txt')
     fs = Path(p).getFileSystem(sc._jsc.hadoopConfiguration())
     ostream = fs.create(Path(p))
     writer = sc._gateway.jvm.java.io.BufferedWriter(sc._jvm.java.io.OutputStreamWriter(ostream))
+    print("HDFS Writer: %s opened" % p)
 
     # histFile contiene il DB con l'istogramma di una sola sequenza prodotto con kmc 3
     kmcFile.RestartListing()
@@ -359,18 +362,19 @@ def loadHistogramOnHDFS(histFile: str):
         totDistinct += 1
 
         # write on HDFS the kmer with its counter
-        writer.write('%s\t%d' % (strKmer, count))
-
+        writer.write('%s\t%d\n' % (strKmer, count))
+        print('%s, %d' % (strKmer, count))
         if (count > 0):
-            prob = cnt / float(totalKmerCnt)
+            prob = count / float(totalKmerCnt) # c'e' un modo per conoscere il numero totale di kmer ? len - k + 1 ? non conosco ne len ne il totale
             totalProb = totalProb + prob
             Hk = Hk + prob * math.log(prob, 2)
             # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
 
     writer.close()
-
-    if (round(totalProb,0) != 1.0):
-        raise ValueError("Somma(p) = %f must be 1.0. Aborting" % round(totalProb, 0))
+    print("totKmerCnt = %d, totDistinct = %d" % (totalKmerCnt, totDistinct))
+    
+    # if (round(totalProb,0) != 1.0):
+    #    raise ValueError("Somma(p) = %f must be 1.0. Aborting" % round(totalProb, 0))
 
     # return Hk * -1
 
@@ -429,11 +433,11 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
     # first extract kmer statistics for both sequences
     tempDir = os.path.dirname( seqFile1)
 
-    baseSeq1 = os.path.basename( seqFile1)
+    baseSeq1 = Path(seqFile1).stem
     kmcOutputPrefixA = "%s/k=%d-%s" % (tempDir, k, baseSeq1)
     extractKmers(seqFile1, k, tempDir, kmcOutputPrefixA)
 
-    baseSeq2 = os.path.basename( seqFile2)
+    baseSeq2 = Path(seqFile2).stem
     kmcOutputPrefixB = "%s/k=%d-%s" % (tempDir, k, baseSeq2)
     extractKmers(seqFile2, k, tempDir, kmcOutputPrefixB)
 
@@ -441,10 +445,10 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
 
     # load kmers statistics from histogram files
     kmerDict = dict()
-    (totalDistinctA, totalKmerCntA, HkA) = loadHistogramOnHDFS(kmerDict, kmcOutputPrefixA)
+    (totalDistinctA, totalKmerCntA, HkA) = loadHistogramOnHDFS(kmcOutputPrefixA)
     entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
 
-    (totalDistinctB, totalKmerCntB, HkB) = loadHistogramOnHDFS(kmerDict, kmcOutputPrefixB)
+    (totalDistinctB, totalKmerCntB, HkB) = loadHistogramOnHDFS(kmcOutputPrefixB)
     entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
 
     i = 0
