@@ -3,8 +3,8 @@
 if (( $# != 3)); then
     echo "Usage: $0 seq1 seq2  hdfsDataDir"
     # exit -1
-    seq1=/home/cattaneo/3rdPartiesSoftware/KMC-3.2.2/tests/KMCCompare/S1.fasta
-    seq2=/home/cattaneo/3rdPartiesSoftware/KMC-3.2.2/tests/KMCCompare/S2.fasta
+    seq1=/home/cattaneo/3rdPartiesSoftware/KMC-3.2.2/tests/ncbi_dataset/data/GCF_000955945.1/GCF_003339765.1_Mmul_10_genomic.fna
+    seq2=/home/cattaneo/3rdPartiesSoftware/KMC-3.2.2/tests/ncbi_dataset/data/GCF_000955945.1/GCF_000165445.2_Mmur_3.0_genomic.fna
     dataDir=data
 else
     seq1=$1

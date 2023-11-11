@@ -30,7 +30,8 @@ nTests = 1000
 minK = 4
 maxK = 32
 stepK = 4
-sketchSizes = [1000, 10000, 100000]
+# sketchSizes = [1000, 10000, 100000]
+sketchSizes = [ 10000]
 outFilePrefix = 'PresentAbsentECData'
 
 
@@ -329,7 +330,7 @@ def entropyData(entropySeqA, entropySeqB):
 def loadHistogramOnHDFS2(histFile: str, destFile: str, totKmer: int):
 
     tmp = histFile + '.txt'
-    print("KMC db file: %s opened, k = %d, totalDistinct = %d" % (histFile, k, totalDistinct))
+
     # dump the result -> kmer histogram (no longer needed)
     cmd = "/usr/local/bin/kmc_dump %s %s" % (histFile, tmp)
     p = subprocess.Popen(cmd.split())
@@ -492,11 +493,11 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
     # load kmers statistics from histogram files
     destFilenameA = '%s/k=%d-%s.txt' % (hdfsDataDir, k, baseSeq1)
     (totalDistinctA, totalKmerCntA, HkA) = loadHistogramOnHDFS2(kmcOutputPrefixA, destFilenameA, totKmerA)
-    entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
+    # entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
 
     destFilenameB = '%s/k=%d-%s.txt' % (hdfsDataDir,k, baseSeq2)
     (totalDistinctB, totalKmerCntB, HkB) = loadHistogramOnHDFS2(kmcOutputPrefixB, destFilenameB, totKmerB)
-    entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
+    # entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
 
         
     tot1Acc = sc.accumulator(0)
@@ -531,7 +532,8 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
 
     dati2 = runMash(seqFile1, seqFile2, k)
 
-    dati4 = entropyData(entropySeqA, entropySeqB)
+    # dati4 = entropyData(entropySeqA, entropySeqB)
+    dati4 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     os.remove(kmcOutputPrefixA+'.kmc_pre') # remove kmc output prefix file
     os.remove(kmcOutputPrefixA+'.kmc_suf') # remove kmc output suffix file
