@@ -24,15 +24,14 @@ def ModifySequence():
         exit(-1)
 
     outFile = "%s-%d%%.fasta" % (os.path.splitext( inputFile)[0], theta)
-    subst = 0
-    totLen = 0
+    (written, subst, totLen) = (0, 0, 0)
     newBase = ''
     out = []
     with open(outFile, "w") as outText:
         with open(inputFile) as inFile:
             for line in inFile:
                 if (line.startswith(">")):
-                    out = line.rstrip() + ' theta = %d\n' % theta
+                    out = line.rstrip() + ' theta = %d%%\n' % theta
                 else:
                     s = list(line)
                     for i in range(len(line)):
@@ -55,11 +54,21 @@ def ModifySequence():
                             # print( "%d: %s->%s" % (i, s[i], newBase), end=" - ")
                             s[i] = newBase
                             subst += 1
+
+                        if (i > 0 and i % 1048576 == 0):
+                            written += 1
+                            sys.stdout.write('.')
+                            sys.stdout.flush()
+                            
                     out = "".join(s)
                     totLen += len(line) - 1
 
-            outText.write(out) # \n are in the original strings
-
+                outText.write(out) # \n are in the original strings
+                m = totLen // 1048576
+                if (m > written):
+                    written = m
+                    sys.stdout.write('.')
+                    sys.stdout.flush()
 
     print("%s -> %d/%d substitutions" % (outFile, subst, totLen))
 
