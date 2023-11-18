@@ -12,6 +12,7 @@ import copy
 import subprocess
 import math
 import csv
+import time
 
 import numpy as np
 import py_kmc_api as kmc
@@ -419,28 +420,31 @@ def distCounter(cnt, x: str):
 
 
 # run jaccard on sequence pair ds with kmer of length = k
-def processLocalPair(seqFile1: str, seqFile2: str, k: int):
+def processLocalPair(seqFile1: str, seqFile2: str, k: int, tempDir: str):
+
+    start = time.time()
 
     # first locally extract kmer statistics for both sequences
-    tempDir = os.path.dirname( seqFile1)
 
     baseSeq1 = Path(seqFile1).stem
     kmcOutputPrefixA = "%s/k=%d-%s" % (tempDir, k, baseSeq1)
-    totKmerA = extractKmers(seqFile1, k, tempDir, kmcOutputPrefixA)
+    destFilenameA = '%s/k=%d-%s.txt' % (hdfsDataDir, k, baseSeq1)
 
+    if (not checkPathExists(destFilenameA)):
+        totKmerA = extractKmers(seqFile1, k, tempDir, kmcOutputPrefixA)
+        # load kmers statistics from histogram files
+        (totalDistinctA, totalKmerCntA, HkA) = loadHistogramOnHDFS2(kmcOutputPrefixA, destFilenameA, totKmerA)
+        # entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
+    
     baseSeq2 = Path(seqFile2).stem
     kmcOutputPrefixB = "%s/k=%d-%s" % (tempDir, k, baseSeq2)
-    totKmerB = extractKmers(seqFile2, k, tempDir, kmcOutputPrefixB)
-
-    # load kmers statistics from histogram files
-    destFilenameA = '%s/k=%d-%s.txt' % (hdfsDataDir, k, baseSeq1)
-    (totalDistinctA, totalKmerCntA, HkA) = loadHistogramOnHDFS2(kmcOutputPrefixA, destFilenameA, totKmerA)
-    # entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
-
     destFilenameB = '%s/k=%d-%s.txt' % (hdfsDataDir,k, baseSeq2)
-    (totalDistinctB, totalKmerCntB, HkB) = loadHistogramOnHDFS2(kmcOutputPrefixB, destFilenameB, totKmerB)
-    # entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
 
+    if (not checkPathExists(destFilenameB)):
+        totKmerB = extractKmers(seqFile2, k, tempDir, kmcOutputPrefixB)
+        # load kmers statistics from histogram files
+        (totalDistinctB, totalKmerCntB, HkB) = loadHistogramOnHDFS2(kmcOutputPrefixB, destFilenameB, totKmerB)
+        # entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
         
     tot1Acc = sc.accumulator(0)
     seq1 = sc.textFile(destFilenameA).map( lambda x: splitAndCount( tot1Acc, x))
@@ -464,7 +468,7 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
           
     ###################################################
 
-    data0 = [baseSeq1, baseSeq2, k]
+    delay = time.time()-start
 
     # dati3 = runCountBasedMeasures(cnts, k)
     dati3 =  [0, 0.0, 0.0]
@@ -479,23 +483,26 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
     # dati4 = entropyData(entropySeqA, entropySeqB)
     dati4 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-    # remove textula histogram files from hdfs
-    cmd = f"hdfs dfs -rm -skipTrash {destFilenameA}"
-    p = subprocess.Popen(cmd.split())
-    p.wait()
+    delay = time.time()-start
+    dati0 = [baseSeq1, baseSeq2, k, start, delay]
+
+    # do not remove base textual histogram file (for all k values) because can be reused in next iterations (for other theta values)
+    # cmd = f"hdfs dfs -rm -skipTrash {destFilenameA}"
+    # p = subprocess.Popen(cmd.split())
+    # p.wait()
+
+    # remove textual histogram files from hdfs
     cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
     p = subprocess.Popen(cmd.split())
     p.wait()
     
-    return data0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
+    return dati0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
 
 
 
 
 def writeHeader( writer):#
-    # columns = ['name', 'seqA', 'contentA', 'seqB', 'contentB']
-
-    columns0 = ['sequenceA', 'sequenceB', 'k'] # dati 0
+    columns0 = ['sequenceA', 'sequenceB', 'start time', 'real time', 'k'] # dati 0
     columns1 = [ 'A', 'B', 'C', 'D', 'N',
                'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming',
                 'Jaccard', 'Kulczynski', 'Matching', 'Ochiai',
@@ -522,10 +529,12 @@ def writeHeader( writer):#
 
 # processa localmente una coppia di sequenze seqFile1 e seqFile2
 def processPairs(seqFile1: str, seqFile2: str):
-    # process local file system temporary directory
-    tempDir = tempfile.mkdtemp()
+    # process local sequence files in the same local directory (temporary named ttt)
+    tempDir = os.path.dirname( seqFile1)+'/ttt'
+    if (not os.path.isdir(tempDir)):
+        os.mkdir(tempDir)
 
-    outFile = "%s/%s-%s.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile2).stem)
+    outFile = "%s/%s-%s-%d.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile2).stem, int(time.time()))
     with open(outFile, 'w') as file:
         csvWriter = csv.writer(file)        
         writeHeader(csvWriter)
@@ -537,7 +546,8 @@ def processPairs(seqFile1: str, seqFile2: str):
                 (f, ext) = os.path.splitext(seqFile1)
                 seqFile2 = f"{f}-{theta}{ext}" 
                 print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ****")
-                csvWriter.writerow(processLocalPair(seqFile1, seqFile2, k))
+                res = processLocalPair(seqFile1, seqFile2, k, tempDir)
+                csvWriter.writerow( res)
                 file.flush()
 
             
