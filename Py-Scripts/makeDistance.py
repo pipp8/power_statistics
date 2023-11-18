@@ -23,7 +23,7 @@ def ModifySequence():
         print("Errore nei parametri:\nUsage: %s InputSequence thetaProbability" % os.path.basename(sys.argv[0]))
         exit(-1)
 
-    outFile = "%s-%d%%.fasta" % (os.path.splitext( inputFile)[0], theta)
+    outFile = "%s-%d.fasta" % (os.path.splitext( inputFile)[0], theta)
     (written, subst, totLen) = (0, 0, 0)
     newBase = ''
     out = []

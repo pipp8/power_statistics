@@ -362,9 +362,11 @@ def processLocalPair2(seqFile1: str, seqFile2: str):
 
     outputFile = '%s/k=%d-%s-%s.txt' % (hdfsDataDir, k, Path(seqFile1).stem, Path(seqFile2).stem)
 
-    tot3Acc = sc.accumulator(0)
-    intersection.map(lambda x: distCounter(tot3Acc, x)).saveAsTextFile( outputFile)    
-    bothCnt = tot3Acc.value
+    # tot3Acc = sc.accumulator(0)
+    # intersection.map(lambda x: distCounter(tot3Acc, x)).saveAsTextFile( outputFile)    
+    # bothCnt = tot3Acc.value
+    bothCnt = intersection.count()
+
     leftCnt = tot1Acc.value - bothCnt
     rightCnt = tot2Acc.value - bothCnt
 

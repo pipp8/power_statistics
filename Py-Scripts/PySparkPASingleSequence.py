@@ -1,4 +1,5 @@
 #! /usr/local/bin/python3
+
 import re
 import os
 import os.path
@@ -31,8 +32,11 @@ minK = 4
 maxK = 32
 stepK = 4
 # sketchSizes = [1000, 10000, 100000]
-sketchSizes = [ 10000]
+sketchSizes = [10000]
+Ts = [5, 10, 20, 80, 90, 95]
 outFilePrefix = 'PresentAbsentECData'
+
+
 
 
 class EntropyData:
@@ -161,7 +165,7 @@ def NormalizedSquaredEuclideanDistance( vector):
 
 
 # run jaccard on sequence pair ds with kmer of length = k
-def runPresentAbsent(  bothCnt, leftCnt, rightCnt, k):
+def runPresentAbsent(  bothCnt: int, leftCnt: int, rightCnt: int, k: int):
 
     A = int(bothCnt)
     B = int(leftCnt)
@@ -337,83 +341,21 @@ def loadHistogramOnHDFS2(histFile: str, destFile: str, totKmer: int):
     p.wait()
     # print("cmd: %s returned: %s" % (cmd, p.returncode))
 
+    os.remove(histFile +'.kmc_pre') # remove kmc output prefix file
+    os.remove(histFile +'.kmc_suf') # remove kmc output suffix file
+
     # trasferisce sull'HDFS il file testuale
     cmd = "hdfs dfs -put %s %s" % (tmp, destFile)
     p = subprocess.Popen(cmd.split())
     p.wait()
 
+    os.remove(tmp) # remove kmc output suffix file
+    
     totalDistinct = 0
     totalKmerCnt = 0
     totDistinct = 0
     totalProb = 0.0
     Hk = 0.0
-
-    return (totalDistinct, totalKmerCnt, Hk)
-
-
-
-
-# load histogram for both sequences (for counter based measures such as D2)
-# and calculate Entropy of the sequence
-# dest file è la path sull'HDFS già nel formato hdfs://host:port/xxx/yyy
-def loadHistogramOnHDFS(histFile: str, destFile: str, totKmer: int):
-    kmcFile = kmc.KMCFile()
-    if (not kmcFile.OpenForListing(histFile)):
-        raise IOError( "OpenForListing failed for %s DB." % histFile)
-
-    info = kmcFile.Info()
-    k = kmcFile.KmerLength()
-    totalDistinct = kmcFile.KmerCount()
-
-    print("KMC db file: %s opened, k = %d, totalDistinct = %d" % (histFile, k, totalDistinct))
-
-    kmer = kmc.KmerAPI(k)
-    cnt  = kmc.Count()
-
-    totalKmerCnt = 0
-    totDistinct = 0
-    totalProb = 0.0
-    Hk = 0.0
-
-    URI = sc._gateway.jvm.java.net.URI
-    Path = sc._gateway.jvm.org.apache.hadoop.fs.Path
-    FileSystem = sc._gateway.jvm.org.apache.hadoop.fs.FileSystem
-    conf = sc._jsc.hadoopConfiguration()
-    fs = Path(destFile).getFileSystem(sc._jsc.hadoopConfiguration())
-    ostream = fs.create(Path(destFile))
-    writer = sc._gateway.jvm.java.io.BufferedWriter(sc._jvm.java.io.OutputStreamWriter(ostream))
-    print("HDFS Writer: %s opened" % destFile)
-
-    # histFile contiene il DB con l'istogramma di una sola sequenza prodotto con kmc 3
-    kmcFile.RestartListing()
-    while(kmcFile.ReadNextKmer( kmer, cnt)):
-        strKmer = kmer.__str__()
-        count = cnt.value
-        totalKmerCnt += count
-        totDistinct += 1
-
-        # write on HDFS the kmer with its counter
-        writer.write('%s\t%d\n' % (strKmer, count))
-        # print('%s, %d' % (strKmer, count))
-        if (count > 0):
-            prob = count / float(totKmer) # numero totale dei kmer cme contato da KMC
-            totalProb = totalProb + prob
-            Hk = Hk + prob * math.log(prob, 2)
-            # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
-
-    writer.close()
-    print("totKmerCnt = %d, totDistinct = %d" % (totalKmerCnt, totDistinct))
-    
-    if (round(totalProb,0) != 1.0):
-        raise ValueError("Somma(p) = %f must be 1.0. Aborting" % round(totalProb, 0))
-
-    if (totKmer != totalKmerCnt):
-        raise ValueError("TotalKmerCount (%d) must be = to KMC counted kmers (%d). Aborting" % (totKmer, totalKmerCnt))
-        
-    if (kmcFile.KmerCount() != totalDistinct):
-        raise ValueError( "Loaded %d distinct kmers vs %d" % (totalDistinct, kmcFile.KmerCount()))
-
-    kmcFile.Close()
 
     return (totalDistinct, totalKmerCnt, Hk)
 
@@ -510,13 +452,15 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
 
     outputFile = '%s/k=%d-%s-%s.txt' % (hdfsDataDir, k, baseSeq1, baseSeq2)
 
-    tot3Acc = sc.accumulator(0)
-    intersection.map(lambda x: distCounter(tot3Acc, x)).saveAsTextFile( outputFile)    
-    bothCnt = tot3Acc.value
+    # tot3Acc = sc.accumulator(0)
+    # intersection.map(lambda x: distCounter(tot3Acc, x)).saveAsTextFile( outputFile)    
+    # bothCnt = tot3Acc.value
+
+    bothCnt = intersection.count()
     leftCnt = tot1Acc.value - bothCnt
     rightCnt = tot2Acc.value - bothCnt
 
-    print("********* k: %d, A: %d, B: %d, C:%d ***********" % (k, bothCnt, leftCnt, rightCnt))
+    print("********* k: %d, A: %d, B: %d, C: %d ***********" % (k, bothCnt, leftCnt, rightCnt))
           
     ###################################################
 
@@ -535,15 +479,16 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
     # dati4 = entropyData(entropySeqA, entropySeqB)
     dati4 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-    os.remove(kmcOutputPrefixA+'.kmc_pre') # remove kmc output prefix file
-    os.remove(kmcOutputPrefixA+'.kmc_suf') # remove kmc output suffix file
-    os.remove(kmcOutputPrefixA+'.txt') # remove kmc output suffix file
-
-    os.remove(kmcOutputPrefixB+'.kmc_pre') # remove kmc output prefix file
-    os.remove(kmcOutputPrefixB+'.kmc_suf') # remove kmc output suffix file
-    os.remove(kmcOutputPrefixB+'.txt') # remove kmc output suffix file
-
+    # remove textula histogram files from hdfs
+    cmd = f"hdfs dfs -rm -skipTrash {destFilenameA}"
+    p = subprocess.Popen(cmd.split())
+    p.wait()
+    cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
+    p = subprocess.Popen(cmd.split())
+    p.wait()
+    
     return data0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
+
 
 
 
@@ -569,7 +514,7 @@ def writeHeader( writer):#
                 'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
 
     writer.writerow(columns0 + columns1 + columns2 + columns3 + columns4)
-
+    
                  
 
 
@@ -580,15 +525,20 @@ def processPairs(seqFile1: str, seqFile2: str):
     # process local file system temporary directory
     tempDir = tempfile.mkdtemp()
 
-    outFile = "%s/%s-%s.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile1).stem)
+    outFile = "%s/%s-%s.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile2).stem)
     with open(outFile, 'w') as file:
         csvWriter = csv.writer(file)        
         writeHeader(csvWriter)
+        file.flush()
         
-        for k in range( minK, maxK+1, stepK):
-            print("**** starting local computation for k = %d *****" % k)
-            # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
-            csvWriter.writerow(processLocalPair(seqFile1, seqFile2, k))
+        for theta in Ts:
+            for k in range( minK, maxK+1, stepK):
+                # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
+                (f, ext) = os.path.splitext(seqFile1)
+                seqFile2 = f"{f}-{theta}{ext}" 
+                print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ****")
+                csvWriter.writerow(processLocalPair(seqFile1, seqFile2, k))
+                file.flush()
 
             
     # clean up
@@ -632,7 +582,7 @@ def main():
     sc = spark.sparkContext
 
     sc2 = spark._jsc.sc()
-    nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) -1
+    nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) - 1
 
     if (not checkPathExists( hdfsDataDir)):
         print("Data dir: %s does not exist. Program terminated." % hdfsDataDir)
@@ -644,6 +594,8 @@ def main():
 
     spark.stop()
 
+
+    
 
 
 
