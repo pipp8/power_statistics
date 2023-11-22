@@ -540,7 +540,7 @@ def processPairs(seqFile1: str, seqFile2: str):
         writeHeader(csvWriter)
         file.flush()
 
-        if (seqFile2 == "synthetic"):
+        if (seqFile2 != "synthetic"):
             for k in range( minK, maxK+1, stepK):
                 # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
                 print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} ****")
