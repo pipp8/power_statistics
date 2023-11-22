@@ -420,7 +420,7 @@ def distCounter(cnt, x: str):
 
 
 # run jaccard on sequence pair ds with kmer of length = k
-def processLocalPair(seqFile1: str, seqFile2: str, k: int, tempDir: str):
+def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: str):
 
     start = time.time()
 
@@ -484,7 +484,7 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, tempDir: str):
     dati4 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     delay = time.time()-start
-    dati0 = [baseSeq1, baseSeq2, k, start, delay]
+    dati0 = [baseSeq1, baseSeq2, start, delay, theta, k]
 
     # do not remove base textual histogram file (for all k values) because can be reused in next iterations (for other theta values)
     # cmd = f"hdfs dfs -rm -skipTrash {destFilenameA}"
@@ -539,16 +539,24 @@ def processPairs(seqFile1: str, seqFile2: str):
         csvWriter = csv.writer(file)        
         writeHeader(csvWriter)
         file.flush()
-        
-        for theta in Ts:
+
+        if (seqFile2 == "synthetic"):
             for k in range( minK, maxK+1, stepK):
                 # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
-                (f, ext) = os.path.splitext(seqFile1)
-                seqFile2 = f"{f}-{theta}{ext}" 
-                print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ****")
+                print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} ****")
                 res = processLocalPair(seqFile1, seqFile2, k, tempDir)
                 csvWriter.writerow( res)
                 file.flush()
+        else:
+            for theta in Ts:
+                for k in range( minK, maxK+1, stepK):
+                    # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
+                    (f, ext) = os.path.splitext(seqFile1)
+                    seqFile2 = f"{f}-{theta}{ext}"
+                    print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ****")
+                    res = processLocalPair(seqFile1, seqFile2, k, tempDir)
+                    csvWriter.writerow( res)
+                    file.flush()
 
             
     # clean up
