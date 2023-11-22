@@ -544,7 +544,7 @@ def processPairs(seqFile1: str, seqFile2: str):
             for k in range( minK, maxK+1, stepK):
                 # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
                 print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} ****")
-                res = processLocalPair(seqFile1, seqFile2, k, tempDir)
+                res = processLocalPair(seqFile1, seqFile2, k, 0, tempDir)
                 csvWriter.writerow( res)
                 file.flush()
         else:
@@ -554,7 +554,7 @@ def processPairs(seqFile1: str, seqFile2: str):
                     (f, ext) = os.path.splitext(seqFile1)
                     seqFile2 = f"{f}-{theta}{ext}"
                     print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ****")
-                    res = processLocalPair(seqFile1, seqFile2, k, tempDir)
+                    res = processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
                     csvWriter.writerow( res)
                     file.flush()
 
