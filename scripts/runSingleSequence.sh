@@ -5,7 +5,8 @@ if (( $# != 3)); then
     # exit -1
     seq1=/home/cattaneo/3rdPartiesSoftware/KMC-3.2.2/tests/ncbi_dataset/GCF_003339765.1_Mmul_1.0.fasta
     # the second sequence has been produced by makeDistance.py (same prefix -theta.fasta)
-    seq2=sinthetic
+    seq2=/home/cattaneo/3rdPartiesSoftware/KMC-3.2.2/tests/ncbi_dataset/GCF_000165445.2_Mmur_3.0.fasta
+    # seq2=synthetic
     dataDir=huge 
     # seq1=/home/cattaneo/3rdPartiesSoftware/KMC-3.2.2/tests/KMCCompare/S1.fasta
     # seq2=/home/cattaneo/3rdPartiesSoftware/KMC-3.2.2/tests/KMCCompare/S2.fasta
