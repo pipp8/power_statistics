@@ -1,4 +1,4 @@
-#! /usr/local/spark/bin/pyspark
+#! /usr/local/bin/python3
 
 import re
 import os
@@ -15,24 +15,57 @@ import csv
 import time
 
 import numpy as np
-
-sys.path = ['/usr/local/spark/python/lib/pyspark.zip', '/usr/local/spark/python/lib/py4j-0.10.9.5-src.zip', '/usr/local/spark/python/lib'] + sys.path
-
+import py_kmc_api as kmc
 
 from operator import add
 import pyspark
 from pyspark.sql import SparkSession
 from pyspark import SparkFiles
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, LongType
-from pyspark.sql.functions import col, udf
 
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
-hdfsPrefixPath = '/Users/pipp8/tmp/'
 hdfsDataDir = ''
 spark = []
 sc = []
+
+nTests = 1000
+minK = 4
+maxK = 32
+stepK = 4
+# sketchSizes = [1000, 10000, 100000]
 sketchSizes = [10000]
+Ts = [5, 10, 20, 80, 90, 95]
+outFilePrefix = 'PresentAbsentECData'
+
+
+
+
+class EntropyData:
+    def __init__(self, nKeys, totalKmerCnt, Hk):
+        self.nKeys = nKeys
+        self.totalKmerCnt = totalKmerCnt;
+        self.Hk = Hk
+
+    def getDelta(self):
+        return float(self.nKeys) / (2 * self.totalKmerCnt)
+
+    def getError(self):
+        return self.getDelta() / self.Hk
+
+class MashData:
+    def __init__(self, cmdResults):
+        mr = cmdResults.split()
+        mashAN = mr[4].decode('UTF-8')
+        self.Pv = float(mr[2])
+        self.dist = float(mr[3])
+        try:
+            ns = mashAN.index('/')
+            self.A = int(mashAN[:ns])
+            self.N = int(mashAN[ns+1:])
+        except ValueError:
+            self.A = 0
+            self.N = 0
+
 
 def checkPathExists(path: str) -> bool:
     global hdfsDataDir, spark
@@ -42,6 +75,41 @@ def checkPathExists(path: str) -> bool:
         sc._jvm.java.net.URI.create(hdfsDataDir),
         sc._jsc.hadoopConfiguration(),)
     return fs.exists(sc._jvm.org.apache.hadoop.fs.Path(path))
+
+
+def hamming_distance(seq1: str, seq2: str) -> int:
+    return sum(c1 != c2 for c1, c2 in zip(seq1, seq2))
+
+def hamming_distance2(seq1: str, seq2: str) -> int:
+    return len(list(filter(lambda x : ord(x[0])^ord(x[1]), zip(seq1, seq2))))
+
+
+
+
+# calcola i valori dell'entropia per non caricare due volte l'istogramma
+
+
+
+
+
+def extractStatistics(cnts):
+
+    (left, right, both ) = (0,0,0)
+    for i in range(cnts.shape[1]):
+        if (cnts[0, i] == 0):
+            if (cnts[1,i] > 0):
+                right += 1  # presente solo a destra
+            else:
+                raise ValueError("double 0 in kmer histogram")
+        else:
+            if (cnts[1,i] == 0):
+                left += 1   # solo a sinistra
+            else:
+                both += 1   # in entrambi
+
+    return( both, left, right)
+
+
 
 
 
@@ -98,7 +166,7 @@ def NormalizedSquaredEuclideanDistance( vector):
 
 
 # run jaccard on sequence pair ds with kmer of length = k
-def runPresentAbsent(  bothCnt, leftCnt, rightCnt, k):
+def runPresentAbsent(  bothCnt: int, leftCnt: int, rightCnt: int, k: int):
 
     A = int(bothCnt)
     B = int(leftCnt)
@@ -208,7 +276,7 @@ def runPresentAbsent(  bothCnt, leftCnt, rightCnt, k):
 
     # salva il risultato nel file CSV
     # dati present / absent e distanze present absent
-    data1 = [ A, B, C, str(D), str(NMax),
+    data1 = [ A, B, C, str(D), str(NMax), str(A/NMax),
              anderberg, antidice, dice, gower, hamman, hamming, jaccard,
              kulczynski, matching, ochiai, phi, russel, sneath, tanimoto, yule]
 
@@ -264,7 +332,7 @@ def entropyData(entropySeqA, entropySeqB):
 # load histogram for both sequences (for counter based measures such as D2)
 # and calculate Entropy of the sequence
 # dest file è la path sull'HDFS già nel formato hdfs://host:port/xxx/yyy
-def loadHistogramOnHDFS(histFile: str, destFile: str, totKmer: int):
+def loadHistogramOnHDFS2(histFile: str, destFile: str, totKmer: int):
 
     tmp = histFile + '.txt'
 
@@ -274,11 +342,16 @@ def loadHistogramOnHDFS(histFile: str, destFile: str, totKmer: int):
     p.wait()
     # print("cmd: %s returned: %s" % (cmd, p.returncode))
 
+    os.remove(histFile +'.kmc_pre') # remove kmc output prefix file
+    os.remove(histFile +'.kmc_suf') # remove kmc output suffix file
+
     # trasferisce sull'HDFS il file testuale
     cmd = "hdfs dfs -put %s %s" % (tmp, destFile)
     p = subprocess.Popen(cmd.split())
     p.wait()
 
+    os.remove(tmp) # remove kmc output suffix file
+    
     totalDistinct = 0
     totalKmerCnt = 0
     totDistinct = 0
@@ -286,9 +359,6 @@ def loadHistogramOnHDFS(histFile: str, destFile: str, totKmer: int):
     Hk = 0.0
 
     return (totalDistinct, totalKmerCnt, Hk)
-
-
-
 
 
 
@@ -349,118 +419,153 @@ def distCounter(cnt, x: str):
 
 
 
-
 # run jaccard on sequence pair ds with kmer of length = k
-def processLocalPair(seqFile1: str, seqFile2: str, k: int):
+def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: str):
 
     start = time.time()
-    print(f"program started @{start}")
 
+    # first locally extract kmer statistics for both sequences
+
+    baseSeq1 = Path(seqFile1).stem
+    kmcOutputPrefixA = "%s/k=%d-%s" % (tempDir, k, baseSeq1)
+    destFilenameA = '%s/k=%d-%s.txt' % (hdfsDataDir, k, baseSeq1)
+
+    if (not checkPathExists(destFilenameA)):
+        totKmerA = extractKmers(seqFile1, k, tempDir, kmcOutputPrefixA)
+        # load kmers statistics from histogram files
+        (totalDistinctA, totalKmerCntA, HkA) = loadHistogramOnHDFS2(kmcOutputPrefixA, destFilenameA, totKmerA)
+        # entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
+    
+    baseSeq2 = Path(seqFile2).stem
+    kmcOutputPrefixB = "%s/k=%d-%s" % (tempDir, k, baseSeq2)
+    destFilenameB = '%s/k=%d-%s.txt' % (hdfsDataDir,k, baseSeq2)
+
+    if (not checkPathExists(destFilenameB)):
+        totKmerB = extractKmers(seqFile2, k, tempDir, kmcOutputPrefixB)
+        # load kmers statistics from histogram files
+        (totalDistinctB, totalKmerCntB, HkB) = loadHistogramOnHDFS2(kmcOutputPrefixB, destFilenameB, totKmerB)
+        # entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
+        
     tot1Acc = sc.accumulator(0)
-    seq1 = sc.textFile(seqFile1).map( lambda x: splitAndCount( tot1Acc, x))
+    seq1 = sc.textFile(destFilenameA).map( lambda x: splitAndCount( tot1Acc, x))
     
     tot2Acc = sc.accumulator(0)
-    seq2 = sc.textFile(seqFile2).map( lambda x: splitAndCount( tot2Acc, x))
+    seq2 = sc.textFile(destFilenameB).map( lambda x: splitAndCount( tot2Acc, x))
     
     intersection = seq1.intersection(seq2)
 
-    outputFile = '%s/k=%d-%s-%s.txt' % (hdfsDataDir, k, Path(seqFile1).stem, Path(seqFile2).stem)
+    outputFile = '%s/k=%d-%s-%s.txt' % (hdfsDataDir, k, baseSeq1, baseSeq2)
 
     # tot3Acc = sc.accumulator(0)
     # intersection.map(lambda x: distCounter(tot3Acc, x)).saveAsTextFile( outputFile)    
     # bothCnt = tot3Acc.value
-    bothCnt = intersection.count()
 
+    bothCnt = intersection.count()
     leftCnt = tot1Acc.value - bothCnt
     rightCnt = tot2Acc.value - bothCnt
 
-    end = time.time()
-    print(f"tempo reale: end @{end:.03f} {(end-start)*10**3:.03f} ms")
     print("********* k: %d, A: %d, B: %d, C: %d ***********" % (k, bothCnt, leftCnt, rightCnt))
           
+    ###################################################
 
-    return
+    # dati3 = runCountBasedMeasures(cnts, k)
+    dati3 =  [0, 0.0, 0.0]
+
+    # (bothCnt, leftCnt, rightCnt) = extractStatistics(cnts)
+
+    # load kmers only from histogram files
+    dati1 = runPresentAbsent(bothCnt, leftCnt, rightCnt, k)
+
+    dati2 = runMash(seqFile1, seqFile2, k)
+
+    # dati4 = entropyData(entropySeqA, entropySeqB)
+    dati4 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+    delay = time.time()-start
+    dati0 = [baseSeq1, baseSeq2, start, delay, theta, k]
+
+    # do not remove base textual histogram file (for all k values) because can be reused in next iterations (for other theta values)
+    # cmd = f"hdfs dfs -rm -skipTrash {destFilenameA}"
+    # p = subprocess.Popen(cmd.split())
+    # p.wait()
+
+    # remove textual histogram files from hdfs
+    cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
+    p = subprocess.Popen(cmd.split())
+    p.wait()
+    
+    return dati0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
 
 
-def countBasedMeasures(cnt1: int, cnt2: int):
-
-    d = cnt1 - cnt2
-    cnt = d * d
-    return cnt
 
 
-EuclidAcc = None
+def writeHeader( writer):#
+    columns0 = ['sequenceA', 'sequenceB', 'start time', 'real time', 'Theta', 'k'] # dati 0
+    columns1 = [ 'A', 'B', 'C', 'D', 'N', 'A/N'
+               'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming',
+                'Jaccard', 'Kulczynski', 'Matching', 'Ochiai',
+                'Phi', 'Russel', 'Sneath', 'Tanimoto', 'Yule']
 
-def euclid2(cnt1, cnt2):
-    global EuclidAcc
+    columns2 = []
+    for ss in sketchSizes:
+        columns2.append( 'Mash Pv (%d)' % ss)
+        columns2.append( 'Mash Distance(%d)' % ss)
+        columns2.append( 'A (%d)' % ss)
+        columns2.append( 'N (%d)' % ss)
 
-    d = (0 if cnt2 is None else cnt2) - (0 if cnt1 is None else cnt1)
-    cnt = d * d
-    EuclidAcc += cnt
-    return cnt
+    columns3 = [ 'D2', 'Euclidean', 'Euclid_norm']
 
-def euclid(partData):
-    totDist = 0
-    for row in partData:
-        d = ((0 if row.cnt2 is None else row.cnt2) - \
-             (0 if row.cnt1 is None else row.cnt1))
-        totDist += d * d
+    columns4 = ['NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
+                'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
 
-    return iter([totDist])
+    writer.writerow(columns0 + columns1 + columns2 + columns3 + columns4)
+    
+                 
 
 
-def processCountBased(seqFile1: str, seqFile2: str):
-    global EuclidAcc
 
-    schema1 = StructType([ StructField('kmer', StringType(), True), StructField('cnt1', IntegerType(), True)])
-    schema2 = StructType([ StructField('kmer', StringType(), True), StructField('cnt2', IntegerType(), True)])
 
-    # emptyRDD = spark.sparkContext.emptyRDD()
-    # df = spark.createDataFrame(emptyRDD, schema1)
+# processa localmente una coppia di sequenze seqFile1 e seqFile2
+def processPairs(seqFile1: str, seqFile2: str):
+    # process local sequence files in the same local directory (temporary named ttt)
+    tempDir = os.path.dirname( seqFile1)+'/ttt'
+    if (not os.path.isdir(tempDir)):
+        os.mkdir(tempDir)
 
-    # df1 = spark.read.format("csv").load( seqFile1)
-    # df2 = spark.read.format("csv").load( seqFile2)
+    outFile = "%s/%s-%s-%d.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile2).stem, int(time.time()))
+    with open(outFile, 'w') as file:
+        csvWriter = csv.writer(file)        
+        writeHeader(csvWriter)
+        file.flush()
 
-    # df1 = spark.read.options(delimiter='\t').csv(seqFile1)
-    # df2 = spark.read.options(delimiter='\t').csv(seqFile2)
+        if (seqFile2 != "synthetic"):
+            for k in range( minK, maxK+1, stepK):
+                # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
+                print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} ****")
+                res = processLocalPair(seqFile1, seqFile2, k, 0, tempDir)
+                csvWriter.writerow( res)
+                file.flush()
+        else:
+            for theta in Ts:
+                for k in range( minK, maxK+1, stepK):
+                    # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
+                    (f, ext) = os.path.splitext(seqFile1)
+                    seqFile2 = f"{f}-{theta}{ext}"
+                    print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ****")
+                    res = processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
+                    csvWriter.writerow( res)
+                    file.flush()
 
-    df1 = spark.read.format("csv").schema(schema1).options(delimiter='\t').load(seqFile1)
-    df2 = spark.read.format("csv").schema(schema2).options(delimiter='\t').load(seqFile2)
+            
+    # clean up
+    # do not remove dataset on hdfs
+    # remove histogram files (A & B) + mash sketch file and kmc temporary files
+    try:
+        print("Cleaning temporary directory %s" % (tempDir))
+        shutil.rmtree(tempDir)
+    except OSError as e:
+        print("Error removing: %s: %s" % (tempDir, e.strerror))
 
-    # df1.count()
-    # df2.count()
-    # df3 = df1.union(df2)
-    # df3.sort( 'kmer').show()
-    # df3.count()
-
-    # df3.groupBy('kmer').agg( {'cnt1' : 'sum' }).show()
-
-    # df1.intersection(df2).count()
-    # df1.intersect(df2).show()
-    # inner solo l'intersezione
-    # inner = df1.join(df2, df1.kmer == df2.kmer, "inner")
-    # outer tutte le righe
-    outer = df1.join(df2, df1.kmer == df2.kmer, "outer")
-
-    spark.udf.register("countBasedMeasuresUDF", countBasedMeasures, LongType())
-    # ii = outer.select("*").filter((outer.cnt1.isNotNull()) & (outer.cnt2.isNotNull())).map()
-    EuclidAcc = sc.accumulator(0)
-    EuclidUDF = udf(euclid)
-
-    # outer.map(lambda row: countBasedMeasures( EuclideAcc, row))
-
-    # df4 = outer.select(EuclidUDF(col('cnt1'), col('cnt2'))).show()
-    euclidDistance = math.sqrt( outer.rdd.mapPartitions(euclid).sum())
-
-# df2 = outer.withColumn("VALUE", euclidUDF(col('cnt1'), col('cnt2')))
-
-    print(f"Euclide = {euclidDistance}")
-
-    # outer.select(col("cnt1"), col("cnt2")).foreach(lambda x: print(x.__getattr__("cnt1", x.__getattr__("cnt2"))))
-    # df3.select(col("cnt1"), col("cnt2")).foreach(lambda x: print(x.__getattr__("cnt1"), x.__getattr__("cnt2")))
-    # df3.select(col("cnt1"), col("cnt2")).foreach(lambda x: print(f"{x.__getattr__("cnt1")} -> {x.__getattr__("cnt2")}))
-    # df3.select(col("cnt1"), col("cnt2")).foreach(lambda x: print(f"{x.__getattr__('cnt1')} -> {x.__getattr__('cnt2')}"))
-    # df3.select(col("cnt1"), col("cnt2")).foreach(lambda x: print(f"{x[0]} -> {x[1]}"))
 
 
 
@@ -479,9 +584,7 @@ def main():
     elif argNum == 4:
         hdfsDataDir = '%s/%s' % (hdfsPrefixPath, sys.argv[3])
 
-    seqFile1 = "%s/%s" % (hdfsDataDir, sys.argv[1]) # le sequenze sono gia' sull'HDFS nel formato kmc_dump.txt
-    seqFile2 = "%s/%s" % (hdfsDataDir, sys.argv[2]) # per eseguire localmente l'estrazione dei k-mers
-    seqFile1 = sys.argv[1] # le sequenze sono gia' sull'HDFS nel formato kmc_dump.txt
+    seqFile1 = sys.argv[1] # le sequenze sono sul file system locale
     seqFile2 = sys.argv[2] # per eseguire localmente l'estrazione dei k-mers
     # outFile = '%s/%s-%s.csv' % (hdfsDataDir, Path( seqFile1).stem, Path(seqFile2).stem )
 
@@ -495,7 +598,7 @@ def main():
     sc = spark.sparkContext
 
     sc2 = spark._jsc.sc()
-    nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) -1
+    nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) - 1
 
     if (not checkPathExists( hdfsDataDir)):
         print("Data dir: %s does not exist. Program terminated." % hdfsDataDir)
@@ -503,16 +606,14 @@ def main():
 
     print("%d workers, hdfsDataDir: %s" % (nWorkers, hdfsDataDir))
 
-    processCountBased(seqFile1, seqFile2)
-
-    #processLocalPair(seqFile1, seqFile2)
+    processPairs(seqFile1, seqFile2)
 
     spark.stop()
 
 
-
-
-
     
+
+
+
 if __name__ == "__main__":
     main()
