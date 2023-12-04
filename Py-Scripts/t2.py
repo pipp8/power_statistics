@@ -28,7 +28,7 @@ from pyspark.sql.functions import col, udf
 
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
-hdfsPrefixPath = '/Users/pipp8/tmp/'
+# hdfsPrefixPath = '/Users/pipp8/tmp/'
 hdfsDataDir = ''
 spark = []
 sc = []
@@ -472,8 +472,8 @@ def main():
 
     seqFile1 = "%s/%s" % (hdfsDataDir, sys.argv[1]) # le sequenze sono gia' sull'HDFS nel formato kmc_dump.txt
     seqFile2 = "%s/%s" % (hdfsDataDir, sys.argv[2]) # per eseguire localmente l'estrazione dei k-mers
-    seqFile1 = sys.argv[1] # le sequenze sono gia' sull'HDFS nel formato kmc_dump.txt
-    seqFile2 = sys.argv[2] # per eseguire localmente l'estrazione dei k-mers
+    # seqFile1 = sys.argv[1] # le sequenze sono gia' sull'HDFS nel formato kmc_dump.txt
+    # seqFile2 = sys.argv[2] # per eseguire localmente l'estrazione dei k-mers
     # outFile = '%s/%s-%s.csv' % (hdfsDataDir, Path( seqFile1).stem, Path(seqFile2).stem )
 
     print("hdfsDataDir = %s" % hdfsDataDir)
