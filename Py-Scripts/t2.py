@@ -292,8 +292,6 @@ def loadHistogramOnHDFS(histFile: str, destFile: str, totKmer: int):
 
 
 
-
-
 def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
 
     # run kmc on the first sequence
@@ -382,35 +380,20 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
     return
 
 
-def countBasedMeasures(cnt1: int, cnt2: int):
 
-    d = cnt1 - cnt2
-    cnt = d * d
-    return cnt
-
-
-EuclidAcc = None
-
-def euclid2(cnt1, cnt2):
-    global EuclidAcc
-
-    d = (0 if cnt2 is None else cnt2) - (0 if cnt1 is None else cnt1)
-    cnt = d * d
-    EuclidAcc += cnt
-    return cnt
-
-def euclid(partData):
-    totDist = 0
+def countBasedMeasures(partData):
+    (D2totValue, EuclideanTotValue) = (0, 0)
     for row in partData:
-        d = ((0 if row.cnt2 is None else row.cnt2) - \
-             (0 if row.cnt1 is None else row.cnt1))
-        totDist += d * d
+        cnt2 = 0 if row.cnt2 is None else row.cnt2
+        cnt1 = 0 if row.cnt1 is None else row.cnt1
+        d = cnt2 - cnt1
+        EuclideanTotValue += d * d
+        D2totValue +=  cnt1 * cnt2
 
-    return iter([totDist])
+    return iter([(EuclideanTotValue, D2totValue )])
 
 
 def processCountBased(seqFile1: str, seqFile2: str):
-    global EuclidAcc
 
     schema1 = StructType([ StructField('kmer', StringType(), True), StructField('cnt1', IntegerType(), True)])
     schema2 = StructType([ StructField('kmer', StringType(), True), StructField('cnt2', IntegerType(), True)])
@@ -430,8 +413,6 @@ def processCountBased(seqFile1: str, seqFile2: str):
     # df1.count()
     # df2.count()
     # df3 = df1.union(df2)
-    # df3.sort( 'kmer').show()
-    # df3.count()
 
     # df3.groupBy('kmer').agg( {'cnt1' : 'sum' }).show()
 
@@ -442,19 +423,29 @@ def processCountBased(seqFile1: str, seqFile2: str):
     # outer tutte le righe
     outer = df1.join(df2, df1.kmer == df2.kmer, "outer")
 
-    spark.udf.register("countBasedMeasuresUDF", countBasedMeasures, LongType())
+    # spark.udf.register("countBasedMeasuresUDF", countBasedMeasures, LongType())
     # ii = outer.select("*").filter((outer.cnt1.isNotNull()) & (outer.cnt2.isNotNull())).map()
-    EuclidAcc = sc.accumulator(0)
-    EuclidUDF = udf(euclid)
+    # EuclidAcc = sc.accumulator(0)
+    # EuclidUDF = udf(countBasedMeasures)
 
     # outer.map(lambda row: countBasedMeasures( EuclideAcc, row))
 
     # df4 = outer.select(EuclidUDF(col('cnt1'), col('cnt2'))).show()
-    euclidDistance = math.sqrt( outer.rdd.mapPartitions(euclid).sum())
+    allDist = outer.rdd.mapPartitions(countBasedMeasures).collect()
 
-# df2 = outer.withColumn("VALUE", euclidUDF(col('cnt1'), col('cnt2')))
+    (totEuclid, totD2) = (0,0)
+    for x1, x2 in allDist:
+        totEuclid += x1
+        totD2 += x2
 
-    print(f"Euclide = {euclidDistance}")
+    euclidDistance = math.sqrt(totEuclid)
+
+    print(f"Euclid = {euclidDistance}, D2 = {totD2}")
+    # map(lambda x: ())
+
+    # df2 = outer.withColumn("VALUE", euclidUDF(col('cnt1'), col('cnt2')))
+
+    # print(f"Euclide = {euclidDistance}")
 
     # outer.select(col("cnt1"), col("cnt2")).foreach(lambda x: print(x.__getattr__("cnt1", x.__getattr__("cnt2"))))
     # df3.select(col("cnt1"), col("cnt2")).foreach(lambda x: print(x.__getattr__("cnt1"), x.__getattr__("cnt2")))
@@ -486,22 +477,24 @@ def main():
     # outFile = '%s/%s-%s.csv' % (hdfsDataDir, Path( seqFile1).stem, Path(seqFile2).stem )
 
     print("hdfsDataDir = %s" % hdfsDataDir)
-    
+
+    baseSeq1 = Path(seqFile1).stem
+    baseSeq2 = Path(seqFile2).stem
+
     spark = SparkSession \
         .builder \
-        .appName("%s %s %s" % (Path( sys.argv[0]).stem, Path(seqFile1).stem, Path(seqFile2).stem)) \
+        .appName("%s %s %s" % (Path( sys.argv[0]).stem , baseSeq1, baseSeq2)) \
         .getOrCreate()
 
     sc = spark.sparkContext
 
     sc2 = spark._jsc.sc()
-    nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) -1
 
     if (not checkPathExists( hdfsDataDir)):
         print("Data dir: %s does not exist. Program terminated." % hdfsDataDir)
         exit( -1)
 
-    print("%d workers, hdfsDataDir: %s" % (nWorkers, hdfsDataDir))
+    print(f"Processing {seqFile1} vs {seqFile2}")
 
     processCountBased(seqFile1, seqFile2)
 

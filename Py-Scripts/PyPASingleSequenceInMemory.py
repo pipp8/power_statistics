@@ -555,8 +555,6 @@ def main():
 
     processPairs(seqFile1, seqFile2)
 
-    spark.stop()
-
 
 
 

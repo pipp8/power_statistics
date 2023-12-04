@@ -26,7 +26,8 @@ setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 dirname <- "T1BoxPlot3"
 
 # Sets the name of the file containing the input dataframe
-dfFilename <- "PresentAbsentEC-Power+T1.RDS"
+dfFilename <- "uniform,32/PresentAbsentEC-Power+T1.RDS"
+dfFilename <- "uniform,32/PresentAbsentEC-Power+T1-uniform,32.RDS"
 
 ###### CODE
 
@@ -70,7 +71,7 @@ dfAll$Model = factor(dfAll$Model)
 
 AM = levels(dfAll$Model)[1]
 
-for( a in c( 0.01, 0.05, 0.10)) { 
+for( a in c( 0.01, 0.05, 0.10)) { # alpha values
   
   MaxT1 <- switch( sprintf("%.2f", a), "0.01" = 0.050, "0.05" = 0.150, "0.10" = 0.3) # fattore di amplificazione del valore di T1
   cat(sprintf("%.3f - %.3f\n", a, MaxT1))
@@ -96,7 +97,7 @@ for( a in c( 0.01, 0.05, 0.10)) {
       # scale_fill_grey(start = 0, end = .9)
 	    # ggtitle("Pannello risultati T1-Check")
 	
-	# dev.new(width = 10, height = 5)
+  # dev.new(width = 10, height = 5)
   outfname <- sprintf( "%s/T1Box-alpha=%.2f.pdf", dirname, a)
   ggsave( outfname, width = 9, height = 4, device = pdf(), dpi = 300)
   # print( sp)

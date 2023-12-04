@@ -17,8 +17,8 @@ library(filelock)
 # Sets the path of the directory containing the output of FADE
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
-bs <- 1
-
+bs <- "1"
+bs <- "uniform"
 similarities = c('D2')
 
 # Defines the name of the file containing a copy of the dataframe created by this script
@@ -26,12 +26,14 @@ similarities = c('D2')
 # csvFilename <- 'PresentAbsentData-all.csv'
 # nullModel <- 'Uniform'
 
-dfFilename <- sprintf( "%d,32/PresentAbsentEC-Power+T1-%d,32.RDS", bs, bs)
-csvFilename <- sprintf("%d,32/PresentAbsentECData-%d-32.csv", bs, bs)
-trsh <- sprintf("%d,32/Thresholds.csv", bs)
+dfFilename <- sprintf( "%s,32/PresentAbsentEC-Power+T1-%s,32.RDS", bs, bs)
+csvFilename <- sprintf("%s,32/PresentAbsentECData-%s-32.csv", bs, bs)
+csvFilename <- sprintf("%s,32/PresentAbsentECData-uniform-32-1000.csv", bs)
 
-# nullModel <- 'Uniform'
-nullModel <- 'ShuffledEColi'
+trsh <- sprintf("%s,32/Thresholds.csv", bs)
+
+nullModel <- 'Uniform'
+# nullModel <- 'ShuffledEColi'
 T1Model <- paste( sep='', nullModel, '-T1')
 
 ###### CODE
@@ -95,7 +97,7 @@ getDensity <- function( df, measure, index)
   # (index = position of the threshold value)
   a = df[[intersection]][start:index]
   b = df[[totalCount]][start:index]
-  return ( mean( a / b))
+  return ( c( mean( a / b), sd(a / b)))
 }
 
 
@@ -104,7 +106,8 @@ T1Power <- function( len) {
   resultsDF <- data.frame( Measure = character(),  Model = character(), len = numeric(), gamma = double(),
                            k = numeric(), alpha=double(), threshold = double(),
                            power = double(), T1 = double(),
-                           nmDensity = double(), amDensity = double(),
+                           nmDensity = double(), nmSD = double(),
+                           amDensity = double(), amSD = double(),
                            stringsAsFactors=FALSE)
   
   cat(sprintf("len = %d\n", len))
@@ -131,8 +134,9 @@ T1Power <- function( len) {
           # threshold <- nmDistances[ndx] # solo vettore delle distanze
           ndx <- round(nrow(nmSrt) * alpha)
           threshold <- nmSrt[ndx, mes] # row = ndx, col = measure mes
-          nmDensity = getDensity(nmSrt, mes, ndx)
-
+          cc = getDensity(nmSrt, mes, nrow(nm)) # getDensity(nmSrt, mes, ndx) => fino alla threshold
+          nmDensity = cc[1]
+          nmSD = cc[2]
           # if (threshold == 1) {
           lck = lock( trsh, exclusive = TRUE, timeout = Inf)
           if (!is.null(lck)) {
@@ -143,8 +147,9 @@ T1Power <- function( len) {
           for(altMod in altModels ) {  # 2 alternative models "MotifRepl-U" "PatTransf-U"
             am <- filter( df, df$model == altMod & df$gamma == g & df$seqLen == len & df$k == kv)
             power = getPower(am, mes, threshold, similarityP)
-            amDensity = getDensity(am, mes, nrow(am)) # per gli alternate model prende tutte ???
-
+            cc = getDensity(am, mes, nrow(am)) # per gli alternate model prende tutte ???
+            amDensity = cc[1]
+            amSD = cc[2]
             #            cat(sprintf("AM: %s, power = %f  -  ", altMod, power))
             cat('.')
             if(altMod == altModels[1]) {
@@ -154,7 +159,7 @@ T1Power <- function( len) {
               #              cat(sprintf("T1-error = %f  -  ", T1))
             }
             resultsDF[nrow( resultsDF)+1,] <- list(mes, altMod, len, g, kv, alpha,
-                                                    threshold, power, T1, nmDensity, amDensity)
+                                                    threshold, power, T1, nmDensity, nmSD, amDensity, amSD)
           }
         }
       }
