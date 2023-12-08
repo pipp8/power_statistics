@@ -66,23 +66,42 @@ cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.D
 df$Model = factor(df$Model)
 df$kv = factor(df$k)
 df$len = factor(df$len)
+df$class = "unkmown"
 
-kValues = as.integer(levels(factor(df$k)))
-lengths = as.integer(levels(factor(df$len)))
+kValues = levels(factor(df$k))
+lengths = levels(factor(df$len))
 measures <- levels(factor(df$Measure))
 altModels = levels(df$Model)[1:2]
+classes <- c("scarso", "saturo", "resto")
 
 # fissati alpha, gamma e Model (variabili indipendenti)
 dfScarsi = filter( df, nmDensity <= 0.05 & gamma == 0.05 & Model == "MotifRepl-U")
 dfSaturi = filter( df, nmDensity >= 0.95 & gamma == 0.05 & Model == "MotifRepl-U")
 dfResto =  filter( df, nmDensity > 0.05 & nmDensity < 0.95 & gamma == 0.05 & Model == "MotifRepl-U")
 
-for( ss in c("scarsi", "saturi", "resto")) {
-  dfv <- switch( ss,
-             "scarsi" = filter( df, k > 20 & gamma == 0.05 & Model == "MotifRepl-U"),
-             "saturi" = filter( df, k <= 8 & gamma == 0.05 & Model == "MotifRepl-U"),
-             "resto"  = filter( df, k > 8 & k <= 20 & gamma == 0.05 & Model == "MotifRepl-U"))
+nmdf <- data.frame(lengths)
+for( kk in kValues ) {
+  l <- c()
+  for( ll in lengths) {
+    tdf <- filter( df, k == kk & len == ll & Measure == "Jaccard" & alpha == 0.05 & gamma == 0.05 & Model == "MotifRepl-U")
+    l <- append(l, tdf$nmDensity)
+  }
+  nmdf[kk] <- l
+}
 
+for(i in 1:nrow(df)) {
+  t <- df[i, 'nmDensity']
+  if (t < 0.03)      { lbl <- classes[1]}
+  else if (t > 0.97) { lbl <- classes[2]}
+  else               { lbl <- classes[3]}
+  df[i, 'class'] <- lbl
+}
+
+write.csv(nmdf, "density-k-len.csv", row.names=FALSE)
+
+for( ss in classes) {
+
+  dfv <- filter( df, class == ss & gamma == 0.05 & Model == "MotifRepl-U")
   cat(sprintf("Dataset %s -> %d rows.\n", ss, nrow(dfv)))
 
   # plot scarsi divisi in 3 alpha altrimenti illegibile
@@ -108,21 +127,43 @@ for( ss in c("scarsi", "saturi", "resto")) {
       outfname <- sprintf( "%s/PanelT1-%s-A=%.2f.pdf", dirname, ss, a)
       ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
       # dev.off() #only 129kb in size
+
+
+    sp2 <- ggplot( df1, aes(x = Measure, y = power, fill = kv)) +
+      geom_bar( position = "dodge", stat = "identity") +
+      facet_grid( cols = vars(alpha), rows = vars(len)) +
+      # facet_grid_sc(rows = vars( gamma), scales = 'free') +
+      # scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+      #                   labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
+      # scale_y_continuous(name = "A/N") +
+      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 70),
+                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                            panel.spacing=unit(0.1, "lines")) +
+      labs(y = sprintf("Power results (A/N %s)", ss)) +
+      # scale_x_continuous(trans='log10') +
+      guides(colour = guide_legend(override.aes = list(size=1)))
+    # ggtitle( am)
+
+    # dev.new(width = 6, height = 6)
+    # print(sp1)
+    outfname <- sprintf( "%s/PanelPower-%s-A=%.2f.pdf", dirname, ss, a)
+    ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+    # dev.off() #only 129kb in size
   }
 }
 
-dfv = filter( df, Measure == "Jaccard" & Model == "MotifRepl-U" & gamma == 0.05 & alpha == 0.05)
-
-sp1 <- ggplot( dfv, aes(x = len, y = kv, fill = nmDensity)) +
-  geom_tile() +
-  # scale_fill_gradient(low="white", high="blue") +
-  # scale_fill_distiller(palette = "RdPu") +
-  labs(title = "A/N Density(k, len)", x = "len", y = "K")
-  # theme_ipsum()
-# dev.new(width = 9, height = 6)
-# print(sp2)
-# stop("break")
-outfname <- sprintf( "%s/Heatmap Density.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
-# dev.off() #only 129kb in size
+# dfv = filter( df, Measure == "Jaccard" & Model == "MotifRepl-U" & gamma == 0.05 & alpha == 0.05)
+#
+# sp1 <- ggplot( dfv, aes(x = len, y = kv, fill = nmDensity)) +
+#   geom_tile() +
+#   # scale_fill_gradient(low="white", high="blue") +
+#   # scale_fill_distiller(palette = "RdPu") +
+#   labs(title = "A/N Density(k, len)", x = "len", y = "K")
+#   # theme_ipsum()
+# # dev.new(width = 9, height = 6)
+# # print(sp2)
+# # stop("break")
+# outfname <- sprintf( "%s/Heatmap Density.pdf", dirname)
+# ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+# # dev.off() #only 129kb in size
 cat(sprintf("%d plot printed", 3))
