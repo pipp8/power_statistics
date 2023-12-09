@@ -452,8 +452,8 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     # first locally extract kmer statistics for both sequences
 
     baseSeq1 = Path(seqFile1).stem
-    kmcOutputPrefixA = "%s/k=%d-%s" % (tempDir, k, baseSeq1)
-    destFilenameA = '%s/k=%d-%s.txt' % (hdfsDataDir, k, baseSeq1)
+    kmcOutputPrefixA = f"{tempDir}/{baseSeq1}-k={k}"
+    destFilenameA = f"{hdfsDataDir}/{baseSeq1}-k={k}.txt"
 
     if (not checkPathExists(destFilenameA)):
         totKmerA = extractKmers(seqFile1, k, tempDir, kmcOutputPrefixA)
@@ -462,8 +462,8 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
         # entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
     
     baseSeq2 = Path(seqFile2).stem
-    kmcOutputPrefixB = "%s/k=%d-%s" % (tempDir, k, baseSeq2)
-    destFilenameB = '%s/k=%d-%s.txt' % (hdfsDataDir,k, baseSeq2)
+    kmcOutputPrefixB = f"{tempDir}/{baseSeq2}-k={k}"
+    destFilenameB = f"{hdfsDataDir}/{baseSeq2}-k={k}.txt"
 
     if (not checkPathExists(destFilenameB)):
         totKmerB = extractKmers(seqFile2, k, tempDir, kmcOutputPrefixB)
@@ -498,36 +498,31 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     euclidDistance = math.sqrt(totEuclid)
     print(f"Euclid = {euclidDistance}, D2 = {totD2}")
     print(f"Present/Absent = {Acnt}, {Bcnt}, {Ccnt},")
-
-    tot1Acc = sc.accumulator(0)
-    seq1 = sc.textFile(destFilenameA).map( lambda x: splitAndCount( tot1Acc, x))
-    
-    tot2Acc = sc.accumulator(0)
-    seq2 = sc.textFile(destFilenameB).map( lambda x: splitAndCount( tot2Acc, x))
-    
-    intersection = seq1.intersection(seq2)
-
-    outputFile = '%s/k=%d-%s-%s.txt' % (hdfsDataDir, k, baseSeq1, baseSeq2)
-
-    # tot3Acc = sc.accumulator(0)
-    # intersection.map(lambda x: distCounter(tot3Acc, x)).saveAsTextFile( outputFile)    
-    # bothCnt = tot3Acc.value
-
-    bothCnt = intersection.count()
-    leftCnt = tot1Acc.value - bothCnt
-    rightCnt = tot2Acc.value - bothCnt
-
-    print("********* k: %d, A: %d, B: %d, C: %d ***********" % (k, bothCnt, leftCnt, rightCnt))
-          
-    ###################################################
-
     # dati3 = runCountBasedMeasures(cnts, k)
-    dati3 =  [0, 0.0, 0.0]
+    dati3 =  [totD2, euclidDistance, 0.0]
 
-    # (bothCnt, leftCnt, rightCnt) = extractStatistics(cnts)
+    # implementazione precedente per avere A, B, e C. Effettuato test i risultati coincidono
+    # tot1Acc = sc.accumulator(0)
+    # seq1 = sc.textFile(destFilenameA).map( lambda x: splitAndCount( tot1Acc, x))
+    #
+    # tot2Acc = sc.accumulator(0)
+    # seq2 = sc.textFile(destFilenameB).map( lambda x: splitAndCount( tot2Acc, x))
+    #
+    # intersection = seq1.intersection(seq2)
+    #
+    # outputFile = '%s/k=%d-%s-%s.txt' % (hdfsDataDir, k, baseSeq1, baseSeq2)
+    #
+    # # tot3Acc = sc.accumulator(0)
+    # # intersection.map(lambda x: distCounter(tot3Acc, x)).saveAsTextFile( outputFile)
+    # # bothCnt = tot3Acc.value
+    #
+    # ACnt = intersection.count()
+    # Bcnt = tot1Acc.value - bothCnt
+    # Ccnt = tot2Acc.value - bothCnt
 
-    # load kmers only from histogram files
-    dati1 = runPresentAbsent(bothCnt, leftCnt, rightCnt, k)
+    ###################################################
+    print("********* k: %d, A: %d, B: %d, C: %d ***********" % (k, Acnt, Bcnt, Ccnt))
+    dati1 = runPresentAbsent(Acnt, Bcnt, Ccnt, k)
 
     dati2 = runMash(seqFile1, seqFile2, k)
 
@@ -585,6 +580,7 @@ def processPairs(seqFile1: str, seqFile2: str):
     if (not os.path.isdir(tempDir)):
         os.mkdir(tempDir)
 
+    # local file system result file
     outFile = "%s/%s-%s-%d.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile2).stem, int(time.time()))
     with open(outFile, 'w') as file:
         csvWriter = csv.writer(file)        
