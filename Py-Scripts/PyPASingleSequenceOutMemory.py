@@ -21,9 +21,12 @@ from operator import add
 import pyspark
 from pyspark.sql import SparkSession
 from pyspark import SparkFiles
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType, LongType
+from pyspark.sql.functions import col, udf
 
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
+hdfsPrefixPath = '/Users/pipp8/tmp/'
 hdfsDataDir = ''
 spark = []
 sc = []
@@ -418,6 +421,27 @@ def distCounter(cnt, x: str):
     return x
 
 
+def countBasedMeasures(partData):
+    (D2totValue, EuclideanTotValue) = (0, 0)
+    (Acnt, Bcnt, Ccnt) = (0, 0, 0)
+    for row in partData:
+        cnt2 = 0 if row.cnt2 is None else row.cnt2
+        cnt1 = 0 if row.cnt1 is None else row.cnt1
+        d = cnt2 - cnt1
+        EuclideanTotValue += d * d
+        D2totValue +=  cnt1 * cnt2
+        # Present/Absent
+        if (cnt1 > 0 and cnt2 > 0):
+            Acnt += 1
+        elif (cnt1 > 0):
+            Bcnt += 1
+        else:
+            Ccnt += 1
+
+    return iter([(EuclideanTotValue, D2totValue, Acnt, Bcnt, Ccnt)])
+
+
+
 
 # run jaccard on sequence pair ds with kmer of length = k
 def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: str):
@@ -445,7 +469,35 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
         # load kmers statistics from histogram files
         (totalDistinctB, totalKmerCntB, HkB) = loadHistogramOnHDFS2(kmcOutputPrefixB, destFilenameB, totKmerB)
         # entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
-        
+
+    #
+    # inizio procedura Dataframe oriented (out of memory)
+    #
+    schema1 = StructType([ StructField('kmer', StringType(), True), StructField('cnt1', IntegerType(), True)])
+    schema2 = StructType([ StructField('kmer', StringType(), True), StructField('cnt2', IntegerType(), True)])
+
+    df1 = spark.read.format("csv").schema(schema1).options(delimiter='\t').load(destFilenameA)
+    df2 = spark.read.format("csv").schema(schema2).options(delimiter='\t').load(destFilenameB)
+
+    # inner solo l'intersezione
+    # inner = df1.join(df2, df1.kmer == df2.kmer, "inner")
+    # outer tutte le righe
+    outer = df1.join(df2, df1.kmer == df2.kmer, "outer")
+    # df4 = outer.select(EuclidUDF(col('cnt1'), col('cnt2'))).show()
+    allDist = outer.rdd.mapPartitions(countBasedMeasures).collect()
+
+    (totEuclid, totD2, Acnt, Bcnt, Ccnt) = (0,0, 0, 0, 0)
+    for t in allDist:
+        totEuclid += t[0]
+        totD2 += t[1]
+        Acnt += t[2]
+        Bcnt += t[3]
+        Ccnt += t[4]
+
+    euclidDistance = math.sqrt(totEuclid)
+    print(f"Euclid = {euclidDistance}, D2 = {totD2}")
+    print(f"Present/Absent = {Acnt}, {Bcnt}, {Ccnt},")
+
     tot1Acc = sc.accumulator(0)
     seq1 = sc.textFile(destFilenameA).map( lambda x: splitAndCount( tot1Acc, x))
     
@@ -588,7 +640,7 @@ def main():
     seqFile2 = sys.argv[2] # per eseguire localmente l'estrazione dei k-mers
     # outFile = '%s/%s-%s.csv' % (hdfsDataDir, Path( seqFile1).stem, Path(seqFile2).stem )
 
-    print("hdfsDataDir = %s" % hdfsDataDir)
+    print(f"Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} in hdfsDataDir = {hdfsDataDir}")
     
     spark = SparkSession \
         .builder \

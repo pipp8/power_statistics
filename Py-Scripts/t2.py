@@ -352,7 +352,18 @@ def distCounter(cnt, x: str):
 def processLocalPair(seqFile1: str, seqFile2: str, k: int):
 
     start = time.time()
-    print(f"program started @{start}")
+    print(f"program started @def countBasedMeasures(partData):
+    (D2totValue, EuclideanTotValue) = (0, 0)
+    for row in partData:
+        cnt2 = 0 if row.cnt2 is None else row.cnt2
+    cnt1 = 0 if row.cnt1 is None else row.cnt1
+    d = cnt2 - cnt1
+    EuclideanTotValue += d * d
+    D2totValue +=  cnt1 * cnt2
+
+    return iter([(EuclideanTotValue, D2totValue )])
+
+{start}")
 
     tot1Acc = sc.accumulator(0)
     seq1 = sc.textFile(seqFile1).map( lambda x: splitAndCount( tot1Acc, x))
@@ -380,17 +391,6 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int):
     return
 
 
-
-def countBasedMeasures(partData):
-    (D2totValue, EuclideanTotValue) = (0, 0)
-    for row in partData:
-        cnt2 = 0 if row.cnt2 is None else row.cnt2
-        cnt1 = 0 if row.cnt1 is None else row.cnt1
-        d = cnt2 - cnt1
-        EuclideanTotValue += d * d
-        D2totValue +=  cnt1 * cnt2
-
-    return iter([(EuclideanTotValue, D2totValue )])
 
 
 def processCountBased(seqFile1: str, seqFile2: str):
