@@ -26,7 +26,7 @@ from pyspark.sql.functions import col, udf
 
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
-hdfsPrefixPath = '/Users/pipp8/tmp/'
+# hdfsPrefixPath = '/Users/pipp8/tmp/'
 hdfsDataDir = ''
 spark = []
 sc = []
@@ -343,12 +343,13 @@ def loadHistogramOnHDFS2(histFile: str, destFile: str, totKmer: int):
     cmd = "/usr/local/bin/kmc_dump %s %s" % (histFile, tmp)
     p = subprocess.Popen(cmd.split())
     p.wait()
-    # print("cmd: %s returned: %s" % (cmd, p.returncode))
+    print(f"Dumping {histFile} kmers counting")
 
     os.remove(histFile +'.kmc_pre') # remove kmc output prefix file
     os.remove(histFile +'.kmc_suf') # remove kmc output suffix file
 
     # trasferisce sull'HDFS il file testuale
+    print(f"Transferring to hdfs {histFile} -> {destFile}")
     cmd = "hdfs dfs -put %s %s" % (tmp, destFile)
     p = subprocess.Popen(cmd.split())
     p.wait()
