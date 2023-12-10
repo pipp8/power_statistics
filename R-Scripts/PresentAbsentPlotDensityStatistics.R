@@ -91,8 +91,8 @@ for( kk in kValues ) {
 
 for(i in 1:nrow(df)) {
   t <- df[i, 'nmDensity']
-  if (t < 0.03)      { lbl <- classes[1]}
-  else if (t > 0.97) { lbl <- classes[2]}
+  if (t == 0)        { lbl <- classes[1]}
+  else if (t > 0.98) { lbl <- classes[2]}
   else               { lbl <- classes[3]}
   df[i, 'class'] <- lbl
 }
@@ -101,7 +101,7 @@ write.csv(nmdf, "density-k-len.csv", row.names=FALSE)
 
 for( ss in classes) {
 
-  dfv <- filter( df, class == ss & gamma == 0.05 & Model == "MotifRepl-U")
+  dfv <- filter( df, class == ss & Model == "MotifRepl-U")
   cat(sprintf("Dataset %s -> %d rows.\n", ss, nrow(dfv)))
 
   # plot scarsi divisi in 3 alpha altrimenti illegibile
@@ -109,7 +109,7 @@ for( ss in classes) {
     df1 = filter( dfv, alpha == a)
     sp1 <- ggplot( df1, aes(x = Measure, y = T1, fill = kv)) +
       geom_bar( position = "dodge", stat = "identity") +
-      facet_grid( cols = vars(alpha), rows = vars(len)) +
+      facet_grid( cols = vars(gamma), rows = vars(len)) +
       # facet_grid_sc(rows = vars( gamma), scales = 'free') +
       # scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
       #                   labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
@@ -124,14 +124,14 @@ for( ss in classes) {
 
       # dev.new(width = 6, height = 6)
       # print(sp1)
-      outfname <- sprintf( "%s/PanelT1-%s-A=%.2f.pdf", dirname, ss, a)
+      outfname <- sprintf( "%s/PanelT1-%s-A=%.2f-G=%.2f.pdf", dirname, ss, a, g)
       ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
       # dev.off() #only 129kb in size
 
 
     sp2 <- ggplot( df1, aes(x = Measure, y = power, fill = kv)) +
       geom_bar( position = "dodge", stat = "identity") +
-      facet_grid( cols = vars(alpha), rows = vars(len)) +
+      facet_grid( cols = vars(gamma), rows = vars(len)) +
       # facet_grid_sc(rows = vars( gamma), scales = 'free') +
       # scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
       #                   labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
@@ -146,7 +146,7 @@ for( ss in classes) {
 
     # dev.new(width = 6, height = 6)
     # print(sp1)
-    outfname <- sprintf( "%s/PanelPower-%s-A=%.2f.pdf", dirname, ss, a)
+    outfname <- sprintf( "%s/PanelPower-%s-A=%.2f-G=%.2f.pdf", dirname, ss, a, g)
     ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
     # dev.off() #only 129kb in size
   }
