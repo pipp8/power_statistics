@@ -26,7 +26,7 @@ from pyspark.sql.functions import col, udf
 
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
-# hdfsPrefixPath = '/Users/pipp8/tmp/'
+hdfsPrefixPath = '/Users/pipp8/tmp/'
 hdfsDataDir = ''
 spark = []
 sc = []
@@ -39,6 +39,12 @@ stepK = 4
 sketchSizes = [10000]
 Ts = [5, 10, 20, 80, 90, 95]
 outFilePrefix = 'PresentAbsentECData'
+
+# global broadcast variables
+totDistinctKmerAAcc = []
+totDistinctKmerBAcc = []
+totKmerAAcc = []
+totKmerBAcc = []
 
 
 
@@ -55,6 +61,12 @@ class EntropyData:
     def getError(self):
         return self.getDelta() / self.Hk
 
+    def toString(self):
+        return [self.nKeys, 2 * self.totalKmerCnt, self.getDelta(), self.Hk, self.getError()]
+
+
+
+
 class MashData:
     def __init__(self, cmdResults):
         mr = cmdResults.split()
@@ -68,6 +80,9 @@ class MashData:
         except ValueError:
             self.A = 0
             self.N = 0
+
+    def toString( self):
+        return [ self.Pv, self.dist, self.A, self.N ]
 
 
 def checkPathExists(path: str) -> bool:
@@ -90,42 +105,6 @@ def hamming_distance2(seq1: str, seq2: str) -> int:
 
 
 # calcola i valori dell'entropia per non caricare due volte l'istogramma
-
-
-
-
-
-def extractStatistics(cnts):
-
-    (left, right, both ) = (0,0,0)
-    for i in range(cnts.shape[1]):
-        if (cnts[0, i] == 0):
-            if (cnts[1,i] > 0):
-                right += 1  # presente solo a destra
-            else:
-                raise ValueError("double 0 in kmer histogram")
-        else:
-            if (cnts[1,i] == 0):
-                left += 1   # solo a sinistra
-            else:
-                both += 1   # in entrambi
-
-    return( both, left, right)
-
-
-
-
-
-def runCountBasedMeasures(cnts, k):
-    D2totValue = 0
-    EuclideanTotValue = 0
-    for i in range(cnts.shape[1]):
-        D2totValue = D2totValue + cnts[0,i] * cnts[1,i]
-        d = cnts[0,i] - cnts[1,i]
-        EuclideanTotValue = EuclideanTotValue + d * d
-
-    NED = NormalizedSquaredEuclideanDistance( cnts)
-    return [int(D2totValue), math.sqrt(EuclideanTotValue), float(NED)]
 
 
 
@@ -309,10 +288,7 @@ def runMash(inputDS1, inputDS2, k):
     # dati mash distance
     data2 = []
     for i in range(len(sketchSizes)):
-        data2.append( mashValues[i].Pv)
-        data2.append( mashValues[i].dist)
-        data2.append( mashValues[i].A)
-        data2.append( mashValues[i].N)
+        data2 = data2 + mashValues[i].toString()
 
     # clean up remove kmc temporary files
     os.remove(inputDS1 + '.msh')
@@ -323,19 +299,10 @@ def runMash(inputDS1, inputDS2, k):
 
 
 
-
-def entropyData(entropySeqA, entropySeqB):
-    # dati errore entropia e rappresentazione present/absent
-    return  [entropySeqA.nKeys, 2 * entropySeqA.totalKmerCnt, entropySeqA.getDelta(), entropySeqA.Hk, entropySeqA.getError(),
-             entropySeqB.nKeys, 2 * entropySeqB.totalKmerCnt, entropySeqB.getDelta(), entropySeqB.Hk, entropySeqB.getError()]
-
-
-
-
 # load histogram for both sequences (for counter based measures such as D2)
 # and calculate Entropy of the sequence
 # dest file è la path sull'HDFS già nel formato hdfs://host:port/xxx/yyy
-def loadHistogramOnHDFS2(histFile: str, destFile: str, totKmer: int):
+def loadHistogramOnHDFS(histFile: str, destFile: str, totKmer: int):
 
     tmp = histFile + '.txt'
 
@@ -355,14 +322,8 @@ def loadHistogramOnHDFS2(histFile: str, destFile: str, totKmer: int):
     p.wait()
 
     os.remove(tmp) # remove kmc output suffix file
-    
-    totalDistinct = 0
-    totalKmerCnt = 0
-    totDistinct = 0
-    totalProb = 0.0
-    Hk = 0.0
 
-    return (totalDistinct, totalKmerCnt, Hk)
+    return
 
 
 
@@ -389,24 +350,17 @@ def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
     # -sr<value> - number of threads for 2nd stage
     # -hp - hide percentage progress (default: false)
 
-    cmd = "/usr/local/bin/kmc -b -hp -k%d -m2 -fm -ci0 -cs1048575000 -cx2000000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
+    cmd = "/usr/local/bin/kmc -b -hp -k%d -m12 -fm -ci0 -cs1048575000 -cx2000000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
     out = subprocess.check_output(cmd.split())
-
-    m = re.search(r'Total no. of k-mers[ \t]*:[ \t]*(\d+)', out.decode())
+    results = out.decode()
+    m = re.search(r'Total no. of k-mers[ \t]*:[ \t]*(\d+)', results)
     totalKmerNumber = 0 if (m is None) else int(m.group(1))
     # print("cmd: %s returned:\n%s" % (cmd, out))
-                            
-    # p = subprocess.Popen(cmd.split())
-    # p.wait()
-    # print("cmd: %s returned: %s" % (cmd, p.returncode))
 
-    # dump the result -> kmer histogram (no longer needed)
-    #cmd = "/usr/local/bin/kmc_dump %s %s" % ( kmcOutputPrefix, histFile)
-    # p = subprocess.Popen(cmd.split())
-    # p.wait()
-    # print("cmd: %s returned: %s" % (cmd, p.returncode))
+    m = re.search(r'No. of unique k-mers[ \t]*:[ \t]*(\d+)', results)
+    totalDistinctKmerNumber = 0 if (m is None) else int(m.group(1))
 
-    return totalKmerNumber
+    return (totalDistinctKmerNumber, totalKmerNumber)
 
 
 
@@ -422,12 +376,40 @@ def distCounter(cnt, x: str):
     return x
 
 
+# calcola i valori dell'entropia per non caricare due volte l'istogramma
+def sequenceEntropy( seqDict, pairID, totalKmerCnt):
+
+    ndx = 0 if pairID == 'A' else 1
+    totalProb = 0.0
+    Hk = 0.0
+    for key, cntTuple in seqDict.items():
+        cnt = cntTuple[ndx]
+        if (cnt > 0):
+            prob = cnt / float(totalKmerCnt)
+            totalProb = totalProb + prob
+            Hk = Hk + prob * math.log(prob, 2)
+            # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
+
+    if (round(totalProb,0) != 1.0):
+        raise ValueError("Somma(p) = %f must be 1.0. Aborting" % round(totalProb, 0))
+
+    return Hk * -1
+
+
+
 def countBasedMeasures(partData):
+    global totKmerAAcc, totKmerBAcc
+
     (D2totValue, EuclideanTotValue) = (0, 0)
     (Acnt, Bcnt, Ccnt) = (0, 0, 0)
+    (Hk1, totalProb1, Hk2, totalProb2) = (0.0, 0.0, 0.0, 0.0)
+    totalKmerCnt1 = float(totKmerAAcc.value)
+    totalKmerCnt2 = float(totKmerBAcc.value)
+
     for row in partData:
         cnt2 = 0 if row.cnt2 is None else row.cnt2
         cnt1 = 0 if row.cnt1 is None else row.cnt1
+        # counting based measures
         d = cnt2 - cnt1
         EuclideanTotValue += d * d
         D2totValue +=  cnt1 * cnt2
@@ -438,14 +420,25 @@ def countBasedMeasures(partData):
             Bcnt += 1
         else:
             Ccnt += 1
+        # entropy
+        if (cnt1 > 0):
+            prob1 = cnt1 / totalKmerCnt1
+            totalProb1 += prob1
+            Hk1 += prob1 * math.log(prob1, 2)
 
-    return iter([(EuclideanTotValue, D2totValue, Acnt, Bcnt, Ccnt)])
+        if (cnt2 > 0):
+            prob2 = cnt2 / totalKmerCnt2
+            totalProb2 += prob2
+            Hk2 += prob2 * math.log(prob2, 2)
+
+    return iter([(EuclideanTotValue, D2totValue, Acnt, Bcnt, Ccnt, Hk1, totalProb1, Hk2, totalProb2)])
 
 
 
 
 # run jaccard on sequence pair ds with kmer of length = k
 def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: str):
+    global totDistinctKmerAAcc, totDistinctKmerBAcc, totKmerAAcc, totKmerBAcc
 
     start = time.time()
 
@@ -454,26 +447,29 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     baseSeq1 = Path(seqFile1).stem
     kmcOutputPrefixA = f"{tempDir}/{baseSeq1}-k={k}"
     destFilenameA = f"{hdfsDataDir}/{baseSeq1}-k={k}.txt"
-
+    # calcola comunque kmc per avere i valori di totDistinctKmerA, totKmerA
+    (totDistinctKmerA, totKmerA) = extractKmers(seqFile1, k, tempDir, kmcOutputPrefixA)
     if (not checkPathExists(destFilenameA)):
-        totKmerA = extractKmers(seqFile1, k, tempDir, kmcOutputPrefixA)
         # load kmers statistics from histogram files
-        (totalDistinctA, totalKmerCntA, HkA) = loadHistogramOnHDFS2(kmcOutputPrefixA, destFilenameA, totKmerA)
-        # entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
-    
+        loadHistogramOnHDFS(kmcOutputPrefixA, destFilenameA, totKmerA)
+
     baseSeq2 = Path(seqFile2).stem
     kmcOutputPrefixB = f"{tempDir}/{baseSeq2}-k={k}"
     destFilenameB = f"{hdfsDataDir}/{baseSeq2}-k={k}.txt"
-
+    # calcola comunque kmc per avere i valori di totDistinctKmerB, totKmerB
+    (totDistinctKmerB, totKmerB) = extractKmers(seqFile2, k, tempDir, kmcOutputPrefixB)
     if (not checkPathExists(destFilenameB)):
-        totKmerB = extractKmers(seqFile2, k, tempDir, kmcOutputPrefixB)
         # load kmers statistics from histogram files
-        (totalDistinctB, totalKmerCntB, HkB) = loadHistogramOnHDFS2(kmcOutputPrefixB, destFilenameB, totKmerB)
-        # entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
+        loadHistogramOnHDFS(kmcOutputPrefixB, destFilenameB, totKmerB)
 
     #
     # inizio procedura Dataframe oriented (out of memory)
     #
+    totDistinctKmerAAcc = sc.broadcast(totDistinctKmerA)
+    totDistinctKmerBAcc = sc.broadcast(totDistinctKmerB)
+    totKmerAAcc = sc.broadcast(totKmerA)
+    totKmerBAcc = sc.broadcast(totKmerB)
+
     schema1 = StructType([ StructField('kmer', StringType(), True), StructField('cnt1', IntegerType(), True)])
     schema2 = StructType([ StructField('kmer', StringType(), True), StructField('cnt2', IntegerType(), True)])
 
@@ -487,13 +483,30 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     # df4 = outer.select(EuclidUDF(col('cnt1'), col('cnt2'))).show()
     allDist = outer.rdd.mapPartitions(countBasedMeasures).collect()
 
-    (totEuclid, totD2, Acnt, Bcnt, Ccnt) = (0,0, 0, 0, 0)
+    (totEuclid, totD2, Acnt, Bcnt, Ccnt) = (0, 0, 0, 0, 0)
+    (HkA, totalProbA, HkB, totalProbB)   = (0.0, 0.0, 0.0, 0.0)
     for t in allDist:
         totEuclid += t[0]
         totD2 += t[1]
         Acnt += t[2]
         Bcnt += t[3]
         Ccnt += t[4]
+        HkA  += t[5]
+        totalProbA += t[6]
+        HkB  += t[7]
+        totalProbB += t[8]
+
+    if round(totalProbA,0) != 1.0:
+        # raise ValueError("Somma(Pa = {round(totalProbA, 0):f} must be 1.0. Aborting")
+        print(f"Somma(Pa) = {round(totalProbA, 0):.2f} must be 1.0!!!")
+    else:
+        entropySeqA = EntropyData( totDistinctKmerA, totKmerA, HkA)
+
+    if round(totalProbB,0) != 1.0:
+        # raise ValueError("Somma(Pb) = {round(totalProbB, 0):f} must be 1.0. Aborting")
+        print(f"Somma(Pb) = {round(totalProbB, 0):.2f} must be 1.0!!!")
+    else:
+        entropySeqB = EntropyData( totDistinctKmerB, totKmerB, HkB)
 
     euclidDistance = math.sqrt(totEuclid)
     print(f"Euclid = {euclidDistance}, D2 = {totD2}")
@@ -526,8 +539,8 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
 
     dati2 = runMash(seqFile1, seqFile2, k)
 
-    # dati4 = entropyData(entropySeqA, entropySeqB)
-    dati4 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    # dati4 = dati entropia
+    dati4 = entropySeqA.toString() + entropySeqB.toString()
 
     delay = time.time()-start
     dati0 = [baseSeq1, baseSeq2, start, delay, theta, k]
@@ -549,7 +562,7 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
 
 def writeHeader( writer):#
     columns0 = ['sequenceA', 'sequenceB', 'start time', 'real time', 'Theta', 'k'] # dati 0
-    columns1 = [ 'A', 'B', 'C', 'D', 'N', 'A/N'
+    columns1 = [ 'A', 'B', 'C', 'D', 'N', 'A/N',
                'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming',
                 'Jaccard', 'Kulczynski', 'Matching', 'Ochiai',
                 'Phi', 'Russel', 'Sneath', 'Tanimoto', 'Yule']
