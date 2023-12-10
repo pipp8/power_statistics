@@ -26,7 +26,7 @@ from pyspark.sql.functions import col, udf
 
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
-# hdfsPrefixPath = '/Users/pipp8/tmp/'
+hdfsPrefixPath = '/Users/pipp8/tmp/'
 hdfsDataDir = ''
 spark = []
 sc = []
@@ -310,13 +310,13 @@ def loadHistogramOnHDFS(histFile: str, destFile: str, totKmer: int):
     cmd = "/usr/local/bin/kmc_dump %s %s" % (histFile, tmp)
     p = subprocess.Popen(cmd.split())
     p.wait()
-    print(f"Dumping {histFile} kmers counting")
+    print(f"****** Dumping {histFile} kmers counting ******")
 
     os.remove(histFile +'.kmc_pre') # remove kmc output prefix file
     os.remove(histFile +'.kmc_suf') # remove kmc output suffix file
 
     # trasferisce sull'HDFS il file testuale
-    print(f"Transferring to hdfs {histFile} -> {destFile}")
+    print(f"****** Transferring to hdfs {histFile} -> {destFile} ******")
     cmd = "hdfs dfs -put %s %s" % (tmp, destFile)
     p = subprocess.Popen(cmd.split())
     p.wait()
@@ -355,7 +355,7 @@ def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
     results = out.decode()
     m = re.search(r'Total no. of k-mers[ \t]*:[ \t]*(\d+)', results)
     totalKmerNumber = 0 if (m is None) else int(m.group(1))
-    # print("cmd: %s returned:\n%s" % (cmd, out))
+    # print(f"****** cmd: {cmd} returned:\n{results} ******")
 
     m = re.search(r'No. of unique k-mers[ \t]*:[ \t]*(\d+)', results)
     totalDistinctKmerNumber = 0 if (m is None) else int(m.group(1))
@@ -376,33 +376,14 @@ def distCounter(cnt, x: str):
     return x
 
 
-# calcola i valori dell'entropia per non caricare due volte l'istogramma
-def sequenceEntropy( seqDict, pairID, totalKmerCnt):
-
-    ndx = 0 if pairID == 'A' else 1
-    totalProb = 0.0
-    Hk = 0.0
-    for key, cntTuple in seqDict.items():
-        cnt = cntTuple[ndx]
-        if (cnt > 0):
-            prob = cnt / float(totalKmerCnt)
-            totalProb = totalProb + prob
-            Hk = Hk + prob * math.log(prob, 2)
-            # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
-
-    if (round(totalProb,0) != 1.0):
-        raise ValueError("Somma(p) = %f must be 1.0. Aborting" % round(totalProb, 0))
-
-    return Hk * -1
-
 
 
 def countBasedMeasures(partData):
     global totKmerAAcc, totKmerBAcc
 
-    (D2totValue, EuclideanTotValue) = (0, 0)
-    (Acnt, Bcnt, Ccnt) = (0, 0, 0)
-    (Hk1, totalProb1, Hk2, totalProb2) = (0.0, 0.0, 0.0, 0.0)
+    D2totValue = EuclideanTotValue = 0
+    Acnt = Bcnt = Ccnt = 0
+    Hk1 = totalProb1 = Hk2 = totalProb2 = 0.0
     totalKmerCnt1 = float(totKmerAAcc.value)
     totalKmerCnt2 = float(totKmerBAcc.value)
 
@@ -420,7 +401,7 @@ def countBasedMeasures(partData):
             Bcnt += 1
         else:
             Ccnt += 1
-        # entropy
+        # calcola i valori dell'entropia in-line per evitare due pipe
         if (cnt1 > 0):
             prob1 = cnt1 / totalKmerCnt1
             totalProb1 += prob1
@@ -465,6 +446,7 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     #
     # inizio procedura Dataframe oriented (out of memory)
     #
+    # Broadcast variables ... for all map tasks. These are read-only
     totDistinctKmerAAcc = sc.broadcast(totDistinctKmerA)
     totDistinctKmerBAcc = sc.broadcast(totDistinctKmerB)
     totKmerAAcc = sc.broadcast(totKmerA)
@@ -483,35 +465,36 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     # df4 = outer.select(EuclidUDF(col('cnt1'), col('cnt2'))).show()
     allDist = outer.rdd.mapPartitions(countBasedMeasures).collect()
 
-    (totEuclid, totD2, Acnt, Bcnt, Ccnt) = (0, 0, 0, 0, 0)
-    (HkA, totalProbA, HkB, totalProbB)   = (0.0, 0.0, 0.0, 0.0)
+    totEuclid = totD2 = Acnt = Bcnt = Ccnt = 0
+    HkA = totalProbA = HkB = totalProbB = 0.0
     for t in allDist:
-        totEuclid += t[0]
-        totD2 += t[1]
-        Acnt += t[2]
-        Bcnt += t[3]
-        Ccnt += t[4]
-        HkA  += t[5]
-        totalProbA += t[6]
-        HkB  += t[7]
-        totalProbB += t[8]
+        totEuclid += t[0]; totD2 += t[1]; Acnt += t[2]; Bcnt += t[3]; Ccnt += t[4]
+        HkA  += t[5]; totalProbA += t[6]; HkB  += t[7]; totalProbB += t[8]
+
+    vec = [0,0,0,0,0,0,0,0,0]
+    for t in allDist:
+        vec = [ x[0] + x[1] for x in zip(vec, t) ]
+
+    print(f"****** {vec[0]}, {vec[1]}, {vec[2]}, {vec[3]}, {vec[4]}, {vec[5]}, {vec[6]}, {vec[7]}, {vec[8]} ******")
 
     if round(totalProbA,0) != 1.0:
         # raise ValueError("Somma(Pa = {round(totalProbA, 0):f} must be 1.0. Aborting")
-        print(f"Somma(Pa) = {round(totalProbA, 0):.2f} must be 1.0!!!")
+        print(f"****** Somma(Pa) = {round(totalProbA, 0):.2f} must be 1.0!!! ******")
     else:
         entropySeqA = EntropyData( totDistinctKmerA, totKmerA, HkA)
 
     if round(totalProbB,0) != 1.0:
         # raise ValueError("Somma(Pb) = {round(totalProbB, 0):f} must be 1.0. Aborting")
-        print(f"Somma(Pb) = {round(totalProbB, 0):.2f} must be 1.0!!!")
+        print(f"****** Somma(Pb) = {round(totalProbB, 0):.2f} must be 1.0!!! ******")
     else:
         entropySeqB = EntropyData( totDistinctKmerB, totKmerB, HkB)
 
     euclidDistance = math.sqrt(totEuclid)
-    print(f"Euclid = {euclidDistance}, D2 = {totD2}")
-    print(f"Present/Absent = {Acnt}, {Bcnt}, {Ccnt},")
-    # dati3 = runCountBasedMeasures(cnts, k)
+    print(f"****** Euclid = {euclidDistance:.4f}, D2 = {totD2:,} ******")
+    print(f"****** Present/Absent = {Acnt:,}, {Bcnt:,}, {Ccnt:,} ******")
+    print(f"****** HkA: {entropySeqA.Hk:.5f} HkB: {entropySeqB.Hk:.5f}, totDistinctKmerA: {entropySeqA.totalKmerCnt:,}, totDistinctKmerB: {entropySeqB.totalKmerCnt:,} ******")
+
+# dati3 = runCountBasedMeasures(cnts, k)
     dati3 =  [totD2, euclidDistance, 0.0]
 
     # implementazione precedente per avere A, B, e C. Effettuato test i risultati coincidono
@@ -534,7 +517,6 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     # Ccnt = tot2Acc.value - bothCnt
 
     ###################################################
-    print("********* k: %d, A: %d, B: %d, C: %d ***********" % (k, Acnt, Bcnt, Ccnt))
     dati1 = runPresentAbsent(Acnt, Bcnt, Ccnt, k)
 
     dati2 = runMash(seqFile1, seqFile2, k)
@@ -603,7 +585,7 @@ def processPairs(seqFile1: str, seqFile2: str):
         if (seqFile2 != "synthetic"):
             for k in range( minK, maxK+1, stepK):
                 # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
-                print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} ****")
+                print(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} ******")
                 res = processLocalPair(seqFile1, seqFile2, k, 0, tempDir)
                 csvWriter.writerow( res)
                 file.flush()
@@ -613,7 +595,7 @@ def processPairs(seqFile1: str, seqFile2: str):
                     # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
                     (f, ext) = os.path.splitext(seqFile1)
                     seqFile2 = f"{f}-{theta}{ext}"
-                    print(f"**** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ****")
+                    print(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ******")
                     res = processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
                     csvWriter.writerow( res)
                     file.flush()
@@ -623,7 +605,7 @@ def processPairs(seqFile1: str, seqFile2: str):
     # do not remove dataset on hdfs
     # remove histogram files (A & B) + mash sketch file and kmc temporary files
     try:
-        print("Cleaning temporary directory %s" % (tempDir))
+        print(f"****** Cleaning temporary directory {tempDir} ******")
         shutil.rmtree(tempDir)
     except OSError as e:
         print("Error removing: %s: %s" % (tempDir, e.strerror))
@@ -650,7 +632,7 @@ def main():
     seqFile2 = sys.argv[2] # per eseguire localmente l'estrazione dei k-mers
     # outFile = '%s/%s-%s.csv' % (hdfsDataDir, Path( seqFile1).stem, Path(seqFile2).stem )
 
-    print(f"Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} in hdfsDataDir = {hdfsDataDir}")
+    print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} in hdfsDataDir = {hdfsDataDir} ******")
     
     spark = SparkSession \
         .builder \
@@ -663,10 +645,10 @@ def main():
     nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) - 1
 
     if (not checkPathExists( hdfsDataDir)):
-        print("Data dir: %s does not exist. Program terminated." % hdfsDataDir)
+        print(f"****** Data dir: {hdfsDataDir} does not exist. Program terminated. ******")
         exit( -1)
 
-    print("%d workers, hdfsDataDir: %s" % (nWorkers, hdfsDataDir))
+    print(f"****** {nWorkers} workers, hdfsDataDir: {hdfsDataDir} ******")
 
     processPairs(seqFile1, seqFile2)
 
