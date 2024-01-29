@@ -302,26 +302,29 @@ def runMash(inputDS1, inputDS2, k):
 # load histogram for both sequences (for counter based measures such as D2)
 # and calculate Entropy of the sequence
 # dest file è la path sull'HDFS già nel formato hdfs://host:port/xxx/yyy
-def loadHistogramOnHDFS(histFile: str, destFile: str, totKmer: int):
+def loadHistogramOnHDFS(histFile: str, destFile: str):
 
-    tmp = histFile + '.txt'
+    # tmp = histFile + '.txt'
+    #
+    # # dump the result -> kmer histogram
+    # cmd = "/usr/local/bin/kmc_dump %s %s" % (histFile, tmp)
+    # p = subprocess.Popen(cmd.split())
+    # p.wait()
+    # print(f"****** Dumping {histFile} kmers counting ******")
+    #
+    # # trasferisce sull'HDFS il file testuale
+    # print(f"****** Transferring to hdfs {histFile} -> {destFile} ******")
+    # cmd = "hdfs dfs -put %s %s" % (tmp, destFile)
+    # p = subprocess.Popen(cmd.split())
+    # p.wait()
+    # os.remove(tmp) # remove kmc output suffix file
 
-    # dump the result -> kmer histogram (no longer needed)
-    cmd = "/usr/local/bin/kmc_dump %s %s" % (histFile, tmp)
-    p = subprocess.Popen(cmd.split())
-    p.wait()
-    print(f"****** Dumping {histFile} kmers counting ******")
+    print(f"****** Dumping & Transferring to hdfs {histFile} -> {destFile} ******")
+    cmd1 = f"/usr/local/bin/mykmcdump {histFile} stdout | hdfs dfs -put - {destFile}"
+    p = subprocess.run( cmd1, shell=True, stdout=subprocess.PIPE)
 
     os.remove(histFile +'.kmc_pre') # remove kmc output prefix file
     os.remove(histFile +'.kmc_suf') # remove kmc output suffix file
-
-    # trasferisce sull'HDFS il file testuale
-    print(f"****** Transferring to hdfs {histFile} -> {destFile} ******")
-    cmd = "hdfs dfs -put %s %s" % (tmp, destFile)
-    p = subprocess.Popen(cmd.split())
-    p.wait()
-
-    os.remove(tmp) # remove kmc output suffix file
 
     return
 
@@ -432,7 +435,10 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     (totDistinctKmerA, totKmerA) = extractKmers(seqFile1, k, tempDir, kmcOutputPrefixA)
     if (not checkPathExists(destFilenameA)):
         # load kmers statistics from histogram files
-        loadHistogramOnHDFS(kmcOutputPrefixA, destFilenameA, totKmerA)
+        loadHistogramOnHDFS(kmcOutputPrefixA, destFilenameA)
+    else:
+        os.remove(kmcOutputPrefixA+'kmc_pre')
+        os.remove(kmcOutputPrefixA+'kmc_suf')
 
     baseSeq2 = Path(seqFile2).stem
     kmcOutputPrefixB = f"{tempDir}/{baseSeq2}-k={k}"
@@ -441,7 +447,10 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     (totDistinctKmerB, totKmerB) = extractKmers(seqFile2, k, tempDir, kmcOutputPrefixB)
     if (not checkPathExists(destFilenameB)):
         # load kmers statistics from histogram files
-        loadHistogramOnHDFS(kmcOutputPrefixB, destFilenameB, totKmerB)
+        loadHistogramOnHDFS(kmcOutputPrefixB, destFilenameB)
+    else:
+        os.remove(kmcOutputPrefixB+'kmc_pre')
+        os.remove(kmcOutputPrefixB+'kmc_suf')
 
     #
     # inizio procedura Dataframe oriented (out of memory)

@@ -11,20 +11,21 @@ import copy
 import subprocess
 import math
 import csv
-import time
 
 import numpy as np
 import py_kmc_api as kmc
 
+from operator import add
+import pyspark
+from pyspark.sql import SparkSession
+from pyspark import SparkFiles
 
-hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data'
-inputRE = '*.fasta'
+
+hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
+hdfsDataDir = ''
 spark = []
+sc = []
 
-# models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
-models = ['ShuffledEColi', 'MotifRepl-Sh', 'PatTransf-Sh', 'ShuffledEColi-T1']
-#lengths = range(1000, 50001, 1000) # small dataset
-#gVals = [10, 50, 100]
 nTests = 1000
 minK = 4
 maxK = 32
@@ -77,64 +78,9 @@ def hamming_distance2(seq1: str, seq2: str) -> int:
     return len(list(filter(lambda x : ord(x[0])^ord(x[1]), zip(seq1, seq2))))
 
 
-# load histogram for both sequences (for counter based measures such as D2)
-def loadHistogram(kmerDict: dict, histFile: str, pairId: str):
-
-    ndx = 0 if pairId == 'A' else 1
-    kmcFile = kmc.KMCFile()
-    if (kmcFile.OpenForListing(histFile)):
-        print("file: %s Opened." % histFile)
-    else:
-        raise IOError( "OpenForListing failed for %s DB." % histFile)
-
-    kmer = kmc.KmerAPI( kmcFile.KmerLength())
-    cnt  = kmc.Count()
-
-    totalKmerCnt = 0
-    totalDistinct = 0
-    # histFile contiene il DB con l'istogramma di una sola sequenza prodotto con kmc 3
-    kmcFile.RestartListing()
-    while(kmcFile.ReadNextKmer( kmer, cnt)):
-        strKmer = kmer.__str__()
-        count = cnt.value
-        totalKmerCnt += count
-        totalDistinct += 1
-        if strKmer in kmerDict:
-
-            cntTuple = kmerDict[strKmer]
-            kmerDict[strKmer] = (cntTuple[0] + count, 0) if ndx == 0 else (cntTuple[0], cntTuple[1] + count)
-        else:
-            kmerDict[strKmer] = (count, 0) if ndx == 0 else (0, count) # # first time meet or kmer not present in sequence A
-
-    if (kmcFile.KmerCount() != totalDistinct):
-        raise ValueError( "Loaded %d distinct kmers vs %d" % (totalDistinct, kmcFile.KmerCount()))
-
-    kmcFile.Close()
-    Hk = sequenceEntropy( kmerDict, pairId, totalKmerCnt)
-
-    return (totalDistinct, totalKmerCnt, Hk)
-
-
 
 
 # calcola i valori dell'entropia per non caricare due volte l'istogramma
-def sequenceEntropy( seqDict, pairID, totalKmerCnt):
-
-    ndx = 0 if pairID == 'A' else 1
-    totalProb = 0.0
-    Hk = 0.0
-    for key, cntTuple in seqDict.items():
-        cnt = cntTuple[ndx]
-        if (cnt > 0):
-            prob = cnt / float(totalKmerCnt)
-            totalProb = totalProb + prob
-            Hk = Hk + prob * math.log(prob, 2)
-            # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
-
-    if (round(totalProb,0) != 1.0):
-        raise ValueError("Somma(p) = %f must be 1.0. Aborting" % round(totalProb, 0))
-
-    return Hk * -1
 
 
 
@@ -156,46 +102,6 @@ def extractStatistics(cnts):
                 both += 1   # in entrambi
 
     return( both, left, right)
-
-
-
-
-
-
-def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
-
-    # run kmc on the first sequence
-    # -v - verbose mode (shows all parameter settings); default: false
-    # -k<len> - k-mer length (k from 1 to 256; default: 25)
-    # -m<size> - max amount of RAM in GB (from 1 to 1024); default: 12
-    # -sm - use strict memory mode (memory limit from -m<n> switch will not be exceeded)
-    # -p<par> - signature length (5, 6, 7, 8, 9, 10, 11); default: 9
-    # -f<a/q/m/bam/kmc> - input in FASTA format (-fa), FASTQ format (-fq), multi FASTA (-fm) or BAM (-fbam) or KMC(-fkmc); default: FASTQ
-    # -ci<value> - exclude k-mers occurring less than <value> times (default: 2)
-    # -cs<value> - maximal value of a counter (default: 255)
-    # -cx<value> - exclude k-mers occurring more of than <value> times (default: 1e9)
-    # -b - turn off transformation of k-mers into canonical form
-    # -r - turn on RAM-only mode
-    # -n<value> - number of bins
-    # -t<value> - total number of threads (default: no. of CPU cores)
-    # -sf<value> - number of FASTQ reading threads
-    # -sp<value> - number of splitting threads
-    # -sr<value> - number of threads for 2nd stage
-    # -hp - hide percentage progress (default: false)
-
-    cmd = "/usr/local/bin/kmc -b -hp -k%d -m2 -fm -ci0 -cs1048575 -cx1000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
-    p = subprocess.Popen(cmd.split())
-    p.wait()
-    print("cmd: %s returned: %s" % (cmd, p.returncode))
-
-    # dump the result -> kmer histogram (no longer needed)
-    # cmd = "/usr/local/bin/kmc_dump %s %s" % ( kmcOutputPrefix, histFile)
-    # p = subprocess.Popen(cmd.split())
-    # p.wait()
-    # print("cmd: %s returned: %s" % (cmd, p.returncode))
-
-    return
-
 
 
 
@@ -256,7 +162,6 @@ def NormalizedSquaredEuclideanDistance( vector):
 # run jaccard on sequence pair ds with kmer of length = k
 def runPresentAbsent(  bothCnt, leftCnt, rightCnt, k):
 
-    print("left: %d, right: %d" % (leftCnt, rightCnt))
     A = int(bothCnt)
     B = int(leftCnt)
     C = int(rightCnt)
@@ -309,7 +214,11 @@ def runPresentAbsent(  bothCnt, leftCnt, rightCnt, k):
     except (ZeroDivisionError, ValueError):
         jaccard = 1.000001
 
-    jaccardDistance = 1 - min( 1.0, A / float(NMax - D))
+    try:
+        jaccardDistance = 1 - min( 1.0, A / float(NMax - D))
+    except (ZeroDivisionError, ValueError):
+        jaccardDistance = 1.000001
+
 
     # Kulczynski dissimilarity => Kulczynski = 1 - (A/(A + B) + A/(A + C)) / 2
     try:
@@ -415,53 +324,186 @@ def entropyData(entropySeqA, entropySeqB):
 
 
 
+# load histogram for both sequences (for counter based measures such as D2)
+# and calculate Entropy of the sequence
+# dest file è la path sull'HDFS già nel formato hdfs://host:port/xxx/yyy
+def loadHistogramOnHDFS(histFile: str, destFile: str, totKmer: int):
+    kmcFile = kmc.KMCFile()
+    if (not kmcFile.OpenForListing(histFile)):
+        raise IOError( "OpenForListing failed for %s DB." % histFile)
+
+    info = kmcFile.Info()
+    k = kmcFile.KmerLength()
+    totalDistinct = kmcFile.KmerCount()
+
+    print("KMC db file: %s opened, k = %d, totalDistinct = %d" % (histFile, k, totalDistinct))
+
+    kmer = kmc.KmerAPI(k)
+    cnt  = kmc.Count()
+
+    totalKmerCnt = 0
+    totDistinct = 0
+    totalProb = 0.0
+    Hk = 0.0
+
+    URI = sc._gateway.jvm.java.net.URI
+    Path = sc._gateway.jvm.org.apache.hadoop.fs.Path
+    FileSystem = sc._gateway.jvm.org.apache.hadoop.fs.FileSystem
+    conf = sc._jsc.hadoopConfiguration()
+    fs = Path(destFile).getFileSystem(sc._jsc.hadoopConfiguration())
+    ostream = fs.create(Path(destFile))
+    writer = sc._gateway.jvm.java.io.BufferedWriter(sc._jvm.java.io.OutputStreamWriter(ostream))
+    print("HDFS Writer: %s opened" % destFile)
+
+    # histFile contiene il DB con l'istogramma di una sola sequenza prodotto con kmc 3
+    kmcFile.RestartListing()
+    while(kmcFile.ReadNextKmer( kmer, cnt)):
+        strKmer = kmer.__str__()
+        count = cnt.value
+        totalKmerCnt += count
+        totDistinct += 1
+
+        # write on HDFS the kmer with its counter
+        writer.write('%s\t%d\n' % (strKmer, count))
+        # print('%s, %d' % (strKmer, count))
+        if (count > 0):
+            prob = count / float(totKmer) # numero totale dei kmer cme contato da KMC
+            totalProb = totalProb + prob
+            Hk = Hk + prob * math.log(prob, 2)
+            # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
+
+    writer.close()
+    print("totKmerCnt = %d, totDistinct = %d" % (totalKmerCnt, totDistinct))
+    
+    if (round(totalProb,0) != 1.0):
+        raise ValueError("Somma(p) = %f must be 1.0. Aborting" % round(totalProb, 0))
+
+    if (totKmer != totalKmerCnt):
+        raise ValueError("TotalKmerCount (%d) must be = to KMC counted kmers (%d). Aborting" % (totKmer, totalKmerCnt))
+        
+    if (kmcFile.KmerCount() != totalDistinct):
+        raise ValueError( "Loaded %d distinct kmers vs %d" % (totalDistinct, kmcFile.KmerCount()))
+
+    kmcFile.Close()
+
+    return (totalDistinct, totalKmerCnt, Hk)
+
+
+
+
+
+def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
+
+    # run kmc on the first sequence
+    # -v - verbose mode (shows all parameter settings); default: false
+    # -k<len> - k-mer length (k from 1 to 256; default: 25)
+    # -m<size> - max amount of RAM in GB (from 1 to 1024); default: 12
+    # -sm - use strict memory mode (memory limit from -m<n> switch will not be exceeded)
+    # -p<par> - signature length (5, 6, 7, 8, 9, 10, 11); default: 9
+    # -f<a/q/m/bam/kmc> - input in FASTA format (-fa), FASTQ format (-fq), multi FASTA (-fm) or BAM (-fbam) or KMC(-fkmc); default: FASTQ
+    # -ci<value> - exclude k-mers occurring less than <value> times (default: 2)
+    # -cs<value> - maximal value of a counter (default: 255)
+    # -cx<value> - exclude k-mers occurring more of than <value> times (default: 1e9)
+    # -b - turn off transformation of k-mers into canonical form
+    # -r - turn on RAM-only mode
+    # -n<value> - number of bins
+    # -t<value> - total number of threads (default: no. of CPU cores)
+    # -sf<value> - number of FASTQ reading threads
+    # -sp<value> - number of splitting threads
+    # -sr<value> - number of threads for 2nd stage
+    # -hp - hide percentage progress (default: false)
+
+    cmd = "/usr/local/bin/kmc -b -hp -k%d -m2 -fm -ci0 -cs1048575000 -cx2000000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
+    out = subprocess.check_output(cmd.split())
+
+    m = re.search(r'Total no. of k-mers[ \t]*:[ \t]*(\d+)', out.decode())
+    totalKmerNumber = 0 if (m is None) else int(m.group(1))
+    # print("cmd: %s returned:\n%s" % (cmd, out))
+                            
+    # p = subprocess.Popen(cmd.split())
+    # p.wait()
+    # print("cmd: %s returned: %s" % (cmd, p.returncode))
+
+    # dump the result -> kmer histogram (no longer needed)
+    # cmd = "/usr/local/bin/kmc_dump %s %s" % ( kmcOutputPrefix, histFile)
+    # p = subprocess.Popen(cmd.split())
+    # p.wait()
+    # print("cmd: %s returned: %s" % (cmd, p.returncode))
+
+    return totalKmerNumber
+
+
+
+
+def splitAndCount(cnt, x: str):
+    cnt += 1
+    return x.split('\t')[0]
+
+
+
+def distCounter(cnt, x: str):
+    cnt += 1
+    return x
+
+
 
 # run jaccard on sequence pair ds with kmer of length = k
-def processLocalPair( inputDatasetA, inputDatasetB, k, tempDir):
+def processLocalPair(seqFile1: str, seqFile2: str, k: int):
 
-    start = time.time()
+    # first locally extract kmer statistics for both sequences
+    tempDir = os.path.dirname( seqFile1)
 
-    baseSeq1 = Path(inputDatasetA).stem
-    kmcOutputPrefixA = "%s/k=%d-%s-A" % (tempDir, k, baseSeq1)
-    extractKmers(inputDatasetA, k, tempDir, kmcOutputPrefixA)
+    baseSeq1 = Path(seqFile1).stem
+    kmcOutputPrefixA = "%s/k=%d-%s" % (tempDir, k, baseSeq1)
+    totKmerA = extractKmers(seqFile1, k, tempDir, kmcOutputPrefixA)
 
-    baseSeq2 = Path(inputDatasetB).stem
-    kmcOutputPrefixB = "%s/k=%d-%s-B" % (tempDir, k, baseSeq2)
-    extractKmers(inputDatasetB, k, tempDir, kmcOutputPrefixB)
+    baseSeq2 = Path(seqFile2).stem
+    kmcOutputPrefixB = "%s/k=%d-%s" % (tempDir, k, baseSeq2)
+    totKmerB = extractKmers(seqFile2, k, tempDir, kmcOutputPrefixB)
 
     # load kmers statistics from histogram files
-    kmerDict = dict()
-    (totalDistinctA, totalKmerCntA, HkA) = loadHistogram(kmerDict, kmcOutputPrefixA, 'A')
+    destFilenameA = '%s/k=%d-%s.txt' % (hdfsDataDir, k, baseSeq1)
+    (totalDistinctA, totalKmerCntA, HkA) = loadHistogramOnHDFS(kmcOutputPrefixA, destFilenameA, totKmerA)
     entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
 
-    (totalDistinctB, totalKmerCntB, HkB) = loadHistogram(kmerDict, kmcOutputPrefixB, 'B')
+    destFilenameB = '%s/k=%d-%s.txt' % (hdfsDataDir,k, baseSeq2)
+    (totalDistinctB, totalKmerCntB, HkB) = loadHistogramOnHDFS(kmcOutputPrefixB, destFilenameB, totKmerB)
     entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
 
-    i = 0
-    cnts = np.empty( shape=(2, len( kmerDict.values())), dtype='int32')
-    for v in kmerDict.values():
-        cnts[0, i] = v[0]
-        cnts[1, i] = v[1]
-        i += 1
+        
+    tot1Acc = sc.accumulator(0)
+    seq1 = sc.textFile(destFilenameA).map( lambda x: splitAndCount( tot1Acc, x))
+    
+    tot2Acc = sc.accumulator(0)
+    seq2 = sc.textFile(destFilenameB).map( lambda x: splitAndCount( tot2Acc, x))
+    
+    intersection = seq1.intersection(seq2)
 
-    kmerDict = None # free dictionary memory (=> counting are no longer necessary)
+    outputFile = '%s/k=%d-%s-%s.txt' % (hdfsDataDir, k, baseSeq1, baseSeq2)
 
-    dati3 = runCountBasedMeasures(cnts, k)
+    tot3Acc = sc.accumulator(0)
+    intersection.map(lambda x: distCounter(tot3Acc, x)).saveAsTextFile( outputFile)    
+    bothCnt = tot3Acc.value
+    leftCnt = tot1Acc.value - bothCnt
+    rightCnt = tot2Acc.value - bothCnt
 
-    (bothCnt, leftCnt, rightCnt) = extractStatistics(cnts)
+    print("********* k: %d, A: %d, B: %d, C:%d ***********" % (k, bothCnt, leftCnt, rightCnt))
+          
+    ###################################################
 
-    cnts = None # free ndarray with kmer counting
+    data0 = [baseSeq1, baseSeq2, k]
+
+    # dati3 = runCountBasedMeasures(cnts, k)
+    dati3 =  [0, 0.0, 0.0]
+
+    # (bothCnt, leftCnt, rightCnt) = extractStatistics(cnts)
 
     # load kmers only from histogram files
     dati1 = runPresentAbsent(bothCnt, leftCnt, rightCnt, k)
 
-    dati2 = runMash(inputDatasetA, inputDatasetB, k)
+    dati2 = runMash(seqFile1, seqFile2, k)
 
     dati4 = entropyData(entropySeqA, entropySeqB)
-
-    delay = time.time()-start
-
-    dati0 = [baseSeq1, baseSeq2, start, delay, k]
 
     os.remove(kmcOutputPrefixA+'.kmc_pre') # remove kmc output prefix file
     os.remove(kmcOutputPrefixA+'.kmc_suf') # remove kmc output suffix file
@@ -469,17 +511,18 @@ def processLocalPair( inputDatasetA, inputDatasetB, k, tempDir):
     os.remove(kmcOutputPrefixB+'.kmc_pre') # remove kmc output prefix file
     os.remove(kmcOutputPrefixB+'.kmc_suf') # remove kmc output suffix file
 
-    return dati0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
+    return data0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
 
 
 
 def writeHeader( writer):#
+    # columns = ['name', 'seqA', 'contentA', 'seqB', 'contentB']
 
-    columns0 = ['seq1', 'seq2', 'start time', 'real time', 'k'] # dati 0
+    columns0 = ['sequenceA', 'sequenceB', 'k'] # dati 0
     columns1 = [ 'A', 'B', 'C', 'D', 'N',
-                 'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming',
-                 'Jaccard', 'Kulczynski', 'Matching', 'Ochiai',
-                 'Phi', 'Russel', 'Sneath', 'Tanimoto', 'Yule']
+               'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming',
+                'Jaccard', 'Kulczynski', 'Matching', 'Ochiai',
+                'Phi', 'Russel', 'Sneath', 'Tanimoto', 'Yule']
 
     columns2 = []
     for ss in sketchSizes:
@@ -495,31 +538,27 @@ def writeHeader( writer):#
 
     writer.writerow(columns0 + columns1 + columns2 + columns3 + columns4)
 
+                 
 
 
 
 
-# processo una coppia del tipo (id, (hdrA, seqA), (hdrB, seqB))
-def processPairs(seqFile1, seqFile2):
-
+# processa localmente una coppia di sequenze seqFile1 e seqFile2
+def processPairs(seqFile1: str, seqFile2: str):
     # process local file system temporary directory
-    tempDir = os.path.dirname( seqFile1)+'/ttt'
-    if (not os.path.isdir(tempDir)):
-        os.mkdir(tempDir)
+    tempDir = tempfile.mkdtemp()
 
-    outFile = "%s/%s-%s-%d.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem, Path(seqFile2).stem, int(time.time()))
+    outFile = "%s/%s-%s.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile1).stem)
     with open(outFile, 'w') as file:
-        csvWriter = csv.writer(file)
+        csvWriter = csv.writer(file)        
         writeHeader(csvWriter)
-        file.flush()
-
+        
         for k in range( minK, maxK+1, stepK):
             print("**** starting local computation for k = %d *****" % k)
             # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
-            res = processLocalPair(seqFile1, seqFile2, k, tempDir)
-            csvWriter.writerow( res)
-            file.flush()
+            csvWriter.writerow(processLocalPair(seqFile1, seqFile2, k))
 
+            
     # clean up
     # do not remove dataset on hdfs
     # remove histogram files (A & B) + mash sketch file and kmc temporary files
@@ -552,10 +591,26 @@ def main():
     # outFile = '%s/%s-%s.csv' % (hdfsDataDir, Path( seqFile1).stem, Path(seqFile2).stem )
 
     print("hdfsDataDir = %s" % hdfsDataDir)
+    
+    spark = SparkSession \
+        .builder \
+        .appName("%s %s %s" % (Path( sys.argv[0]).stem, Path(seqFile1).stem, Path(seqFile2).stem)) \
+        .getOrCreate()
+
+    sc = spark.sparkContext
+
+    sc2 = spark._jsc.sc()
+    nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) -1
+
+    if (not checkPathExists( hdfsDataDir)):
+        print("Data dir: %s does not exist. Program terminated." % hdfsDataDir)
+        exit( -1)
+
+    print("%d workers, hdfsDataDir: %s" % (nWorkers, hdfsDataDir))
 
     processPairs(seqFile1, seqFile2)
 
-
+    spark.stop()
 
 
 

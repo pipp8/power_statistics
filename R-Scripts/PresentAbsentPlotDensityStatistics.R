@@ -65,7 +65,7 @@ cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.D
 
 df$Model = factor(df$Model)
 df$kv = factor(df$k)
-df$len = factor(df$len)
+# df$len = factor(df$len)
 df$class = "unkmown"
 
 kValues = levels(factor(df$k))
@@ -98,6 +98,42 @@ for(i in 1:nrow(df)) {
 }
 
 write.csv(nmdf, "density-k-len.csv", row.names=FALSE)
+#
+# primo grafico nmDensity solo per Measure = Jaccard e AM = MotifReplace e alpha = 0.05
+for( a in c(0.01, 0.05, 0.10)) {
+  df2 = filter( df, alpha == a & Model == "MotifRepl-U"  & Measure == "Jaccard")
+
+  sp <- ggplot(data=df2, aes(x=len, y=nmDensity, label=nmDensity)) +
+    geom_line(aes(color = kv)) +
+    geom_point() +
+    geom_text(aes(label = round(nmDensity, 3)), vjust = "inward", hjust = "inward", show.legend = FALSE) +
+    facet_grid( cols = vars(gamma), rows = vars(k)) +
+    scale_x_continuous(name = NULL,
+                       breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                       labels=c("", "1e+4", "", "1e+6", ""),
+                       limits = c(1000, 10000000),
+                       trans='log10') +
+    labs(y = "A/N")
+  outfname <- sprintf( "%s/PanelnmDensity-A=%.2f.pdf", dirname, a)
+  ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+
+#
+# secondo grafico amDensity solo per Measure = Jaccard e AM = MotifReplace e alpha = 0.05
+  sp <- ggplot(data=df2, aes(x=len, y=amDensity, label=amDensity)) +
+    geom_line(aes(color=kv)) +
+    geom_point() +
+    geom_text(aes(label = round(amDensity, 3)), vjust = "inward", hjust = "inward", show.legend = FALSE) +
+    facet_grid( cols = vars(gamma), rows = vars(k)) +
+    scale_x_continuous(name = NULL,
+                       breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                       labels=c("", "1e+4", "", "1e+6", ""),
+                       limits = c(1000, 10000000),
+                       trans='log10') +
+    labs(y = "A/N")
+  outfname <- sprintf( "%s/PanelamDensity-A=%.2f.pdf", dirname, a)
+  ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+}
+
 
 for( ss in classes) {
 
@@ -124,7 +160,7 @@ for( ss in classes) {
 
       # dev.new(width = 6, height = 6)
       # print(sp1)
-      outfname <- sprintf( "%s/PanelT1-%s-A=%.2f-G=%.2f.pdf", dirname, ss, a, g)
+      outfname <- sprintf( "%s/PanelT1-%s-A=%.2f.pdf", dirname, ss, a)
       ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
       # dev.off() #only 129kb in size
 
@@ -146,7 +182,7 @@ for( ss in classes) {
 
     # dev.new(width = 6, height = 6)
     # print(sp1)
-    outfname <- sprintf( "%s/PanelPower-%s-A=%.2f-G=%.2f.pdf", dirname, ss, a, g)
+    outfname <- sprintf( "%s/PanelPower-%s-A=%.2f.pdf", dirname, ss, a)
     ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
     # dev.off() #only 129kb in size
   }
