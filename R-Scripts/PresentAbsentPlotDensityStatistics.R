@@ -66,18 +66,15 @@ cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.D
 df$Model = factor(df$Model)
 df$kv = factor(df$k)
 # df$len = factor(df$len)
-df$class = "unkmown"
+df$lenFac = factor(df$len)
 
 kValues = levels(factor(df$k))
 lengths = levels(factor(df$len))
 measures <- levels(factor(df$Measure))
 altModels = levels(df$Model)[1:2]
-classes <- c("scarso", "saturo", "resto")
+classes <- c("saturated", "normal", "rare")
 
-# fissati alpha, gamma e Model (variabili indipendenti)
-dfScarsi = filter( df, nmDensity <= 0.05 & gamma == 0.05 & Model == "MotifRepl-U")
-dfSaturi = filter( df, nmDensity >= 0.95 & gamma == 0.05 & Model == "MotifRepl-U")
-dfResto =  filter( df, nmDensity > 0.05 & nmDensity < 0.95 & gamma == 0.05 & Model == "MotifRepl-U")
+tresholds = c(0.01, 0.99)
 
 nmdf <- data.frame(lengths)
 for( kk in kValues ) {
@@ -91,115 +88,126 @@ for( kk in kValues ) {
 
 for(i in 1:nrow(df)) {
   t <- df[i, 'nmDensity']
-  if (t == 0)        { lbl <- classes[1]}
-  else if (t > 0.98) { lbl <- classes[2]}
-  else               { lbl <- classes[3]}
-  df[i, 'class'] <- lbl
+  if (t < tresholds[1])        { lblnm <- classes[3]}
+  else if (t > tresholds[2])   { lblnm <- classes[1]}
+  else                         { lblnm <- classes[2]}
+  df[i, 'classNM'] <- lblnm
+  t <- df[i, 'amDensity']
+  if (t < tresholds[1])        { lblam <- classes[3]}
+  else if (t > tresholds[2])   { lblam <- classes[1]}
+  else                         { lblam <- classes[2]}
+  df[i, 'classAM'] <- lblam
 }
+
+df$classNM <- factor(df$classNM, levels = classes)
+df$classAM <- factor(df$classAM, levels = classes)
 
 write.csv(nmdf, "density-k-len.csv", row.names=FALSE)
+a = 0.05
 #
 # primo grafico nmDensity solo per Measure = Jaccard e AM = MotifReplace e alpha = 0.05
-for( a in c(0.01, 0.05, 0.10)) {
-  df2 = filter( df, alpha == a & Model == "MotifRepl-U"  & Measure == "Jaccard")
+df2 = filter( df, alpha == a & Model == "MotifRepl-U"  & Measure == "Jaccard")
 
-  sp <- ggplot(data=df2, aes(x=len, y=nmDensity, label=nmDensity)) +
-    geom_line(aes(color = kv)) +
-    geom_point() +
-    geom_text(aes(label = round(nmDensity, 3)), vjust = "inward", hjust = "inward", show.legend = FALSE) +
-    facet_grid( cols = vars(gamma), rows = vars(k)) +
-    scale_x_continuous(name = NULL,
-                       breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                       labels=c("", "1e+4", "", "1e+6", ""),
-                       limits = c(1000, 10000000),
-                       trans='log10') +
-    labs(y = "A/N")
-  outfname <- sprintf( "%s/PanelnmDensity-A=%.2f.pdf", dirname, a)
-  ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+sp <- ggplot(data=df2, aes(x=len, y=nmDensity, label=nmDensity)) +
+  geom_line(aes(color = kv)) +
+  geom_point() +
+  geom_text(aes(label = round(nmDensity, 3)), vjust = "inward", hjust = "inward", show.legend = FALSE) +
+  facet_grid( cols = vars(classNM), rows = vars(k)) +
+  scale_x_continuous(name = NULL,
+                     breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                     labels=c("", "1e+4", "", "1e+6", ""),
+                     limits = c(1000, 10000000),
+                     trans='log10') +
+  labs(y = "A/N")
+outfname <- sprintf( "%s/PanelnmDensity-A=%.2f.pdf", dirname, a)
+ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+totPrinted <- 1
 
+
+for(m in altModels) {
+  for(g in c(0.01, 0.05, 0.10)) {
 #
 # secondo grafico amDensity solo per Measure = Jaccard e AM = MotifReplace e alpha = 0.05
-  sp <- ggplot(data=df2, aes(x=len, y=amDensity, label=amDensity)) +
-    geom_line(aes(color=kv)) +
-    geom_point() +
-    geom_text(aes(label = round(amDensity, 3)), vjust = "inward", hjust = "inward", show.legend = FALSE) +
-    facet_grid( cols = vars(gamma), rows = vars(k)) +
-    scale_x_continuous(name = NULL,
-                       breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                       labels=c("", "1e+4", "", "1e+6", ""),
-                       limits = c(1000, 10000000),
-                       trans='log10') +
-    labs(y = "A/N")
-  outfname <- sprintf( "%s/PanelamDensity-A=%.2f.pdf", dirname, a)
+    df2 = filter( df, alpha == 0.05 & gamma == g & Model == m  & Measure == "Jaccard")
+    sp <- ggplot(data=df2, aes(x=len, y=amDensity, label=amDensity)) +
+      geom_line(aes(color=kv)) +
+      geom_point() +
+      geom_text(aes(label = round(amDensity, 3)), vjust = "inward", hjust = "inward", show.legend = FALSE) +
+      facet_grid( cols = vars(classAM), rows = vars(k)) +
+      scale_x_continuous(name = NULL,
+                         breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                         labels=c("", "1e+4", "", "1e+6", ""),
+                         limits = c(1000, 10000000),
+                         trans='log10') +
+      labs(y = "A/N")
+    outfname <- sprintf( "%s/PanelamDensity-%s-G=%.2f.pdf", dirname, m, g)
+    ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+    totPrinted <- totPrinted + 1
+  }
+}
+# T1 results
+cat(sprintf("Dataset all classes -> %d rows.\n",  nrow(df)))
+
+# plot scarsi divisi in 3 alpha altrimenti illegibile
+for( a in c(0.01, 0.05, 0.10)) {
+  df1 = filter( df, alpha == a)
+  sp1 <- ggplot( df1, aes(x = Measure, y = T1, fill = kv)) +
+    geom_bar( position = "dodge", stat = "identity") +
+    facet_grid( cols =vars(classNM), rows = vars(lenFac)) +
+    # facet_grid_sc(rows = vars( gamma), scales = 'free') +
+    # scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+    #                   labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
+    # scale_y_continuous(name = "A/N") +
+    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 70),
+                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                          panel.spacing=unit(0.1, "lines")) +
+    labs(y = sprintf("T1 results")) +
+    # scale_x_continuous(trans='log10') +
+    guides(colour = guide_legend(override.aes = list(size=1)))
+  # ggtitle( am)
+
+  # dev.new(width = 6, height = 6)
+  # print(sp1)
+  outfname <- sprintf( "%s/PanelT1-A=%.2f.pdf", dirname, a)
   ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+  # dev.off() #only 129kb in size
+  totPrinted <- totPrinted + 1
 }
 
 
-for( ss in classes) {
+cat(sprintf("T1 Done.\n"))
 
-  dfv <- filter( df, class == ss & Model == "MotifRepl-U")
-  cat(sprintf("Dataset %s -> %d rows.\n", ss, nrow(dfv)))
+#
+# plot della power per i due AM e per i 3 valori di gamma
+#
+for(m in altModels) {
+  for(a in c(0.01, 0.05, 0.10)) {
+    for(g in c(0.01, 0.05, 0.10)) {
 
-  # plot scarsi divisi in 3 alpha altrimenti illegibile
-  for( a in c(0.01, 0.05, 0.10)) {
-    df1 = filter( dfv, alpha == a)
-    sp1 <- ggplot( df1, aes(x = Measure, y = T1, fill = kv)) +
-      geom_bar( position = "dodge", stat = "identity") +
-      facet_grid( cols = vars(gamma), rows = vars(len)) +
-      # facet_grid_sc(rows = vars( gamma), scales = 'free') +
-      # scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-      #                   labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
-      # scale_y_continuous(name = "A/N") +
-      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 70),
-                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                            panel.spacing=unit(0.1, "lines")) +
-      labs(y = sprintf("T1 results (A/N %s)", ss)) +
-      # scale_x_continuous(trans='log10') +
-      guides(colour = guide_legend(override.aes = list(size=1)))
-    # ggtitle( am)
+      df2 = filter( df, gamma == g & alpha == a & Model == m)
+
+      sp2 <- ggplot( df2, aes(x = Measure, y = power, fill = kv)) +
+        geom_bar( position = "dodge", stat = "identity") +
+        facet_grid( cols = vars(classAM), rows = vars(lenFac)) +
+        # facet_grid_sc(rows = vars( gamma), scales = 'free') +
+        # scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+        #                   labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
+        # scale_y_continuous(name = "A/N") +
+        theme_light() + theme(strip.text.x = element_text( size = 8, angle = 70),
+                              axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                              panel.spacing=unit(0.1, "lines")) +
+        labs(y = sprintf("Power results")) +
+        # scale_x_continuous(trans='log10') +
+        guides(colour = guide_legend(override.aes = list(size=1)))
+      # ggtitle( am)
 
       # dev.new(width = 6, height = 6)
       # print(sp1)
-      outfname <- sprintf( "%s/PanelT1-%s-A=%.2f.pdf", dirname, ss, a)
+      outfname <- sprintf( "%s/PanelPower-%s-A=%.2f-G=%.2f.pdf", dirname, m, a, g)
       ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
       # dev.off() #only 129kb in size
-
-
-    sp2 <- ggplot( df1, aes(x = Measure, y = power, fill = kv)) +
-      geom_bar( position = "dodge", stat = "identity") +
-      facet_grid( cols = vars(gamma), rows = vars(len)) +
-      # facet_grid_sc(rows = vars( gamma), scales = 'free') +
-      # scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-      #                   labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
-      # scale_y_continuous(name = "A/N") +
-      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 70),
-                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                            panel.spacing=unit(0.1, "lines")) +
-      labs(y = sprintf("Power results (A/N %s)", ss)) +
-      # scale_x_continuous(trans='log10') +
-      guides(colour = guide_legend(override.aes = list(size=1)))
-    # ggtitle( am)
-
-    # dev.new(width = 6, height = 6)
-    # print(sp1)
-    outfname <- sprintf( "%s/PanelPower-%s-A=%.2f.pdf", dirname, ss, a)
-    ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
-    # dev.off() #only 129kb in size
+      totPrinted <- totPrinted + 1
+    }
   }
 }
-
-# dfv = filter( df, Measure == "Jaccard" & Model == "MotifRepl-U" & gamma == 0.05 & alpha == 0.05)
-#
-# sp1 <- ggplot( dfv, aes(x = len, y = kv, fill = nmDensity)) +
-#   geom_tile() +
-#   # scale_fill_gradient(low="white", high="blue") +
-#   # scale_fill_distiller(palette = "RdPu") +
-#   labs(title = "A/N Density(k, len)", x = "len", y = "K")
-#   # theme_ipsum()
-# # dev.new(width = 9, height = 6)
-# # print(sp2)
-# # stop("break")
-# outfname <- sprintf( "%s/Heatmap Density.pdf", dirname)
-# ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
-# # dev.off() #only 129kb in size
-cat(sprintf("%d plot printed", 3))
+cat(sprintf("%d plot printed", totPrinted))
