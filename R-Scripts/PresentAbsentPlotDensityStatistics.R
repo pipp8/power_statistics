@@ -12,6 +12,21 @@ library(hrbrthemes)
 
 
 ###### OPTIONS
+###### CODE
+plot_labeller <- function(variable, value){
+  # cat(sprintf("variable: <%s>, value: <%s>\n", variable, as.character(value)))
+  if (variable == 'kv') {
+    # N.B. kv e' un factor
+    return(sprintf("k = %s", as.character(value)))
+  } else if (variable == 'k') {
+    return(sprintf("k = %d", value))
+  }  else if (variable == 'lenFac') {
+    # lenFac è un factor
+    return(formatC(as.numeric(as.character(value)), format="f", digits=0, big.mark="."))
+  }else {
+    return(as.character(value))
+  }
+}
 
 # Sets the path of the directory containing the output of FADE
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
@@ -72,29 +87,29 @@ kValues = levels(factor(df$k))
 lengths = levels(factor(df$len))
 measures <- levels(factor(df$Measure))
 altModels = levels(df$Model)[1:2]
-classes <- c("saturated", "normal", "rare")
+classes <- c("rare", "normal", "saturated")
 
-tresholds = c(0.01, 0.99)
+thresholds = c(0.01, 0.99)
 
-nmdf <- data.frame(lengths)
-for( kk in kValues ) {
-  l <- c()
-  for( ll in lengths) {
-    tdf <- filter( df, k == kk & len == ll & Measure == "Jaccard" & alpha == 0.05 & gamma == 0.05 & Model == "MotifRepl-U")
-    l <- append(l, tdf$nmDensity)
-  }
-  nmdf[kk] <- l
-}
+# nmdf <- data.frame(lengths)
+# for( kk in kValues ) {
+#   l <- c()
+#   for( ll in lengths) {
+#     tdf <- filter( df, k == kk & len == ll & Measure == "Jaccard" & alpha == 0.05 & gamma == 0.05 & Model == "MotifRepl-U")
+#     l <- append(l, tdf$nmDensity)
+#   }
+#   nmdf[kk] <- l
+# }
 
 for(i in 1:nrow(df)) {
   t <- df[i, 'nmDensity']
-  if (t < tresholds[1])        { lblnm <- classes[3]}
-  else if (t > tresholds[2])   { lblnm <- classes[1]}
+  if (t < thresholds[1])        { lblnm <- classes[1]}
+  else if (t > thresholds[2])   { lblnm <- classes[3]}
   else                         { lblnm <- classes[2]}
   df[i, 'classNM'] <- lblnm
   t <- df[i, 'amDensity']
-  if (t < tresholds[1])        { lblam <- classes[3]}
-  else if (t > tresholds[2])   { lblam <- classes[1]}
+  if (t < thresholds[1])        { lblam <- classes[1]}
+  else if (t > thresholds[2])   { lblam <- classes[3]}
   else                         { lblam <- classes[2]}
   df[i, 'classAM'] <- lblam
 }
@@ -102,7 +117,7 @@ for(i in 1:nrow(df)) {
 df$classNM <- factor(df$classNM, levels = classes)
 df$classAM <- factor(df$classAM, levels = classes)
 
-write.csv(nmdf, "density-k-len.csv", row.names=FALSE)
+# write.csv(nmdf, "density-k-len.csv", row.names=FALSE)
 a = 0.05
 #
 # primo grafico nmDensity solo per Measure = Jaccard e AM = MotifReplace e alpha = 0.05
@@ -111,16 +126,22 @@ df2 = filter( df, alpha == a & Model == "MotifRepl-U"  & Measure == "Jaccard")
 sp <- ggplot(data=df2, aes(x=len, y=nmDensity, label=nmDensity)) +
   geom_line(aes(color = kv)) +
   geom_point() +
-  geom_text(aes(label = round(nmDensity, 3)), vjust = "inward", hjust = "inward", show.legend = FALSE) +
-  facet_grid( cols = vars(classNM), rows = vars(k)) +
+  geom_text(aes(label = round(nmDensity, 3)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
+  facet_grid( cols = vars(classNM), rows = vars(k), labeller = labeller( k = label_both)) +
   scale_x_continuous(name = NULL,
                      breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                     labels=c("", "1e+4", "", "1e+6", ""),
+                     labels=c("1e+3", "1e+4", "1e+5", "1e+6", "1e+7"),
                      limits = c(1000, 10000000),
                      trans='log10') +
-  labs(y = "A/N")
+  scale_y_continuous(name = "A/N (Null Model)",
+                     breaks=c(0, 0.5, 1),
+                     labels=c("0", "0.5", "1")) +
+  theme_light() + theme( panel.spacing=unit(0.2, "lines"),
+                         legend.position = "none")
+
 outfname <- sprintf( "%s/PanelnmDensity-A=%.2f.pdf", dirname, a)
 ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+dev.off()
 totPrinted <- 1
 
 
@@ -132,17 +153,23 @@ for(m in altModels) {
     sp <- ggplot(data=df2, aes(x=len, y=amDensity, label=amDensity)) +
       geom_line(aes(color=kv)) +
       geom_point() +
-      geom_text(aes(label = round(amDensity, 3)), vjust = "inward", hjust = "inward", show.legend = FALSE) +
-      facet_grid( cols = vars(classAM), rows = vars(k)) +
+      geom_text(aes(label = round(nmDensity, 3)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
+      facet_grid( cols = vars(classAM), rows = vars(k), labeller = labeller( k = label_both)) +
       scale_x_continuous(name = NULL,
                          breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                         labels=c("", "1e+4", "", "1e+6", ""),
+                         labels=c("1e+3", "1e+4", "1e+5", "1e+6", "1e+7"),
                          limits = c(1000, 10000000),
                          trans='log10') +
-      labs(y = "A/N")
+      scale_y_continuous(name = sprintf("A/N (AM = %s, G=%.2f)", m, g),
+                         breaks=c(0, 0.5, 1),
+                         labels=c("0", "0.5", "1")) +
+      theme_light() + theme( panel.spacing=unit(0.2, "lines"),
+                             legend.position = "none")
+
     outfname <- sprintf( "%s/PanelamDensity-%s-G=%.2f.pdf", dirname, m, g)
     ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
     totPrinted <- totPrinted + 1
+    dev.off()
   }
 }
 # T1 results
@@ -152,16 +179,13 @@ cat(sprintf("Dataset all classes -> %d rows.\n",  nrow(df)))
 for( a in c(0.01, 0.05, 0.10)) {
   df1 = filter( df, alpha == a)
   sp1 <- ggplot( df1, aes(x = Measure, y = T1, fill = kv)) +
-    geom_bar( position = "dodge", stat = "identity") +
-    facet_grid( cols =vars(classNM), rows = vars(lenFac)) +
-    # facet_grid_sc(rows = vars( gamma), scales = 'free') +
-    # scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-    #                   labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
-    # scale_y_continuous(name = "A/N") +
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 70),
+    geom_bar( width = 0.7, position = "dodge", stat = "identity") +
+    geom_hline(yintercept = a, linetype="dashed", color = "black") +
+    facet_grid( cols =vars(classNM), rows = vars(lenFac), labeller = plot_labeller) +
+    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                           panel.spacing=unit(0.1, "lines")) +
-    labs(y = sprintf("T1 results")) +
+    labs(y = sprintf("T1 results (A = %.2f)", a)) +
     # scale_x_continuous(trans='log10') +
     guides(colour = guide_legend(override.aes = list(size=1)))
   # ggtitle( am)
@@ -170,7 +194,7 @@ for( a in c(0.01, 0.05, 0.10)) {
   # print(sp1)
   outfname <- sprintf( "%s/PanelT1-A=%.2f.pdf", dirname, a)
   ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
-  # dev.off() #only 129kb in size
+  dev.off() # only 129kb in size
   totPrinted <- totPrinted + 1
 }
 
@@ -187,17 +211,12 @@ for(m in altModels) {
       df2 = filter( df, gamma == g & alpha == a & Model == m)
 
       sp2 <- ggplot( df2, aes(x = Measure, y = power, fill = kv)) +
-        geom_bar( position = "dodge", stat = "identity") +
-        facet_grid( cols = vars(classAM), rows = vars(lenFac)) +
-        # facet_grid_sc(rows = vars( gamma), scales = 'free') +
-        # scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-        #                   labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
-        # scale_y_continuous(name = "A/N") +
-        theme_light() + theme(strip.text.x = element_text( size = 8, angle = 70),
+        geom_bar( width = 0.7, position = "dodge", stat = "identity") +
+        facet_grid( cols = vars(classAM), rows = vars(lenFac), labeller = plot_labeller) +
+        theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
                               axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                               panel.spacing=unit(0.1, "lines")) +
-        labs(y = sprintf("Power results")) +
-        # scale_x_continuous(trans='log10') +
+        labs(y = sprintf("Power results (A = %.2f, G = %.2f)", a, g)) +
         guides(colour = guide_legend(override.aes = list(size=1)))
       # ggtitle( am)
 
@@ -205,7 +224,7 @@ for(m in altModels) {
       # print(sp1)
       outfname <- sprintf( "%s/PanelPower-%s-A=%.2f-G=%.2f.pdf", dirname, m, a, g)
       ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
-      # dev.off() #only 129kb in size
+      dev.off() # only 129kb in size
       totPrinted <- totPrinted + 1
     }
   }
