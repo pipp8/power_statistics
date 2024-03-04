@@ -437,8 +437,8 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
         # load kmers statistics from histogram files
         loadHistogramOnHDFS(kmcOutputPrefixA, destFilenameA)
     else:
-        os.remove(kmcOutputPrefixA+'kmc_pre')
-        os.remove(kmcOutputPrefixA+'kmc_suf')
+        os.remove(kmcOutputPrefixA+'.kmc_pre')
+        os.remove(kmcOutputPrefixA+'.kmc_suf')
 
     baseSeq2 = Path(seqFile2).stem
     kmcOutputPrefixB = f"{tempDir}/{baseSeq2}-k={k}"
@@ -449,8 +449,8 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
         # load kmers statistics from histogram files
         loadHistogramOnHDFS(kmcOutputPrefixB, destFilenameB)
     else:
-        os.remove(kmcOutputPrefixB+'kmc_pre')
-        os.remove(kmcOutputPrefixB+'kmc_suf')
+        os.remove(kmcOutputPrefixB+'.kmc_pre')
+        os.remove(kmcOutputPrefixB+'.kmc_suf')
 
     #
     # inizio procedura Dataframe oriented (out of memory)
@@ -489,14 +489,14 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     if round(totalProbA,0) != 1.0:
         # raise ValueError("Somma(Pa = {round(totalProbA, 0):f} must be 1.0. Aborting")
         print(f"****** Somma(Pa) = {round(totalProbA, 0):.2f} must be 1.0!!! ******")
-    else:
-        entropySeqA = EntropyData( totDistinctKmerA, totKmerA, HkA)
+
+    entropySeqA = EntropyData( totDistinctKmerA, totKmerA, HkA)
 
     if round(totalProbB,0) != 1.0:
         # raise ValueError("Somma(Pb) = {round(totalProbB, 0):f} must be 1.0. Aborting")
         print(f"****** Somma(Pb) = {round(totalProbB, 0):.2f} must be 1.0!!! ******")
-    else:
-        entropySeqB = EntropyData( totDistinctKmerB, totKmerB, HkB)
+
+    entropySeqB = EntropyData( totDistinctKmerB, totKmerB, HkB)
 
     euclidDistance = math.sqrt(totEuclid)
     print(f"****** Euclid = {euclidDistance:.4f}, D2 = {totD2:,} ******")
