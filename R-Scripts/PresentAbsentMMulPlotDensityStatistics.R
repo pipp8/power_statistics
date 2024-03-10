@@ -7,8 +7,7 @@ library(hrbrthemes)
 
 ###### DESCRIPTION
 
-# compute Power Statistics and T1 error from raw data produced by PresenAbsent3.py script
-# in CSV format
+# Plot experiment results for Macaco Mulatta Genomes artificially modified
 
 
 ###### OPTIONS
@@ -157,7 +156,8 @@ measures = append(measures, extras)
 for(i in 1:nrow(df)) {
   r <- df[i,]
   for(m in measures) {
-    nr <- c( m, r[5:12], df[i, m])
+    MesName <- if (m == "Mash.Distance.10000.") "Mash" else m
+    nr <- c( MesName, r[5:12], df[i, m])
     tgtDF[nrow( tgtDF)+1,] <- nr
   }
 }
@@ -165,6 +165,9 @@ for(i in 1:nrow(df)) {
 # escludiamo le misure: euclidean norm, anderberg, gowel , phi e yule. 864 -> 672 observations
 tgtDF <- filter( tgtDF, Measure != "Anderberg" & Measure != "Gower" & Measure != "Phi" & Measure != "Yule" &
   Measure != "Euclid_norm" & Measure != "Mash.Distance.1000." & Measure != "Mash.Distance.100000.")
+
+# nessun filtro 864 -> 864
+# tgtDF <- filter( tgtDF, Measure != "Euclid_norm" & Measure != "Mash.Distance.1000." & Measure != "Mash.Distance.100000.")
 
 cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.Distance.1000, Mash.Distance.100000. (%d rows).\n",nrow(df)))
 
@@ -208,12 +211,15 @@ totPrinted <- 1
 # secondo grafico distanze per ciascuna misura (Theta sull'asse delle x)
 df2 = filter( tgtDF, Measure != "D2" & Measure != "Euclidean")
 
-sp1 <- ggplot( df2, aes(x = Measure, y = distance, fill = Measure)) +
-    geom_bar( width = 0.7, position = "dodge", stat = "identity") +
-    facet_grid( rows = vars(k), cols = vars(Theta), labeller = labeller( k = label_both)) +
-    # theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-    #                       axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-    #                       panel.spacing=unit(0.1, "lines")) +
+sp1 <- ggplot( df2, aes(x = Theta, y = distance, fill = k)) +
+    geom_line(aes(color = k)) +
+    geom_point( size = 0.8) +
+    #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
+    facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
+    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                           panel.spacing=unit(0.1, "lines")) +
+    theme(legend.position = "none") +
     scale_y_continuous(name = "Distance",
                      breaks=c(0, 0.5, 1),
                      labels=c("0", "0.5", "1"))
@@ -228,7 +234,7 @@ ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
-# terzo grafico di riferimento per Euclid / D2
+# terzo grafico di riferimento per Euclid
 df2 = filter( tgtDF, Measure == "Euclidean")
 
 sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
@@ -247,14 +253,14 @@ sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
 # guides(colour = guide_legend(override.aes = list(size=1)))
 
 
-# dev.new(width = 6, height = 6)
+# dev.new(width = 6, height = 9)
 # print(sp1)
 outfname <- sprintf( "%s/PanelEuclidDistanceMMul.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
-# terzo grafico di riferimento per Euclid / D2
+# Quarto grafico di riferimento per simmilarità D2
 df2 = filter( tgtDF, Measure == "D2")
 
 sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
@@ -273,10 +279,10 @@ sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
 # guides(colour = guide_legend(override.aes = list(size=1)))
 
 
-# dev.new(width = 6, height = 6)
+# dev.new(width = 6, height = 9)
 # print(sp1)
 outfname <- sprintf( "%s/PanelD2DistanceMMul.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
