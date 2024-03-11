@@ -320,7 +320,7 @@ def loadHistogramOnHDFS(histFile: str, destFile: str):
     # os.remove(tmp) # remove kmc output suffix file
 
     print(f"****** Dumping & Transferring to hdfs {histFile} -> {destFile} ******")
-    cmd1 = f"/usr/local/bin/mykmcdump {histFile} stdout | hdfs dfs -put - {destFile}"
+    cmd1 = f"/usr/local/bin/kmc_dump_x {histFile} stdout | hdfs dfs -put - {destFile}"
     p = subprocess.run( cmd1, shell=True, stdout=subprocess.PIPE)
 
     os.remove(histFile +'.kmc_pre') # remove kmc output prefix file
@@ -542,9 +542,9 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     # p.wait()
 
     # remove textual histogram files from hdfs
-    cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
-    p = subprocess.Popen(cmd.split())
-    p.wait()
+    # cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
+    # p = subprocess.Popen(cmd.split())
+    # p.wait()
     
     return dati0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
 
