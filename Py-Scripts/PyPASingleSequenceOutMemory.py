@@ -542,9 +542,9 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     # p.wait()
 
     # remove textual histogram files from hdfs
-    cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
-    p = subprocess.Popen(cmd.split())
-    p.wait()
+    # cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
+    # p = subprocess.Popen(cmd.split())
+    # p.wait()
     
     return dati0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
 

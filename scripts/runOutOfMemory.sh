@@ -9,7 +9,7 @@ dataDir=/mnt/VolumeDati1/Dataset/PresentAbsentDatasets/ncbi_dataset
 
 
 if (( $# != 3)); then
-    seq1=${dataDir}/GCF_003339765.1_Mmul_1.0.fasta
+    seq1=${dataDir}/GCF_000955945.1_Caty_1.0.fasta
     # synthetic => the second sequence has been produced by makeDistance.py (same prefix -theta.fasta)
     # seq2=synthetic
     seq2=${dataDir}/GCF_012559485.2_MFA.2.fasta
@@ -19,9 +19,9 @@ if (( $# != 3)); then
     echo "Using: $0 $seq1 $seq2 $remoteDataDir"
     # exit -1
 else
-    seq1=$1
-    seq2=$2
-    dataDir=$3
+    seq1=${dataDir}/$1
+    seq2=${dataDir}/$2
+    remoteDataDir=$3
 fi
 
 
