@@ -2,7 +2,7 @@ library(DescTools)
 library(dplyr)
 library(ggplot2)
 library(hrbrthemes)
-
+library(r2r)
 
 
 ###### DESCRIPTION
@@ -27,6 +27,23 @@ plot_labeller <- function(variable, value){
   }
 }
 
+
+TranslationTable  <- hashmap(default = 0)
+TranslationTable[["Mash.Distance.10000."]] <- "Mash"
+TranslationTable[["GCF_0001654452_Mmur_30"]] <- "gray mouse lemur"
+TranslationTable[["GCF_0033397651_Mmul_10"]] <- "rhesus monkey"
+TranslationTable[["GCF_0125594852_MFA2"]] <- "crab eating macaque"
+TranslationTable[["GCF_0009559451_Caty_10"]] <- "sooty mangabey"
+
+TerminologyServer <- function( key) {
+  v = TranslationTable[[key]]
+  if (v == 0) {
+    return( key)
+  } else {
+    return( v)
+  }
+}
+
 ###### CODE
 
 # Sets the path of the directory containing the output of FADE
@@ -38,8 +55,8 @@ similarities = c('D2')
 
 # Defines the name of the file containing a copy of the dataframe created by this script
 
-dfFilename <- sprintf( "%s,32/AllRealSeq.RDS", bs)
-csvFilename <- sprintf("%s,32/AllRealSeq.csv", bs)
+dfFilename <- sprintf( "%s,32/AllRealSeq2.RDS", bs)
+csvFilename <- sprintf("%s,32/AllRealSeq2.csv", bs)
 dirname <- sprintf("%s,32/ReportMMul", bs)
 
 if (!dir.exists(dirname)) {
@@ -71,6 +88,7 @@ if (!file.exists(dfFilename)) {
   saveRDS( df, file = dfFilename)
   cat(sprintf("Dataset %s %d rows saved.", dfFilename, nrow(df)))
 } else {
+  # dataframe già disponibile
   df <-readRDS( file = dfFilename)
 }
 
@@ -120,7 +138,6 @@ if (!file.exists(dfFilename)) {
 # $ HkB                 : Factor w/ 47 levels "-15,47734591",..: 42 43 44 47 46 45 1 2 3 6 ...
 # $ errorB              : Factor w/ 42 levels "-0,00011904",..: 37 36 35 34 34 34 42 41 40 38 ...
 
-df <-readRDS( file = dfFilename)
 cat(sprintf("Dataset %s loaded. (%d rows).\n", dfFilename, nrow(df)))
 
 classes <- c("rare", "normal", "saturated")
@@ -136,9 +153,6 @@ for(i in 1:nrow(df)) {
 }
 # riordina per classi
 df$class <- factor(df$class, levels = classes)
-
-df$sequenceA = gsub("_[1-3][0-9]", "", df$sequenceA)
-df$sequenceB = gsub("_[1-3][0-9]", "", df$sequenceB)
 
 # escludiamo le misure: euclidean norm, anderberg, gowel , phi e yule. 15120 -> 10800 observations
 # df <- filter( df, Measure != "Anderberg" & Measure != "Gower" & Measure != "Phi" & Measure != "Yule" &
@@ -157,8 +171,8 @@ measures = append(measures, extras)
 for(i in 1:nrow(df)) {
   r <- df[i,]
   for(m in measures) {
-    MesName <- if (m == "Mash.Distance.10000.") "Mash" else m
-    nr <- c( sprintf( "%s/%s", r[1], r[2]), MesName, r[6:12], df[i, m]) #theta non interessa
+    nr <- c( sprintf( "%s/%s", TerminologyServer(r[[1]]), TerminologyServer(r[[2]])), TerminologyServer(m),
+             r[6:12], df[i, m]) #theta non interessa
     tgtDF[nrow( tgtDF)+1,] <- nr
   }
 }
@@ -174,9 +188,10 @@ cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.D
 
 tgtDF$k = factor(tgtDF$k)
 
-tgtDF$Pair <- factor(tgtDF$Pair, levels = c( "GCF_0009559451_Caty/GCF_0125594852_MFA2", "GCF_0033397651_Mmul/GCF_0125594852_MFA2",
-                                             "GCF_0009559451_Caty/GCF_0033397651_Mmul", "GCF_0001654452_Mmur/GCF_0009559451_Caty",
-                                             "GCF_0001654452_Mmur/GCF_0125594852_MFA2", "GCF_0001654452_Mmur/GCF_0033397651_Mmul")) # riordina le coppie
+
+tgtDF$Pair <- factor(tgtDF$Pair, levels = c( "rhesus monkey/crab eating macaque",
+                                             "gray mouse lemur/crab eating macaque",
+                                             "gray mouse lemur/rhesus monkey"))
 
 kValues = levels(factor(tgtDF$k))
 measures <- levels(factor(tgtDF$Measure))
@@ -208,7 +223,10 @@ sp1 <- ggplot(data=df2, aes(x=Pair, y=density, label=density)) +
                      labels=c("0", "0.5", "1")) +
   theme_light() + theme( panel.spacing=unit(0.2, "lines"),
                          legend.position = "none",
-                         axis.text.x=element_blank())
+                         strip.text.x = element_text( size = 8, angle = 0),
+                         axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                         axis.title.x = element_blank())
+#                         axis.text.x=element_blank())
 
 outfname <- sprintf( "%s/PanelRealGenomeDensities.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
@@ -220,17 +238,19 @@ totPrinted <- 1
 df2 = filter( tgtDF, Measure != "D2" & Measure != "Euclidean")
 
 sp1 <- ggplot( df2, aes(x = Pair, y = distance, fill = Pair)) +
-    geom_bar( width = 0.7, position = "dodge", stat = "identity") +
-  #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
+    geom_bar( aes(color = Pair), width = 0.7, position = "dodge", stat = "identity") +
     facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
-    theme_light() + theme( panel.spacing=unit(0.1, "lines"),
-                           legend.position = "none",
-                           axis.text.x=element_blank()) +
+    # theme_light() + theme( panel.spacing=unit(0.1, "lines"),
+    #                       legend.position = "none",
+    #                       axis.text.x=element_blank()) +
+    theme_light() + theme( strip.text.x = element_text( size = 8, angle = 0),
+                           axis.text.x = element_blank(), # element_text( size = rel( 0.7), angle = 45, hjust=1),
+                           panel.spacing=unit(0.1, "lines"),
+                           axis.title.x = element_blank()) +
     scale_y_continuous(name = "Distance",
                      breaks=c(0, 0.5, 1),
-                     labels=c("0", "0.5", "1"))
-    # labs(y = "Distance") +
-    # guides(colour = guide_legend(override.aes = list(size=1)))
+                     labels=c("0", "0.5", "1")) +
+    guides(colour = guide_legend(override.aes = list(size=1)))
 
 
 # dev.new(width = 6, height = 6)
@@ -246,7 +266,8 @@ df2 = filter( tgtDF, Measure == "Euclidean")
 sp1 <- ggplot( df2, aes(x = Pair, y = distance, fill = Pair)) +
   geom_bar( aes(color = Pair), width = 0.7, position = "dodge", stat = "identity") +
   facet_grid( rows = vars(k), scales = "free_y", labeller = labeller( k = label_both)) +
-  theme_light() + theme(axis.text.x=element_blank()) +
+  theme_light() + theme(axis.text.x=element_blank(),
+                        axis.title.x = element_blank()) +
   # theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
   #                       axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
   #                       panel.spacing=unit(0.1, "lines")) +
@@ -260,7 +281,7 @@ sp1 <- ggplot( df2, aes(x = Pair, y = distance, fill = Pair)) +
 # dev.new(width = 6, height = 9)
 # print(sp1)
 outfname <- sprintf( "%s/PanelRealGenomeEuclidDistance.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
@@ -270,7 +291,8 @@ df2 = filter( tgtDF, Measure == "D2")
 sp1 <- ggplot( df2, aes(x = Pair, y = distance, fill = Pair)) +
   geom_bar( aes(color = Pair), width = 0.7, position = "dodge", stat = "identity") +
   facet_grid( rows = vars(k), scales = "free_y", labeller = labeller( k = label_both)) +
-  theme_light() + theme(axis.text.x=element_blank()) +
+  theme_light() + theme(axis.text.x=element_blank(),
+                        axis.title.x = element_blank()) +
   # theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
   #                       axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
   #                       panel.spacing=unit(0.1, "lines")) +
@@ -284,7 +306,7 @@ sp1 <- ggplot( df2, aes(x = Pair, y = distance, fill = Pair)) +
 # dev.new(width = 6, height = 9)
 # print(sp1)
 outfname <- sprintf( "%s/PanelRealGenomeD2Distance.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 

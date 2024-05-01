@@ -2,7 +2,7 @@ library(DescTools)
 library(dplyr)
 library(ggplot2)
 library(hrbrthemes)
-
+library(r2r)
 
 
 ###### DESCRIPTION
@@ -13,6 +13,21 @@ library(hrbrthemes)
 
 ###### OPTIONS
 ###### CODE
+
+TranslationTable  <- hashmap(default = 0)
+TranslationTable[["Mash.Distance.10000."]] <- "Mash"
+
+
+TerminologyServer <- function( key) {
+  v = TranslationTable[[key]]
+  if (v == 0) {
+    return( key)
+  } else {
+    return( v)
+  }
+}
+
+
 plot_labeller <- function(variable, value){
   # cat(sprintf("variable: <%s>, value: <%s>\n", variable, as.character(value)))
   if (variable == 'kv') {
@@ -78,6 +93,8 @@ df <- filter( df, Measure != "Anderberg" & Measure != "Gower" & Measure != "Phi"
 
 cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.Distance.1000, Mash.Distance.100000. (%d rows).\n",nrow(df)))
 
+df$Measure <- replace( df$Measure, df$Measure == "Mash.Distance.10000.", "Mash")
+
 df$Model = factor(df$Model)
 df$kv = factor(df$k)
 # df$len = factor(df$len)
@@ -91,15 +108,7 @@ classes <- c("rare", "normal", "saturated")
 
 thresholds = c(0.01, 0.99)
 
-# nmdf <- data.frame(lengths)
-# for( kk in kValues ) {
-#   l <- c()
-#   for( ll in lengths) {
-#     tdf <- filter( df, k == kk & len == ll & Measure == "Jaccard" & alpha == 0.05 & gamma == 0.05 & Model == "MotifRepl-U")
-#     l <- append(l, tdf$nmDensity)
-#   }
-#   nmdf[kk] <- l
-# }
+
 
 for(i in 1:nrow(df)) {
   t <- df[i, 'nmDensity']
