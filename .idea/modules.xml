@@ -3,8 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/Py-Scripts/ComputingScripts.iml" filepath="$PROJECT_DIR$/Py-Scripts/ComputingScripts.iml" />
-      <module fileurl="file://$PROJECT_DIR$/R-Scripts/PlottingScripts.iml" filepath="$PROJECT_DIR$/R-Scripts/PlottingScripts.iml" />
       <module fileurl="file://$PROJECT_DIR$/PowerStatistics.iml" filepath="$PROJECT_DIR$/PowerStatistics.iml" />
+      <module fileurl="file://$PROJECT_DIR$/R-Scripts/R-Scripts.iml" filepath="$PROJECT_DIR$/R-Scripts/R-Scripts.iml" />
     </modules>
   </component>
 </project>

@@ -185,6 +185,7 @@ def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
     # -sr<value> - number of threads for 2nd stage
     # -hp - hide percentage progress (default: false)
 
+    # N.B. -b ==> NON canonici
     cmd = "/usr/local/bin/kmc -b -hp -k%d -m2 -fm -ci0 -cs1048575 -cx1000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
     p = subprocess.Popen(cmd.split())
     p.wait()
@@ -307,6 +308,19 @@ def NormalizedSquaredEuclideanDistance( vector):
     NED = 0.5 * np.var(vector[0] - vector[1]) / (var[0] + var[1])
     return NED
 
+
+def NormalizedSquaredEuclideanDistance2( vector):
+    avg = np.mean( vector, axis=1)
+    std = np.std( vector, axis=1)
+
+    z0_np = (vector[0] - avg[0]) / std[0]
+    z1_np = (vector[1] - avg[1]) / std[1]
+    tot = 0
+    for i in range(vector.shape[1]):
+        tot += ((z0_np[i] - z1_np[i]) ** 2)
+
+    ZEu = tot ** 0.5
+    return ZEu
 
 
 

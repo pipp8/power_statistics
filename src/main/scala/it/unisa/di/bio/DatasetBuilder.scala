@@ -714,7 +714,8 @@ object DatasetBuilder {
           reader = scala.io.Source.fromFile(inputPath)
         }
         else {
-          // solo questo codice legge dal HDFS Source.fromFile legge solo da file system locali
+          // Questo codice legge (o scrive) dal HDFS.
+          // Source.fromFile legge solo da file system locali
           // val hdfs = FileSystem.get(new URI("hdfs://master:8020/"), new Configuration())
           val hdfs = FileSystem.get(sc.hadoopConfiguration)
           val path = new Path(inputPath)
