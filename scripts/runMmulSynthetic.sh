@@ -3,6 +3,7 @@
 scriptDir='/home/cattaneo/spark/power_statistics/Py-Scripts'
 dataDir='/home/cattaneo/spark/power_statistics/Datasets'
 # dataDir=/mnt/VolumeDati1/Dataset/PresentAbsentDatasets/ncbi_dataset
+remoteDataDir=MmulSynthetic
 
 baseSeq=GCF_003339765.1_Mmul_1.0.fna
 # baseSeq=fish1.fna

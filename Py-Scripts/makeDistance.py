@@ -11,6 +11,8 @@ import random
 basis = ['A', 'C', 'G', 'T']
 others = {'A' : ['C', 'G', 'T'], 'C' : ['A', 'G', 'T'], 'G':  ['A', 'C', 'T'], 'T' : ['A', 'C', 'G'] }
 
+ext = '.fna'
+
 # parametri sulla linea di comando
 # inputSeqence theta
 def ModifySequence():
@@ -23,7 +25,9 @@ def ModifySequence():
         print("Errore nei parametri:\nUsage: %s InputSequence thetaProbability" % os.path.basename(sys.argv[0]))
         exit(-1)
 
-    outFile = "%s-%d.fasta" % (os.path.splitext( inputFile)[0], theta)
+
+    baseName, ext = os.path.splitext( inputFile)
+    outFile = "%s-%d%s" % (baseName, theta, ext)
     (written, subst, totLen) = (0, 0, 0)
     newBase = ''
     out = []
@@ -70,7 +74,7 @@ def ModifySequence():
                     sys.stdout.write('.')
                     sys.stdout.flush()
 
-    print("%s -> %d/%d substitutions" % (outFile, subst, totLen))
+    print("\n%s -> %d/%d substitutions" % (outFile, subst, totLen))
 
 
 

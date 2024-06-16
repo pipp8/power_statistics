@@ -434,9 +434,10 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     # calcola comunque kmc per avere i valori di totDistinctKmerA, totKmerA
     (totDistinctKmerA, totKmerA) = extractKmers(seqFile1, k, tempDir, kmcOutputPrefixA)
     if (not checkPathExists(destFilenameA)):
-        # load kmers statistics from histogram files
+        # load kmers statistics from histogram files (dumping kmc output to hdfs)
         loadHistogramOnHDFS(kmcOutputPrefixA, destFilenameA)
     else:
+        # altrimenti rimuove solo i file temporanei di KMC e usera' destFilenameA come input
         os.remove(kmcOutputPrefixA+'.kmc_pre')
         os.remove(kmcOutputPrefixA+'.kmc_suf')
 
@@ -446,9 +447,10 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     # calcola comunque kmc per avere i valori di totDistinctKmerB, totKmerB
     (totDistinctKmerB, totKmerB) = extractKmers(seqFile2, k, tempDir, kmcOutputPrefixB)
     if (not checkPathExists(destFilenameB)):
-        # load kmers statistics from histogram files
+        # load kmers statistics from histogram files (dumping kmc output to hdfs)
         loadHistogramOnHDFS(kmcOutputPrefixB, destFilenameB)
     else:
+        # altrimenti rimuove solo i file temporanei di KMC e usera' destFilenameB come input
         os.remove(kmcOutputPrefixB+'.kmc_pre')
         os.remove(kmcOutputPrefixB+'.kmc_suf')
 
