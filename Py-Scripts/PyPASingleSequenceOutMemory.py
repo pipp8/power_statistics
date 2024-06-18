@@ -641,6 +641,7 @@ def main():
     elif argNum == 4:
         thetaValue = int(sys.argv[3])
     else:
+        thetaValue = int(sys.argv[3])
         hdfsDataDir = '%s/%s' % (hdfsPrefixPath, sys.argv[4])
 
     seqFile1 = sys.argv[1] # le sequenze sono sul file system locale
