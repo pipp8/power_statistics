@@ -70,9 +70,7 @@ if (!file.exists(dfFilename)) {
   df <-read.csv( file = csvFilename, sep = ";", dec = ",", colClasses = columnClasses)
   saveRDS( df, file = dfFilename)
   cat(sprintf("Dataset %s %d rows saved.", dfFilename, nrow(df)))
-} else {
-  df <-readRDS( file = dfFilename)
-}
+} 
 
 # 'data.frame':	48 obs. of  44 variables:
 # $ sequenceA           : Factor w/ 1 level "GCF_003339765.1_Mmul_1.0": 1 1 1 1 1 1 1 1 1 1 ...

@@ -13,6 +13,7 @@ import subprocess
 import math
 import csv
 import time
+import makeDistance as mkd
 
 import numpy as np
 import py_kmc_api as kmc
@@ -30,6 +31,7 @@ hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
 hdfsDataDir = ''
 spark = []
 sc = []
+thetaValue = 0
 
 nTests = 1000
 minK = 4
@@ -580,7 +582,7 @@ def writeHeader( writer):#
 
 
 # processa localmente una coppia di sequenze seqFile1 e seqFile2
-def processPairs(seqFile1: str, seqFile2: str):
+def processPairs(seqFile1: str, seqFile2: str, theta: int):
     # process local sequence files in the same local directory (temporary named ttt)
     tempDir = os.path.dirname( seqFile1)+'/ttt'
     if (not os.path.isdir(tempDir)):
@@ -597,19 +599,19 @@ def processPairs(seqFile1: str, seqFile2: str):
             for k in range( minK, maxK+1, stepK):
                 # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
                 print(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} ******")
-                res = processLocalPair(seqFile1, seqFile2, k, 0, tempDir)
+                res = processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
                 csvWriter.writerow( res)
                 file.flush()
         else:
-            for theta in Ts:
-                for k in range( minK, maxK+1, stepK):
-                    # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
-                    (f, ext) = os.path.splitext(seqFile1)
-                    seqFile2 = f"{f}-{theta}{ext}"
-                    print(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ******")
-                    res = processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
-                    csvWriter.writerow( res)
-                    file.flush()
+            (f, ext) = os.path.splitext(seqFile1)
+            seqFile2 = f"{f}-{theta}{ext}"
+            mkd.MoveAwaySequence(seqFile1, seqFile2, theta)
+            for k in range( minK, maxK+1, stepK):
+                # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
+                print(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ******")
+                res = processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
+                csvWriter.writerow( res)
+                file.flush()
 
             
     # clean up
@@ -627,17 +629,19 @@ def processPairs(seqFile1: str, seqFile2: str):
 
 
 def main():
-    global hdfsDataDir, hdfsPrefixPath, spark, sc
+    global hdfsDataDir, hdfsPrefixPath, spark, sc, thetaValue
 
     hdfsDataDir = hdfsPrefixPath
 
     argNum = len(sys.argv)
-    if (argNum < 3 or argNum > 4):
+    if (argNum < 4 or argNum > 5):
         """
-            Usage: PySparkPAbSingleSequence Sequence1 Sequence2 [dataDir]
+            Usage: PySparkPASingleSequenceOutMemory Sequence1 Sequence2 theta [dataDir]
         """
     elif argNum == 4:
-        hdfsDataDir = '%s/%s' % (hdfsPrefixPath, sys.argv[3])
+        thetaValue = int(sys.argv[3])
+    else:
+        hdfsDataDir = '%s/%s' % (hdfsPrefixPath, sys.argv[4])
 
     seqFile1 = sys.argv[1] # le sequenze sono sul file system locale
     seqFile2 = sys.argv[2] # per eseguire localmente l'estrazione dei k-mers
@@ -661,7 +665,7 @@ def main():
 
     print(f"****** {nWorkers} workers, hdfsDataDir: {hdfsDataDir} ******")
 
-    processPairs(seqFile1, seqFile2)
+    processPairs(seqFile1, seqFile2, thetaValue)
 
     spark.stop()
 

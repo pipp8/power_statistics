@@ -17,17 +17,23 @@ ext = '.fna'
 # inputSeqence theta
 def ModifySequence():
 
-
     if (len(sys.argv) == 3):
         inputFile = sys.argv[1]
         theta = int(sys.argv[2])
+        baseName, ext = os.path.splitext( inputFile)
+        outFile = "%s-%d%s" % (baseName, theta, ext)
+        MoveAwaySequence(inputFile, outFile, theta)
     else:
         print("Errore nei parametri:\nUsage: %s InputSequence thetaProbability" % os.path.basename(sys.argv[0]))
         exit(-1)
 
 
-    baseName, ext = os.path.splitext( inputFile)
-    outFile = "%s-%d%s" % (baseName, theta, ext)
+def MoveAwaySequence(inputFile, outFile, theta):
+
+    print( "*********************************************************")
+    print( "Creating sequence: %s from sequence: %s theta: %d" % (outFile, inputFile, theta))
+    print( "*********************************************************")
+
     (written, subst, totLen) = (0, 0, 0)
     newBase = ''
     out = []
