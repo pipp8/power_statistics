@@ -595,23 +595,18 @@ def processPairs(seqFile1: str, seqFile2: str, theta: int):
         writeHeader(csvWriter)
         file.flush()
 
-        if (seqFile2 != "synthetic"):
-            for k in range( minK, maxK+1, stepK):
-                # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
-                print(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} ******")
-                res = processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
-                csvWriter.writerow( res)
-                file.flush()
-        else:
+        if (seqFile2 == "synthetic"):
+            # produce il file allontanato da seqFile1 di un fattore theta
             (f, ext) = os.path.splitext(seqFile1)
             seqFile2 = f"{f}-{theta}{ext}"
             mkd.MoveAwaySequence(seqFile1, seqFile2, theta)
-            for k in range( minK, maxK+1, stepK):
-                # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
-                print(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ******")
-                res = processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
-                csvWriter.writerow( res)
-                file.flush()
+
+        for k in range( minK, maxK+1, stepK):
+            # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
+            print(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ******")
+            res = processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
+            csvWriter.writerow( res)
+            file.flush()
 
             
     # clean up
