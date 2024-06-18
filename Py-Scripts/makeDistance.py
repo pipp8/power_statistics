@@ -4,7 +4,7 @@ import re
 import os
 import sys
 import random
-
+from pathlib import Path
 
 
 
@@ -31,7 +31,7 @@ def ModifySequence():
 def MoveAwaySequence(inputFile, outFile, theta):
 
     print( "*********************************************************")
-    print( "Creating sequence: %s from sequence: %s theta: %d" % (outFile, inputFile, theta))
+    print( "Creating sequence: %s from sequence: %s theta: %d" % (Path(outFile).stem, Path(inputFile).stem, theta))
     print( "*********************************************************")
 
     (written, subst, totLen) = (0, 0, 0)
