@@ -25,7 +25,7 @@ for i in 5 10 20 30 40 50 60 70 80 90 95; do
 	     ${scriptDir}/PyPASingleSequenceOutMemory.py $seq1 synthetic $i $remoteDataDir"
 
     
-    echo "Comparing $seq1 vs $seq2"
+    echo "Comparing $(basename $seq1) vs $(basename $seq2)"
     echo "Comparing $seq1 vs $seq2" >> $logFile
     echo $cmd >> $logFile
 
