@@ -589,7 +589,7 @@ def processPairs(seqFile1: str, seqFile2: str, theta: int):
         os.mkdir(tempDir)
 
     # local file system result file
-    outFile = "%s/%s-%s-%d-%d.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile2).stem, theta, int(time.time()))
+    outFile = "%s/%s-%s-%2d-%d.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile2).stem, theta, int(time.time()))
     with open(outFile, 'w') as file:
         csvWriter = csv.writer(file)        
         writeHeader(csvWriter)
