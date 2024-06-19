@@ -133,6 +133,7 @@ measures = colnames(df)[13:27]
 extras = c("Mash.Distance.10000.", "D2", "Euclidean")
 measures = append(measures, extras)
 
+# calcola la trasposta ... un rigo per ogni misura
 for(i in 1:nrow(df)) {
   r <- df[i,]
   for(m in measures) {
@@ -155,10 +156,30 @@ cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.D
 tgtDF$k = factor(tgtDF$k)
 # tgtDF$Theta = factor(tgtDF$Theta)
 
-kValues = levels(factor(tgtDF$kf))
+kValues = levels(tgtDF$k)
 measures <- levels(factor(tgtDF$Measure))
 
 cat(sprintf("Data Frame converted (%d observations).\n", nrow(tgtDF)))
+# tgtDF$Theta = factor(tgtDF$Theta)
+
+df_total = data.frame()
+for( km in kValues) {
+  for ( mes in measures) {
+    df <- filter( tgtDF, k == km, Measure == mes)
+    newcol = 'distance2'
+    # cat(sprintf("k = %s, mes = %s, #rows %d\n", km, mes, nrow(df)))
+    for( i in 1:nrow(df) - 1) {
+      df[ i, newcol] <- df[i, 'distance'] / df[i+1, 'distance']
+    }
+    df_total <- rbind(df_total, df)
+  }
+}
+
+if (nrow(tgtDF) == nrow(df_total)) {
+  tgtDF <- df_total
+} else {
+  stop("errore nel calcolo di df_total per il calcolo delle distanze relative")
+}
 
 totPrinted <- 0
 
@@ -185,7 +206,35 @@ sp1 <- ggplot( df2, aes(x = Theta, y = distance, fill = k)) +
 
 # dev.new(width = 6, height = 6)
 # print(sp1)
-outfname <- sprintf( "%s/PanelDistanceMMul.pdf", dirname)
+outfname <- sprintf( "%s/PanelDistancesMMul.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+dev.off() # only 129kb in size
+totPrinted <- totPrinted + 1
+
+
+#  grafico #2 distanze relative x tutte le misure
+
+sp1 <- ggplot( df2, aes(x = Theta, y = distance2, fill = k)) +
+  geom_line(aes(color = k)) +
+  geom_point( size = 0.8) +
+  #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
+  facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
+  theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                        panel.spacing=unit(0.1, "lines"),
+                        legend.position = "none",
+                        axis.text.y = element_blank(),
+                        axis.title.y = element_blank())
+# scale_y_continuous(name = "Distance")
+#                 breaks=c(0, 0.5, 1),
+#                 labels=c("0", "0.5", "1"))
+# labs(y = "Distance") +
+# guides(colour = guide_legend(override.aes = list(size=1)))
+
+
+# dev.new(width = 6, height = 6)
+# print(sp1)
+outfname <- sprintf( "%s/PanelDistancesMMul2.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
@@ -208,7 +257,7 @@ sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
                         strip.text.y = element_blank()) +
   labs( x = " ")
 
-  # labs(y = "Euclidean Distance")
+# labs(y = "Euclidean Distance")
 # guides(colour = guide_legend(override.aes = list(size=1)))
 
 # dev.new(width = 6, height = 9)
@@ -218,7 +267,33 @@ ggsave( outfname, device = pdf(), width = 0.9, height = 6, units = "in", dpi = 3
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
-# Quarto grafico di riferimento per simmilarità D2
+# grafico # 4 Ecludi distanze relative 
+sp1 <- ggplot( df2, aes(x = Theta, y = distance2)) +
+  # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
+  geom_line(aes(color = k)) +
+  geom_point() +
+  # geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
+  facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
+  theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                        panel.spacing=unit(0.1, "lines"),
+                        legend.position = "none",
+                        axis.title.y = element_blank(),
+                        axis.text.y = element_blank(),
+                        strip.text.y = element_blank()) +
+  labs( x = " ")
+
+# labs(y = "Euclidean Distance")
+# guides(colour = guide_legend(override.aes = list(size=1)))
+
+# dev.new(width = 6, height = 9)
+# print(sp1)
+outfname <- sprintf( "%s/PanelEuclidDistanceMMul2.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 0.9, height = 6, units = "in", dpi = 300)
+dev.off() # only 129kb in size
+totPrinted <- totPrinted + 1
+
+# Quinto grafico di riferimento per simmilarità D2
 df2 = filter( tgtDF, Measure == "D2")
 
 sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
@@ -234,13 +309,37 @@ sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
                         axis.text.y = element_blank(),
                         strip.text.y = element_blank()) +
   labs( x = " ", y = "Distances")
-  # labs(y = "D2 Similarity")
+# labs(y = "D2 Similarity")
+# guides(colour = guide_legend(override.aes = list(size=1)))
+
+# dev.new(width = 6, height = 9)
+# print(sp1)
+outfname <- sprintf( "%s/PanelD2DistanceMMul.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
+dev.off() # only 129kb in size
+totPrinted <- totPrinted + 1
+
+# Sesto grafico distanze relative solo D2
+sp1 <- ggplot( df2, aes(x = Theta, y = distance2)) +
+  # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
+  geom_line(aes(color = k)) +
+  geom_point() +
+  # geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
+  facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
+  theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                        panel.spacing=unit(0.1, "lines"),
+                        legend.position = "none",
+                        axis.text.y = element_blank(),
+                        strip.text.y = element_blank()) +
+  labs( x = " ", y = "Distances")
+# labs(y = "D2 Similarity")
 # guides(colour = guide_legend(override.aes = list(size=1)))
 
 
 # dev.new(width = 6, height = 9)
 # print(sp1)
-outfname <- sprintf( "%s/PanelD2DistanceMMul.pdf", dirname)
+outfname <- sprintf( "%s/PanelD2DistanceMMul2.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
