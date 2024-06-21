@@ -24,7 +24,8 @@ logFile="run-$(date '+%s').log"
 echo "Start Log file: $(date)e" > $logFile
 echo "Log file: $logFile"
 
-for i in 5 10 20 30 40 50 60 70 80 90 95; do
+# for i in 5 10 20 30 40 50 60 70 80 90 95; do
+for i in 5 ; do
 
     ${scriptDir}/makeDistance.py ${seq1} $i
     seq2=${dataDir}/$(basename $seq1 .fna)-$i.fna
