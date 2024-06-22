@@ -26,7 +26,8 @@ echo "Log file: $logFile"
 
 for i in 5 10 20 30 40 50 60 70 80 90 95; do
 
-    ${scriptDir}/makeDistance.py ${seq1} $i
+    # ${scriptDir}/makeDistance.py ${seq1} $i
+    /usr/local/bin/MoveAway  ${seq1} $i
     seq2=$(printf "%s/%s-%02d.fna" ${dataDir} $(basename $seq1 .fna) $i)
     
     cmd="spark-submit --master yarn --deploy-mode client --driver-memory 27g \

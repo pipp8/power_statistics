@@ -30,7 +30,8 @@ def ModifySequence():
 
 def MoveAwaySequence(inputFile, outFile, theta):
 
-    if (os.path.exists(inputFile)):
+    if (os.path.exists(outFile)):
+        print("Output File: %s already exists. Exiting." % outFile)
         return
 
     print( "*********************************************************")
