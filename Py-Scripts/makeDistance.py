@@ -21,7 +21,7 @@ def ModifySequence():
         inputFile = sys.argv[1]
         theta = int(sys.argv[2])
         baseName, ext = os.path.splitext( inputFile)
-        outFile = "%s-%d%s" % (baseName, theta, ext)
+        outFile = "%s-%02d%s" % (baseName, theta, ext)
         MoveAwaySequence(inputFile, outFile, theta)
     else:
         print("Errore nei parametri:\nUsage: %s InputSequence thetaProbability" % os.path.basename(sys.argv[0]))
