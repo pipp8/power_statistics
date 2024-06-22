@@ -30,9 +30,9 @@ def CompareSequences():
         print("Errore nei parametri:\nUsage: %s sequence1 sequence2" % os.path.basename(sys.argv[0]))
         exit(-1)
 
-    with open(inputFile1, "r") as inFile1:
-        with open(inputFile2, "r") as inFile2:
-            # skip all comment lines
+    with open(inputFile1, "r") as inFile1, open(inputFile2, "r") as inFile2:
+        while( True):
+            # skip all comment lines from file1
             while (True):
                 line1 = inFile1.readline()
                 if (not line1.startswith(">")):
@@ -42,11 +42,15 @@ def CompareSequences():
                 line2 = inFile2.readline()
                 if (not line2.startswith(">")):
                     break
+            if (line1 == "" and line2 == ""):
+                # entrambi i file sono terminati
+                break
 
             dist += hamming_distance( line1, line2)
             tot1 += len(line1) - 1 # \n
             tot2 += len(line2) - 1 # \n
 
+        inFile2.close()
     print("Hamming distance: %s (%d) vs %s (%d) = %d" % (inputFile1, tot1, inputFile2, tot2, dist))
 
 

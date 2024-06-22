@@ -30,6 +30,9 @@ def ModifySequence():
 
 def MoveAwaySequence(inputFile, outFile, theta):
 
+    if (os.path.exists(inputFile)):
+        return
+
     print( "*********************************************************")
     print( "Creating sequence: %s from sequence: %s theta: %d" % (Path(outFile).stem, Path(inputFile).stem, theta))
     print( "*********************************************************")
