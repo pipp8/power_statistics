@@ -51,7 +51,7 @@ def CompareSequences():
             tot2 += len(line2) - 1 # \n
 
         inFile2.close()
-    print("Hamming distance: %s (%d) vs %s (%d) = %d" % (inputFile1, tot1, inputFile2, tot2, dist))
+    print("Hamming distance: %s (%d) vs %s (%d) = %d (%.2f%%)" % (inputFile1, tot1, inputFile2, tot2, dist, dist/tot1*100))
 
 
 
