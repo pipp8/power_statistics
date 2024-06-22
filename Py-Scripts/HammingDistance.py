@@ -9,6 +9,8 @@ import random
 
 
 def hamming_distance(seq1: str, seq2: str) -> int:
+    seq1 = seq1.upper()
+    seq2 = seq2.upper()
     d = sum([ c1 != c2 for c1, c2 in zip(seq1, seq2)])
     return d
 
