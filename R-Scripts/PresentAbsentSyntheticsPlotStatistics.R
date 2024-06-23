@@ -37,10 +37,12 @@ bs <- "uniform"
 similarities = c('D2')
 
 # Defines the name of the file containing a copy of the dataframe created by this script
+# caenorhabditis, macacamulatta, schistosoma, yeast, homosapiens
 
-dfFilename <- sprintf( "%s,32/ReportMMul.RDS", bs)
-csvFilename <- sprintf("%s,32/ReportMMul.csv", bs)
-dirname <- sprintf("%s,32/ReportMMul-NoPart", bs)
+sequenceName <- "yeast"
+dfFilename <- sprintf( "%s,32/Synthetics/Report%s.RDS", bs, sequenceName)
+csvFilename <- sprintf("%s,32/Synthetics/%s.csv", bs, sequenceName)
+dirname <- sprintf("%s,32/ReportSynthetics", bs)
 
 if (!dir.exists(dirname)) {
   dir.create(dirname)
@@ -50,7 +52,7 @@ if (!file.exists(dfFilename)) {
   # carica il CSV dell'esperimento
   columnClasses = c(
     #   sequenceA  sequenceB  start.time  real.time    Theta        k
-    "character", "character", "integer", "numeric", "integer", "integer",
+    "character", "character", "numeric", "numeric", "integer", "integer",
     #   A	        B	      C	         D	        N         A/N
     "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
     # 15 x misure present absent
@@ -67,7 +69,7 @@ if (!file.exists(dfFilename)) {
     # NKeysB   totalCntB   deltaB       HkB      errorB
     "numeric", "numeric", "numeric", "numeric","numeric")
 
-  df <-read.csv( file = csvFilename, sep = ";", dec = ",", colClasses = columnClasses)
+  df <-read.csv( file = csvFilename, sep = ",", dec = ".", colClasses = columnClasses)
   saveRDS( df, file = dfFilename)
   cat(sprintf("Dataset %s %d rows saved.", dfFilename, nrow(df)))
 } 
@@ -166,10 +168,12 @@ df_total = data.frame()
 for( km in kValues) {
   for ( mes in measures) {
     df <- filter( tgtDF, k == km, Measure == mes)
-    newcol = 'distance2'
+    newcol = 'ri'
     # cat(sprintf("k = %s, mes = %s, #rows %d\n", km, mes, nrow(df)))
     for( i in 1:nrow(df) - 1) {
-      df[ i, newcol] <- df[i, 'distance'] / df[i+1, 'distance']
+      # df[ i, newcol] <- df[i, 'distance'] / df[i+1, 'distance']
+      # utilizziamo il rapporto incrementale
+      df[ i, newcol] <- (df[i+1, 'distance'] - df[i+1, 'distance']) / ( df[i+1, 'Theta'] - df[i, 'Theta'])
     }
     df_total <- rbind(df_total, df)
   }
@@ -206,7 +210,7 @@ sp1 <- ggplot( df2, aes(x = Theta, y = distance, fill = k)) +
 
 # dev.new(width = 6, height = 6)
 # print(sp1)
-outfname <- sprintf( "%s/PanelDistancesMMul.pdf", dirname)
+outfname <- sprintf( "%s/PanelDistances-%s.pdf", dirname, sequenceName)
 ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
@@ -214,7 +218,7 @@ totPrinted <- totPrinted + 1
 
 #  grafico #2 distanze relative x tutte le misure
 
-sp1 <- ggplot( df2, aes(x = Theta, y = distance2, fill = k)) +
+sp1 <- ggplot( df2, aes(x = Theta, y = ri, fill = k)) +
   geom_line(aes(color = k)) +
   geom_point( size = 0.8) +
   #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
@@ -234,7 +238,7 @@ sp1 <- ggplot( df2, aes(x = Theta, y = distance2, fill = k)) +
 
 # dev.new(width = 6, height = 6)
 # print(sp1)
-outfname <- sprintf( "%s/PanelDistancesMMul2.pdf", dirname)
+outfname <- sprintf( "%s/PanelDistances-%s2.pdf", dirname, sequenceName)
 ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
@@ -262,13 +266,13 @@ sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
 
 # dev.new(width = 6, height = 9)
 # print(sp1)
-outfname <- sprintf( "%s/PanelEuclidDistanceMMul.pdf", dirname)
+outfname <- sprintf( "%s/PanelEuclid-%s.pdf", dirname, sequenceName)
 ggsave( outfname, device = pdf(), width = 0.9, height = 6, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
 # grafico # 4 Ecludi distanze relative 
-sp1 <- ggplot( df2, aes(x = Theta, y = distance2)) +
+sp1 <- ggplot( df2, aes(x = Theta, y = ri)) +
   # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
   geom_line(aes(color = k)) +
   geom_point() +
@@ -288,7 +292,7 @@ sp1 <- ggplot( df2, aes(x = Theta, y = distance2)) +
 
 # dev.new(width = 6, height = 9)
 # print(sp1)
-outfname <- sprintf( "%s/PanelEuclidDistanceMMul2.pdf", dirname)
+outfname <- sprintf( "%s/PanelEuclid-%s2.pdf", dirname, sequenceName)
 ggsave( outfname, device = pdf(), width = 0.9, height = 6, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
@@ -314,13 +318,13 @@ sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
 
 # dev.new(width = 6, height = 9)
 # print(sp1)
-outfname <- sprintf( "%s/PanelD2DistanceMMul.pdf", dirname)
+outfname <- sprintf( "%s/PanelD2-%s.pdf", dirname, sequenceName)
 ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
 # Sesto grafico distanze relative solo D2
-sp1 <- ggplot( df2, aes(x = Theta, y = distance2)) +
+sp1 <- ggplot( df2, aes(x = Theta, y = ri)) +
   # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
   geom_line(aes(color = k)) +
   geom_point() +
@@ -332,17 +336,17 @@ sp1 <- ggplot( df2, aes(x = Theta, y = distance2)) +
                         legend.position = "none",
                         axis.text.y = element_blank(),
                         strip.text.y = element_blank()) +
-  labs( x = " ", y = "Distances")
+  labs( x = " ", y = "Rapporto Incrementale")
 # labs(y = "D2 Similarity")
 # guides(colour = guide_legend(override.aes = list(size=1)))
 
 
 # dev.new(width = 6, height = 9)
 # print(sp1)
-outfname <- sprintf( "%s/PanelD2DistanceMMul2.pdf", dirname)
+outfname <- sprintf( "%s/PanelD2-%s2.pdf", dirname, sequenceName)
 ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
 
-cat(sprintf("MMul Done. %d plot printed", totPrinted))
+cat(sprintf("%s synthetics Done. %d plot printed", sequenceName, totPrinted))
