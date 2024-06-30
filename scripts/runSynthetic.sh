@@ -8,14 +8,23 @@ baseSeq=GCF_003339765.1_Mmul_1.0.fna
 baseSeq=fish1.fna
 
 
-if (( $# != 2)); then
-    echo "Usage: $0 sequence remoteDataDir"
+if (( $# < 2)) || (($# > 4)); then
+    echo "Usage: $0 sequence remoteDataDir [theta [k]]"
     exit -1
 else
-    baseSeq=$1
-    remoteDataDir=$2
+    if (($# >= 2)) ; then
+	baseSeq=$1
+	remoteDataDir=$2
+	thetaValues='5 10 20 30 40 50 60 70 80 90 95'
+	kValue=""
+    fi
+    if (($# >= 3)) ; then
+	thetaValues=$3
+    fi
+    if (($# >= 4)) ; then
+	kValue=$4
+    fi
 fi
-
 
 seq1=${dataDir}/$baseSeq
 
@@ -24,21 +33,19 @@ logFile="run-$(date '+%s').log"
 echo "Start Log file: $(date)e" > $logFile
 echo "Log file: $logFile"
 
-for i in 5 10 20 30 40 50 60 70 80 90 95; do
+for i in $thetaValues ; do
 
-    # ${scriptDir}/makeDistance.py ${seq1} $i
     /usr/local/bin/MoveAway  ${seq1} $i
     seq2=$(printf "%s/%s-%02d.fna" ${dataDir} $(basename $seq1 .fna) $i)
     
     cmd="spark-submit --master yarn --deploy-mode client --driver-memory 27g \
 	     --num-executors 48 --executor-memory 27g --executor-cores 7 \
-	     ${scriptDir}/PyPASingleSequenceOutMemory.py $seq1 $seq2 $i $remoteDataDir"
+	     ${scriptDir}/PyPASingleSequenceOutMemory.py $seq1 $seq2 $i $remoteDataDir $kValue"
 
     
     echo "$(date) Comparing $seq1 vs $seq2"
     echo "$(date) Comparing $seq1 vs $seq2" >> $logFile
     echo $cmd >> $logFile
 
-    $cmd >> $logFile 2>&1 
 done
 
