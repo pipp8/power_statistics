@@ -5,6 +5,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 
 
@@ -38,6 +40,18 @@ int main(int argc, char *argv[]) {
   printf("basename:%s\n", bname);  
   sprintf(outFile, "%s/%s-%02d%s", dname, bname, theta, ext);
 
+  struct stat stat1, stat2;
+
+  if (stat( inputFile, &stat1) < 0) {
+    fprintf(stderr, "Input file %s not available\nExiting.\n", inputFile);
+    exit(-1);
+  }
+  
+  if ((stat( outFile, &stat2) == 0) && (stat2.st_size == stat1.st_size)) {
+    fprintf(stderr, "Output file %s is already present and has the same size: %ld byte\nSkipping.\n", outFile, stat1.st_size);
+    exit(0);
+  }
+  
   printf( "*********************************************************\n");
   printf( "Creating sequence: %s from sequence: %s theta: %d\n", outFile, bname, theta);
   printf( "*********************************************************\n");
