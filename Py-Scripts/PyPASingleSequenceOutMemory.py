@@ -662,7 +662,7 @@ def main():
 
     spark = SparkSession \
         .builder \
-        .appName("%s %s %s" % (Path( sys.argv[0]).stem, Path(seqFile1).stem, Path(seqFile2).stem)) \
+        .appName( f"{Path( sys.argv[0]).stem} {Path(seqFile1).stem} {Path(seqFile2).stem} {minK} <= k <= {maxK} theta = {thetaValue}") \
         .getOrCreate()
 
     sc = spark.sparkContext
