@@ -41,11 +41,10 @@ for i in $thetaValues ; do
     cmd="spark-submit --master yarn --deploy-mode client --driver-memory 27g \
 	     --num-executors 48 --executor-memory 27g --executor-cores 7 \
 	     ${scriptDir}/PyPASingleSequenceOutMemory.py $seq1 $seq2 $i $remoteDataDir $kValue"
-
     
     echo "$(date) Comparing $seq1 vs $seq2"
     echo "$(date) Comparing $seq1 vs $seq2" >> $logFile
-    echo $cmd >> $logFile
+    $cmd >> $logFile
 
 done
 
