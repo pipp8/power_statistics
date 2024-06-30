@@ -631,27 +631,35 @@ def processPairs(seqFile1: str, seqFile2: str, theta: int):
 
 
 def main():
-    global hdfsDataDir, hdfsPrefixPath, spark, sc, thetaValue
+    global hdfsDataDir, hdfsPrefixPath, spark, sc, thetaValue, minK, maxK
+
 
     hdfsDataDir = hdfsPrefixPath
 
     argNum = len(sys.argv)
-    if (argNum < 4 or argNum > 5):
+    if (argNum < 5 or argNum > 6):
         """
-            Usage: PySparkPASingleSequenceOutMemory Sequence1 Sequence2 theta [dataDir]
+            Usage: PySparkPASingleSequenceOutMemory Sequence1 Sequence2 theta dataDir [kValue]
         """
-    elif argNum == 4:
-        thetaValue = int(sys.argv[3])
     else:
+        # theta viene utilizzato SOLO se Sequence2 == "synthetic" altrimenti viene ignorato
         thetaValue = int(sys.argv[3])
         hdfsDataDir = '%s/%s' % (hdfsPrefixPath, sys.argv[4])
+
+    if (argNum == 6):
+        # use just one k value instead of all values from minK to maxK (step)
+        minK = int(sys.argv[5])
+        maxK = int(sys.argv[5])
 
     seqFile1 = sys.argv[1] # le sequenze sono sul file system locale
     seqFile2 = sys.argv[2] # per eseguire localmente l'estrazione dei k-mers
     # outFile = '%s/%s-%s.csv' % (hdfsDataDir, Path( seqFile1).stem, Path(seqFile2).stem )
 
-    print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} in hdfsDataDir = {hdfsDataDir} ******")
-    
+    if (seqFile2 == "synthetic"):
+        print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} and Theta = {thetaValue} in hdfsDataDir = {hdfsDataDir} ******")
+    else:
+        print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} in hdfsDataDir = {hdfsDataDir} ******")
+
     spark = SparkSession \
         .builder \
         .appName("%s %s %s" % (Path( sys.argv[0]).stem, Path(seqFile1).stem, Path(seqFile2).stem)) \
