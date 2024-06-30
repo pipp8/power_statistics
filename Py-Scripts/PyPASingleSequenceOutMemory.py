@@ -39,7 +39,7 @@ maxK = 32
 stepK = 4
 # sketchSizes = [1000, 10000, 100000]
 sketchSizes = [10000]
-Ts = [5, 10, 20, 80, 90, 95]
+
 outFilePrefix = 'PresentAbsentECData'
 
 # global broadcast variables
@@ -61,7 +61,11 @@ class EntropyData:
         return float(self.nKeys) / (2 * self.totalKmerCnt)
 
     def getError(self):
-        return self.getDelta() / self.Hk
+        try:
+            result = self.getDelta() / self.Hk
+        except ZeroDivisionError:
+            result = 0
+        return result
 
     def toString(self):
         return [self.nKeys, 2 * self.totalKmerCnt, self.getDelta(), self.Hk, self.getError()]
@@ -356,6 +360,9 @@ def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
     # -hp - hide percentage progress (default: false)
 
     cmd = "/usr/local/bin/kmc -b -hp -k%d -m12 -fm -ci0 -cs1048575000 -cx2000000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
+
+    print(f"****** (local) Kmer Counting {cmd} ******")
+
     out = subprocess.check_output(cmd.split())
     results = out.decode()
     m = re.search(r'Total no. of k-mers[ \t]*:[ \t]*(\d+)', results)
