@@ -41,8 +41,11 @@ zoom = 5
 
 # Defines the name of the file containing a copy of the dataframe created by this script
 #  Yeast, CElegans, HomoSapiens, Schistosoma, Lemur, MacacaMulatta, PiceaAbies
-# genomes <- c( "Yeast", "CElegans", "HomoSapiens", "Schistosoma", "Lemur", "MacacaMulatta", "PiceaAbies")
 genomes <- c( "Yeast", "CElegans", "HomoSapiens", "Schistosoma", "Lemur", "MacacaMulatta", "PiceaAbies")
+sortedGenomes <- c("Yeast", "CElegans", "HomoSapiens", "PiceaAbies")
+
+cvDF <- data.frame( Genome = character(), Measure = character(), k = integer(),
+                     cv = double(), stringsAsFactors=FALSE)
 
 for( sequenceName in genomes) {
 
@@ -156,6 +159,7 @@ for( sequenceName in genomes) {
     }
   }
 
+
   # escludiamo le misure: euclidean norm, anderberg, gowel , phi e yule. 864 -> 672 observations
   tgtDF <- filter( tgtDF, Measure != "Anderberg" & Measure != "Gower" & Measure != "Phi" & Measure != "Yule" &
     Measure != "Euclid_norm" &
@@ -185,7 +189,11 @@ for( sequenceName in genomes) {
       for( i in 1:nrow(df) - 1) {
         # df[ i, newcol] <- df[i, 'distance'] / df[i+1, 'distance']
         # utilizziamo il rapporto incrementale
-        df[ i, newcol] <- (df[i+1, 'distance'] - df[i+1, 'distance']) / ( df[i+1, 'Theta'] - df[i, 'Theta'])
+        df[ i, newcol] <- (df[i+1, 'distance'] - df[i, 'distance']) / ( df[i+1, 'Theta'] - df[i, 'Theta'])
+      }
+      if (sequenceName %in% sortedGenomes) {
+        nr <- list( sequenceName, mes, as.integer(km), sd(df$distance)/mean(df$distance))
+        cvDF[nrow( cvDF)+1,] <- nr
       }
       df_total <- rbind(df_total, df)
     }
@@ -204,7 +212,7 @@ for( sequenceName in genomes) {
 
   sp1 <- ggplot( df2, aes(x = Theta, y = distance, fill = k)) +
       geom_line(aes(color = k)) +
-      geom_point( size = 0.8) +
+      geom_point() +
       #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
       facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
       theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
@@ -231,7 +239,7 @@ for( sequenceName in genomes) {
   #  grafico #2 distanze relative x tutte le misure
   # sp1 <- ggplot( df2, aes(x = Theta, y = ri, fill = k)) +
   #   geom_line(aes(color = k)) +
-  #   geom_point( size = 0.8) +
+  #   geom_point() +
   #   #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
   #   facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
   #   theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
@@ -421,7 +429,7 @@ for( sequenceName in genomes) {
 
   sp1 <- ggplot( df2, aes(x = Theta, y = distance, fill = k)) +
     geom_line(aes(color = k)) +
-    geom_point( size = 0.8) +
+    geom_point(size = 0.8) +
     #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
     facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
     theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
@@ -450,7 +458,7 @@ for( sequenceName in genomes) {
   sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
     # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
     geom_line(aes(color = k)) +
-    geom_point() +
+    geom_point(size = 0.8) +
     # geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
     facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
     theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
@@ -478,7 +486,7 @@ for( sequenceName in genomes) {
   sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
     # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
     geom_line(aes(color = k)) +
-    geom_point() +
+    geom_point(size = 0.8) +
     # geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
     facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
     theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
@@ -500,3 +508,39 @@ for( sequenceName in genomes) {
   
   cat(sprintf("%s synthetics Done. %d plot printed\n", sequenceName, totPrinted))
 }
+
+# per ultimo il grafico con il coefficiente di variazione
+# cvDF = 728 observations = 4 genome x 13 misure x 8 k
+
+# ordina i genomi per lunghezza crescente
+cvDF$Genome <- factor(cvDF$Genome, levels = sortedGenomes)
+cvDF$Measure <- factor(cvDF$Measure)
+cvDF$k <-factor(cvDF$k,levels(factor(cvDF$k)))
+
+sp1 <- ggplot( cvDF, aes(x = Genome, y = cv, fill = k)) +
+  # geom_line(aes(color = k)) +
+  geom_point(size = 0.8, aes(color = k)) +
+  #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
+  facet_grid( rows = vars(kv), cols = vars(Measure), labeller = labeller( k = label_both), scales = "free_y") +
+  theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                        panel.spacing=unit(0.1, "lines"),
+                        legend.position = "none",
+                        axis.text.y = element_blank(),
+                        axis.title.y = element_blank())
+# scale_y_continuous(name = "Coefficiente di Variazione")
+#                 breaks=c(0, 0.5, 1),
+#                 labels=c("0", "0.5", "1"))
+# labs(y = "Distance") +
+# guides(colour = guide_legend(override.aes = list(size=1)))
+
+
+# dev.new(width = 6, height = 6)
+# print(sp1)
+outfname <- sprintf( "%s/PanelCV-all.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+dev.off() # only 129kb in size
+totPrinted <- totPrinted + 1
+cat(sprintf("CV plot Done. %d plot printed\n", totPrinted))
+
+
