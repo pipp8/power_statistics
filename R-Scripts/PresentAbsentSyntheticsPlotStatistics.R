@@ -484,7 +484,6 @@ for( sequenceName in genomes) {
   df2 = filter( tgtDF, Measure == "D2" & Theta >= zoomLevels[zoom])
   
   sp1 <- ggplot( df2, aes(x = Theta, y = distance)) +
-    # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
     geom_line(aes(color = k)) +
     geom_point(size = 0.8) +
     # geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
@@ -517,30 +516,68 @@ cvDF$Genome <- factor(cvDF$Genome, levels = sortedGenomes)
 cvDF$Measure <- factor(cvDF$Measure)
 cvDF$k <-factor(cvDF$k,levels(factor(cvDF$k)))
 
-sp1 <- ggplot( cvDF, aes(x = Genome, y = cv, fill = k)) +
-  # geom_line(aes(color = k)) +
+
+df2 = filter( cvDF, Measure != "D2" & Measure != "Euclidean")
+
+sp1 <- ggplot( df2, aes(x = Genome, y = cv, fill = k)) +
   geom_point(size = 0.8, aes(color = k)) +
-  #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
-  facet_grid( rows = vars(kv), cols = vars(Measure), labeller = labeller( k = label_both), scales = "free_y") +
+  facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both), scales = "free_y") +
   theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
                         axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                         panel.spacing=unit(0.1, "lines"),
                         legend.position = "none",
                         axis.text.y = element_blank(),
                         axis.title.y = element_blank())
-# scale_y_continuous(name = "Coefficiente di Variazione")
-#                 breaks=c(0, 0.5, 1),
-#                 labels=c("0", "0.5", "1"))
-# labs(y = "Distance") +
-# guides(colour = guide_legend(override.aes = list(size=1)))
 
-
-# dev.new(width = 6, height = 6)
-# print(sp1)
 outfname <- sprintf( "%s/PanelCV-all.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
+
+
+
+df2 = filter( cvDF, Measure == "Euclidean")
+
+sp1 <- ggplot( df2, aes(x = Genome, y = cv)) +
+  geom_point(size = 0.8, aes(color = k)) +
+  facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
+  theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                        panel.spacing=unit(0.1, "lines"),
+                        legend.position = "none",
+                        axis.title.y = element_blank(),
+                        axis.text.y = element_blank(),
+                        strip.text.y = element_blank()) +
+  labs( x = " ")
+
+outfname <- sprintf( "%s/PanelCVEuclid.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 0.9, height = 6, units = "in", dpi = 300)
+dev.off() # only 129kb in size
+totPrinted <- totPrinted + 1
+
+df2 = filter( cvDF, Measure == "D2")
+
+sp1 <- ggplot( df2, aes(x = Genome, y = cv)) +
+  geom_point(size = 0.8, aes(color = k)) +
+  facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
+  theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                        panel.spacing=unit(0.1, "lines"),
+                        legend.position = "none",
+                        axis.text.y = element_blank(),
+                        strip.text.y = element_blank()) +
+  labs( x = " ", y = "Cofficiente di Variazione")
+
+outfname <- sprintf( "%s/PanelCVD2.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
+dev.off() # only 129kb in size
+totPrinted <- totPrinted + 1
+
 cat(sprintf("CV plot Done. %d plot printed\n", totPrinted))
+
+for( mes in measures) {
+  df = filter( cvDF, Measure == mes)
+  cat(sprintf("%s -> min: %f, max: %f\n", mes, min(df$cv, na.rm = TRUE), max(df$cv,na.rm = TRUE)))
+}
 
 
