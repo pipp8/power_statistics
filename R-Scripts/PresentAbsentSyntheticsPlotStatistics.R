@@ -575,6 +575,7 @@ totPrinted <- totPrinted + 1
 
 cat(sprintf("CV plot Done. %d plot printed\n", totPrinted))
 
+saveRDS( cvDF, sprintf("%s/cvAll.RDS", dirname ))
 for( mes in measures) {
   df = filter( cvDF, Measure == mes)
   cat(sprintf("%s -> min: %f, max: %f\n", mes, min(df$cv, na.rm = TRUE), max(df$cv,na.rm = TRUE)))

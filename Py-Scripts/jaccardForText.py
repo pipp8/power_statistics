@@ -5,6 +5,8 @@ import os
 import sys
 import string
 import random
+import time
+import csv
 from pathlib import Path
 import numpy as np
 
@@ -24,46 +26,55 @@ def main():
         print("Errore nei parametri:\nUsage: %s InputSequence kmerLength" % os.path.basename(sys.argv[0]))
         exit(-1)
 
-    theta = 10
-    hist1 = kmerExtraction(inputFile, k)
-    leftKeys =  np.array(list(hist1.keys()))
+    baseName, ext = os.path.splitext( inputFile)
+    outFile = f"{baseName}-{time.time()}.csv"
+    f = open(outFile, 'w')
+    writer = csv.writer(f)
+    header = ['inputFile', 'k', 'theta', 'A', 'B', 'C', 'D', 'N', 'Jaccard']
+    writer.writerow(header)
 
-    for theta in [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95]:
-        inputFile2 = MoveAwaySequence(inputFile, theta)
+    for k in range(2,11,1):
+        hist1 = kmerExtraction(inputFile, k, 0)
+        leftKeys =  np.array(list(hist1.keys()))
+
+        for theta in [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95]:
+            # inputFile2 = MoveAwaySequence(inputFile, theta)
+            hist2 = kmerExtraction(inputFile, k, theta)
+
+            # leftKeys =  np.array(list(hist1.keys()))
+            rightKeys =  np.array(list(hist2.keys()))
+
+            intersection = np.intersect1d( leftKeys, rightKeys)
+            A = bothCnt = intersection.size
+            B = leftCnt = leftKeys.size - bothCnt
+            C = rightCnt = rightKeys.size - bothCnt
+
+            NMax = pow(len(basis), k)
+            D = absentCnt = NMax - (A + B + C) # NMax - M01M10M11
+
+            # Jaccard dissimilarity => Jaccard = 1 - A/(N - D)
+            try:
+                jaccard = 1 - A / (NMax - D)
+            except ZeroDivisionError:
+                jaccard = 'UnDefined'
+
+            print(f"Distance: {jaccard} k: {k} theta: {theta}, A: {A:,}, B: {B:,}, C: {C:,}, D: {D:,}")
+
+            writer.writerow( [os.path.basename(inputFile), k, theta, A, B, C, D, NMax, jaccard])
+
+    f.close()
 
 
-        hist2 = kmerExtraction(inputFile2, k)
-
-        # leftKeys =  np.array(list(hist1.keys()))
-        rightKeys =  np.array(list(hist2.keys()))
-
-        intersection = np.intersect1d( leftKeys, rightKeys)
-        A = bothCnt = intersection.size
-        B = leftCnt = leftKeys.size - bothCnt
-        C = rightCnt = rightKeys.size - bothCnt
-
-        NMax = pow(len(basis), k)
-        D = absentCnt = NMax - (A + B + C) # NMax - M01M10M11
-
-        # Jaccard dissimilarity => Jaccard = 1 - A/(N - D)
-        try:
-            jaccard = 1 - A / (NMax - D)
-        except ZeroDivisionError:
-            jaccard = 'UnDefined'
-
-        print(f"Distance: {jaccard} k: {k} theta: {theta}, A: {A:,}, B: {B:,}, C: {C:,}, D: {D:,}")
 
 
-
-
-def kmerExtraction( inputFile: string, k: int):
+def kmerExtraction( inputFile: string, k: int, theta: int):
 
     print( "*********************************************************")
-    print( "Extracting kmer sequences from sequence: %s for k: %d" % (Path(inputFile).stem, k))
-    print( "*********************************************************")
+    print( "Extracting kmers from sequence: %s for k: %d and theta: %d" % (Path(inputFile).stem, k, theta))
 
     count = {}
-    i = 0
+    (cnt, subst, totalLen) = (0, 0, 0)
+    regex0 = re.compile( '[\r\n]')
     regex1 = re.compile( '[%s]' % re.escape(string.punctuation))
     regex2 = re.compile('\s\s+')
     regex3 = re.compile('[\u0080-\uFFFF]')
@@ -72,18 +83,36 @@ def kmerExtraction( inputFile: string, k: int):
     with open(inputFile, encoding='latin-1') as inFile:
         for line in inFile:
             # 1) trasforma tutti i caratteri alfanumeri in uppercase
-            # 2) elimina il newline alla fine
-            l1 = line.rstrip().upper()
+            l0 = line.upper()
+            # 2) sostituisce newline con spazio
+            l1 = regex0.sub(' ', l0)
             # 3) rimpiazza tutti i caratteri di punteggiatura con spazio
             l2 = regex1.sub(' ', l1)
             # 4) rimpiazza più spazi consecutivi in un unico spazio
             l3 = regex2.sub(' ', l2)
             # 5) rimuove i caratteri ascii > 127
-            l4 = regex3.sub( '', l3)
-           # e concatena TUTTO l'input in una unica stringa
-            allText = allText + l4
-            i += 1
+            line = regex3.sub( '', l3)
+
+            if theta > 0:
+                s = list(line)
+                for i in range(len(line)):
+                    if (random.randrange(100) < theta):
+                        # l'elemento i-esimo viene sostituito
+                        b = s[i]
+                        newBase = b
+                        while( newBase == b):
+                            newBase = random.choice( basis)
+                        s[i] = newBase
+                        subst += 1
+                line = "".join(s)
+
+            # e concatena TUTTO l'input in una unica stringa
+            allText = allText + line
+            cnt += 1
             # print(i, l3)
+            totalLen += len(line)
+
+    print(f"{inputFile} -> {subst:,}/{totalLen:,} substitutions")
 
     totalLen = len(allText)
     last = totalLen - k + 1
