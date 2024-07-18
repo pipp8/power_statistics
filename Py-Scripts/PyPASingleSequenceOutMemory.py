@@ -23,11 +23,11 @@ import pyspark
 from pyspark.sql import SparkSession
 from pyspark import SparkFiles
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, LongType
-from pyspark.sql.functions import col, udf
+import pyspark.sql.functions as sf
 
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
-# hdfsPrefixPath = '/Users/pipp8/tmp/'
+hdfsPrefixPath = '/Users/pipp8'
 hdfsDataDir = ''
 spark = []
 sc = []
@@ -47,7 +47,7 @@ totDistinctKmerAAcc = []
 totDistinctKmerBAcc = []
 totKmerAAcc = []
 totKmerBAcc = []
-
+kmerStats = []
 
 
 
@@ -391,21 +391,34 @@ def distCounter(cnt, x: str):
 
 
 def countBasedMeasures(partData):
-    global totKmerAAcc, totKmerBAcc
+    global totKmerAAcc, totKmerBAcc, kmerStats
 
-    D2totValue = EuclideanTotValue = 0
+    D2totValue = D2ZTotValue = EuclideanTotValue = EuclideanZTotValue = 0
     Acnt = Bcnt = Ccnt = 0
     Hk1 = totalProb1 = Hk2 = totalProb2 = 0.0
     totalKmerCnt1 = float(totKmerAAcc.value)
     totalKmerCnt2 = float(totKmerBAcc.value)
+    mean1 = float(kmerStats.value.mean1)
+    mean2 = float(kmerStats.value.mean2)
+    std1 = float(kmerStats.value.std1)
+    std2 = float(kmerStats.value.std2)
 
     for row in partData:
-        cnt2 = 0 if row.cnt2 is None else row.cnt2
-        cnt1 = 0 if row.cnt1 is None else row.cnt1
+        # cnt1 = 0 if row.cnt1 is None else row.cnt1
+        # cnt2 = 0 if row.cnt2 is None else row.cnt2
+        cnt1 = row.cnt1
+        cnt2 = row.cnt2
+        zcnt1 = (cnt1 - mean1) / std1
+        zcnt2 = (cnt2 - mean2) / std2
+
         # counting based measures
         d = cnt2 - cnt1
+        zd = zcnt2 -zcnt1
         EuclideanTotValue += d * d
         D2totValue +=  cnt1 * cnt2
+        EuclideanZTotValue += zd * zd
+        D2ZTotValue += zcnt1 * zcnt2
+
         # Present/Absent
         if (cnt1 > 0 and cnt2 > 0):
             Acnt += 1
@@ -424,14 +437,14 @@ def countBasedMeasures(partData):
             totalProb2 += prob2
             Hk2 += prob2 * math.log(prob2, 2)
 
-    return iter([(EuclideanTotValue, D2totValue, Acnt, Bcnt, Ccnt, Hk1, totalProb1, Hk2, totalProb2)])
+    return iter([(EuclideanTotValue,EuclideanZTotValue, D2totValue, D2ZTotValue, Acnt, Bcnt, Ccnt, Hk1, totalProb1, Hk2, totalProb2)])
 
 
 
 
 # run jaccard on sequence pair ds with kmer of length = k
 def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: str):
-    global totDistinctKmerAAcc, totDistinctKmerBAcc, totKmerAAcc, totKmerBAcc
+    global totDistinctKmerAAcc, totDistinctKmerBAcc, totKmerAAcc, totKmerBAcc, kmerStats
 
     start = time.time()
 
@@ -480,18 +493,35 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
 
     # inner solo l'intersezione
     # inner = df1.join(df2, df1.kmer == df2.kmer, "inner")
-    # outer tutte le righe
-    outer = df1.join(df2, df1.kmer == df2.kmer, "outer")
+    # full outer join di tutte le righe (poiche' le colonne chiave hanno lo stesso nome possiamo usare una lista
+    outer = df1.join(df2, ['kmer'], how='full')
+    # questa produce 2 colonne kmer
+    # outer = df1.join(df2, df1.kmer == df2.kmer, "outer")
+
     # df4 = outer.select(EuclidUDF(col('cnt1'), col('cnt2'))).show()
+    # elimina i NULL vslues
+    outer.fillna(value=0)
+
+    # calcola media e deviazione standard delle frequenze.
+    stats = outer.select(sf.mean(sf.col('cnt1')).alias('mean1'),
+                         sf.stddev(sf.col('cnt1')).alias('std1'),
+                         sf.mean(sf.col('cnt2')).alias('mean2'),
+                         sf.stddev(sf.col('cnt2')).alias('std2')
+                         ).collect()
+
+    # share the results to all workers
+    kmerStats = sc.broadcast( stats[0])
     allDist = outer.rdd.mapPartitions(countBasedMeasures).collect()
 
+    totEuclidZ = totD2Z = 0.0
     totEuclid = totD2 = Acnt = Bcnt = Ccnt = 0
     HkA = totalProbA = HkB = totalProbB = 0.0
     for t in allDist:
-        totEuclid += t[0]; totD2 += t[1]; Acnt += t[2]; Bcnt += t[3]; Ccnt += t[4]
-        HkA  += t[5]; totalProbA += t[6]; HkB  += t[7]; totalProbB += t[8]
+        totEuclid += t[0]; totEuclidZ += t[1]; totD2 += t[2]; totD2Z += t[3]
+        Acnt += t[4]; Bcnt += t[5]; Ccnt += t[6]
+        HkA  += t[7]; totalProbA += t[8]; HkB  += t[9]; totalProbB += t[10]
 
-    vec = [0,0,0,0,0,0,0,0,0]
+    vec = [0,0,0,0,0,0,0,0,0,0,0]
     for t in allDist:
         vec = [ x[0] + x[1] for x in zip(vec, t) ]
 
@@ -509,13 +539,13 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
 
     entropySeqB = EntropyData( totDistinctKmerB, totKmerB, HkB)
 
-    euclidDistance = math.sqrt(totEuclid)
-    print(f"****** Euclid = {euclidDistance:.4f}, D2 = {totD2:,} ******")
+    euclideanDistance = math.sqrt(totEuclid)
+    print(f"****** Euclid = {euclideanDistance:.4f}, D2 = {totD2:,} ******")
     print(f"****** Present/Absent = {Acnt:,}, {Bcnt:,}, {Ccnt:,} ******")
     print(f"****** HkA: {entropySeqA.Hk:.5f} HkB: {entropySeqB.Hk:.5f}, totDistinctKmerA: {entropySeqA.totalKmerCnt:,}, totDistinctKmerB: {entropySeqB.totalKmerCnt:,} ******")
 
 # dati3 = runCountBasedMeasures(cnts, k)
-    dati3 =  [totD2, euclidDistance, 0.0]
+    dati3 =  [totD2, euclideanDistance, 0.0]
 
     # implementazione precedente per avere A, B, e C. Effettuato test i risultati coincidono
     # tot1Acc = sc.accumulator(0)

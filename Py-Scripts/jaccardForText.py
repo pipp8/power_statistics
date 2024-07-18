@@ -20,26 +20,28 @@ basis = string.ascii_uppercase + string.digits + ' '
 def main():
     k = 0
     if (len(sys.argv) == 3):
-        inputFile = sys.argv[1]
+        inputPath = sys.argv[1]
         k = int(sys.argv[2])
     else:
         print("Errore nei parametri:\nUsage: %s InputSequence kmerLength" % os.path.basename(sys.argv[0]))
         exit(-1)
 
-    baseName, ext = os.path.splitext( inputFile)
-    outFile = f"{baseName}-{time.time()}.csv"
+    inputFile = os.path.basename(inputPath)
+    baseName, ext = os.path.splitext( inputPath)
+    outFile = f"{baseName}-{int(time.time())}.csv"
     f = open(outFile, 'w')
     writer = csv.writer(f)
-    header = ['inputFile', 'k', 'theta', 'A', 'B', 'C', 'D', 'N', 'Jaccard']
+    header = ['Input File', 'k', 'theta', 'A', 'B', 'C', 'D', 'N', 'Jaccard',
+              'Total Distinct left', 'Total Kmers left', 'Total Distinct right', 'Total Kmers right']
     writer.writerow(header)
 
     for k in range(2,11,1):
-        hist1 = kmerExtraction(inputFile, k, 0)
+        (totalLeft, hist1) = kmerExtraction(inputPath, k, 0)
         leftKeys =  np.array(list(hist1.keys()))
 
         for theta in [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 95]:
-            # inputFile2 = MoveAwaySequence(inputFile, theta)
-            hist2 = kmerExtraction(inputFile, k, theta)
+            # inputFile2 = MoveAwaySequence(inputPath, theta)
+            (totalRight, hist2) = kmerExtraction(inputPath, k, theta)
 
             # leftKeys =  np.array(list(hist1.keys()))
             rightKeys =  np.array(list(hist2.keys()))
@@ -60,17 +62,19 @@ def main():
 
             print(f"Distance: {jaccard} k: {k} theta: {theta}, A: {A:,}, B: {B:,}, C: {C:,}, D: {D:,}")
 
-            writer.writerow( [os.path.basename(inputFile), k, theta, A, B, C, D, NMax, jaccard])
+            writer.writerow( [ inputFile, k, theta, A, B, C, D, NMax, jaccard,
+                              leftKeys.size, totalLeft, rightKeys.size, totalRight])
 
     f.close()
 
 
 
 
-def kmerExtraction( inputFile: string, k: int, theta: int):
+def kmerExtraction(inputPath: string, k: int, theta: int):
 
+    inputFile = Path(inputPath).name
     print( "*********************************************************")
-    print( "Extracting kmers from sequence: %s for k: %d and theta: %d" % (Path(inputFile).stem, k, theta))
+    print( "Extracting kmers from sequence: %s for k: %d and theta: %d" % (inputFile, k, theta))
 
     count = {}
     (cnt, subst, totalLen) = (0, 0, 0)
@@ -80,7 +84,7 @@ def kmerExtraction( inputFile: string, k: int, theta: int):
     regex3 = re.compile('[\u0080-\uFFFF]')
 
     allText = ""
-    with open(inputFile, encoding='latin-1') as inFile:
+    with open(inputPath, encoding='latin-1') as inFile:
         for line in inFile:
             # 1) trasforma tutti i caratteri alfanumeri in uppercase
             l0 = line.upper()
@@ -125,7 +129,7 @@ def kmerExtraction( inputFile: string, k: int, theta: int):
     # [print(f"{key}: {value}") for key, value in count.items() if (value > 1)]
 
     print(f"Total Distinct: {len(count.keys()):,} / Total: {last:,} kmers (over {len(basis)**k:,} possible kmers)")
-    return count
+    return (totalLen, count)
 
 
 
@@ -139,7 +143,7 @@ def MoveAwaySequence(inputFile: string, theta: int):
         # return outFile
 
     print( "*********************************************************")
-    print( "Creating sequence: %s from sequence: %s theta: %d" % (Path(outFile).stem, Path(inputFile).stem, theta))
+    print( "Creating sequence: %s from sequence: %s theta: %d" % (Path(outFile).name, Path(inputFile).name, theta))
     print( "*********************************************************")
 
     (written, subst, totLen) = (0, 0, 0)
