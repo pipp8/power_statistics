@@ -540,12 +540,14 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     entropySeqB = EntropyData( totDistinctKmerB, totKmerB, HkB)
 
     euclideanDistance = math.sqrt(totEuclid)
-    print(f"****** Euclid = {euclideanDistance:.4f}, D2 = {totD2:,} ******")
+    euclideanDistanceZ = math.sqrt(totEuclidZ)
+    print(f"****** Euclidean = {euclideanDistance:.4f}, EuclideanZ = {euclideanDistanceZ:.4f} ******")
+    print(f"****** D2 = {totD2:,} D2Z = {totD2Z:.4f} ******")
     print(f"****** Present/Absent = {Acnt:,}, {Bcnt:,}, {Ccnt:,} ******")
     print(f"****** HkA: {entropySeqA.Hk:.5f} HkB: {entropySeqB.Hk:.5f}, totDistinctKmerA: {entropySeqA.totalKmerCnt:,}, totDistinctKmerB: {entropySeqB.totalKmerCnt:,} ******")
 
 # dati3 = runCountBasedMeasures(cnts, k)
-    dati3 =  [totD2, euclideanDistance, 0.0]
+    dati3 =  [totD2, totD2Z, euclideanDistance, euclideanDistanceZ]
 
     # implementazione precedente per avere A, B, e C. Effettuato test i risultati coincidono
     # tot1Acc = sc.accumulator(0)
@@ -606,7 +608,7 @@ def writeHeader( writer):#
         columns2.append( 'A (%d)' % ss)
         columns2.append( 'N (%d)' % ss)
 
-    columns3 = [ 'D2', 'Euclidean', 'Euclid_norm']
+    columns3 = [ 'D2', 'D2Z', 'Euclidean', 'EuclideanZ']
 
     columns4 = ['NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
                 'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
