@@ -14,7 +14,7 @@ cmd="spark-submit --master yarn --deploy-mode client --driver-memory 27g \
 	     Py-Scripts/PySparkPresentAbsent4.py $seqLen $dataDir"
 
 
-logFile="run-$(date '+%s').log"
+logFile="run-${seqLen}-$(date '+%s').log"
 
 echo $cmd > $logFile
 
