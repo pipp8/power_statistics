@@ -10,8 +10,7 @@ import copy
 import subprocess
 import math
 import time
-
-import numpy
+from datetime import datetime as dt
 import numpy as np
 import py_kmc_api as kmc
 
@@ -266,7 +265,7 @@ def processLocalPair( ds, model, seqId, seqLen, gamma, k):
 
 
 
-def runCountBasedMeasures(cnts: numpy.ndarray, k: int, zScoreLeft, zScoreRight):
+def runCountBasedMeasures(cnts: np.ndarray, k: int, zScoreLeft, zScoreRight):
     D2Tot = 0
     D2zTot = 0.0
     EuclidTot = 0
@@ -290,7 +289,7 @@ def runCountBasedMeasures(cnts: numpy.ndarray, k: int, zScoreLeft, zScoreRight):
 
     # NED = NormalizedSquaredEuclideanDistance( cnts)
 
-    return [int(D2Tot), D2zTot, math.sqrt(EuclidTot), math.sqrt(ZEuclidTot)]
+    return [int(D2Tot), float(D2zTot), math.sqrt(EuclidTot), math.sqrt(ZEuclidTot)]
 
 
 
@@ -656,7 +655,7 @@ def main():
         seqLen = int(sys.argv[1])
         dataMode = sys.argv[2] if (argNum > 2) else ""
         hdfsDataDir = '%s/%s/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
-        outFile = '%s/%s/%s-%s.%d-%d.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen, int(time.time()))
+        outFile = '%s/%s/%s-%s.%d-%s.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen, dt.today().strftime("%Y%m%d-%H%M"))
 
     print("hdfsDataDir = %s" % hdfsDataDir)
     

@@ -9,8 +9,13 @@ else
 fi
 
 
-spark-submit --master yarn --deploy-mode client --driver-memory 27g \
+cmd="spark-submit --master yarn --deploy-mode client --driver-memory 27g \
 	     --num-executors 48 --executor-memory 27g --executor-cores 7 \
-	     Py-Scripts/PySparkPresentAbsent4.py $seqLen $dataDir
+	     Py-Scripts/PySparkPresentAbsent4.py $seqLen $dataDir"
 
 
+logFile="run-$(date '+%s').log"
+
+echo $cmd > $logFile
+
+$cmd >> $logFile 2>&1 
