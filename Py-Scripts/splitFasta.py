@@ -4,10 +4,6 @@ import re
 import os
 import sys
 
-writeSequenceHistogram = True
-seqDistDir = 'seqDists'
-
-
 
 def main():
 
@@ -15,11 +11,14 @@ def main():
 
     
     
-def splitFastaSequences( inputFile):
+def splitFastaSequences( fullPath: str, subdir = 'seqDists'):
 
-    if (writeSequenceHistogram):
-        if not os.path.exists(seqDistDir):
-            os.mkdir(seqDistDir)
+    inputFile = os.path.basename(fullPath)
+    baseDir = os.path.dirname(fullPath)
+    seqDistDir = os.path.join(baseDir, subdir)
+
+    if not os.path.exists(seqDistDir):
+        os.mkdir(seqDistDir)
 
     m = re.search(r'^(.*)-(\d+)\.(\d+)(.*).fasta', inputFile)
     if (m is None):
@@ -31,12 +30,14 @@ def splitFastaSequences( inputFile):
         pairsLen = int(m.group(3))
         gValue = m.group(4)
 
-    with open(inputFile) as inFile:
+    results = []
+    with open(fullPath) as inFile:
         for line in inFile:
             m = re.search(r'^>(.+)\.(\d+)(.*)-([AB]$)', line)
             if (m is None):
                 # save file
                 fileName = "%s/%s-%04d.%d%s-%s.fasta" % (seqDistDir, seqName, seqId, pairsLen, gValue, pairId)
+                results.append(fileName)
                 with open(fileName, "w") as outText:
                     outText.write("%s%s" % (hdrLine, line)) # \n are in the original strings
 
@@ -53,6 +54,7 @@ def splitFastaSequences( inputFile):
 
 
     print('')
+    return results
 
 
 

@@ -20,7 +20,7 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.io.BufferedSource
 import scala.math._
 import scala.util.control.Breaks._
-import com. cconcurrentthought.cla._
+import com.cconcurrentthought.cla._
 
 
 

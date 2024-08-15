@@ -9,9 +9,13 @@ import shutil
 import copy
 import subprocess
 import math
+import csv
 
+import numpy
 import numpy as np
 import py_kmc_api as kmc
+
+sys.path.extend(['/usr/local/spark/python/lib/pyspark.zip', '/usr/local/spark/python/lib/py4j-0.10.9.5-src.zip'])
 
 from operator import add
 import pyspark
@@ -20,6 +24,8 @@ from pyspark import SparkFiles
 
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data'
+hdfsPrefixPath = '/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data'
+
 inputRE = '*.fasta'
 spark = []
 
@@ -144,7 +150,7 @@ def sequenceEntropy( seqDict, pairID, totalKmerCnt):
 
 def extractStatistics(cnts):
 
-    (left, right, both ) = (0,0,0)
+    (both, left, right) = (0,0,0)
     for i in range(cnts.shape[1]):
         if (cnts[0, i] == 0):
             if (cnts[1,i] > 0):
@@ -236,9 +242,10 @@ def processLocalPair( ds, model, seqId, seqLen, gamma, k):
 
     kmerDict = None # free dictionary memory (=> counting are no longer necessary)
 
-    dati3 = runCountBasedMeasures(cnts, k)
-
+    (zScoreLeft, zScoreRight) = ZScoreNormalization( cnts, k)
     (bothCnt, leftCnt, rightCnt) = extractStatistics(cnts)
+
+    dati3 = runCountBasedMeasures(cnts, k, zScoreLeft, zScoreRight)
 
     cnts = None # free ndarray with kmer counting
 
@@ -259,16 +266,31 @@ def processLocalPair( ds, model, seqId, seqLen, gamma, k):
 
 
 
-def runCountBasedMeasures(cnts, k):
-    D2totValue = 0
-    EuclideanTotValue = 0
+def runCountBasedMeasures(cnts: numpy.ndarray, k: int, zScoreLeft, zScoreRight):
+    D2Tot = 0
+    D2zTot = 0.0
+    EuclidTot = 0
+    ZEuclidTot = 0
+    (mLeft, stdLeft) = zScoreLeft
+    (mRight, stdRight) = zScoreRight
     for i in range(cnts.shape[1]):
-        D2totValue = D2totValue + cnts[0,i] * cnts[1,i]
-        d = cnts[0,i] - cnts[1,i]
-        EuclideanTotValue = EuclideanTotValue + d * d
+        cl = cnts[0,i]
+        cr = cnts[1,i]
+        D2Tot += cl * cr
+        d = cl - cr
+        EuclidTot += d * d
 
-    NED = NormalizedSquaredEuclideanDistance( cnts)
-    return [int(D2totValue), math.sqrt(EuclideanTotValue), float(NED)]
+        # D2z
+        zcl = (cl - mLeft) / stdLeft
+        zcr = (cr - mRight) / stdRight
+
+        D2zTot += ((cl - mLeft) / stdLeft) * ((cr - mRight) / stdRight)
+        d = zcl - zcr
+        ZEuclidTot += d * d
+
+    # NED = NormalizedSquaredEuclideanDistance( cnts)
+
+    return [int(D2Tot), D2zTot, math.sqrt(EuclidTot), math.sqrt(ZEuclidTot)]
 
 
 
@@ -323,6 +345,32 @@ def NormalizedSquaredEuclideanDistance2( vector):
     return ZEu
 
 
+def ZScoreNormalization( vector :np.ndarray, k : int):
+
+    n = 4 ** k    # numero totale possibili kmers
+
+    # m = np.mean( vector, axis=1) # m[0] = average of vector[0] m[1] = average of vector[1]
+    # N.B. non funziona perche' non include i valori 0
+    # divide solo per il numero di elementi del vettore e non per n 4^k
+    (s0, s1, sq0, sq1) = (0, 0, 0, 0)
+    for i in range( len( vector[0])): # i due vettori hanno sempre la stessa lunghezza
+        v0 = vector[0, i]
+        v1 = vector[1, i]
+        s0 += v0
+        s1 += v1
+        sq0 += v0 * v0
+        sq1 += v1 * v1
+
+    m0 = s0 / n # average value of vector(0) including all 0 values (kmers absent)
+    m1 = s1 / n # average value of vector(1)
+    msqr0 = m0 ** 2 # mu(0)^2
+    msqr1 = m1 ** 2 # mu(1)^2
+
+    # std = sqrt((sum(h(x)^2) - n x m^2) / n)
+    std0 = math.sqrt((sq0 - n * msqr0) / n)
+    std1 = math.sqrt((sq1 - n * msqr1) / n)
+
+    return ((m0, std0), (m1, std1))
 
 # run jaccard on sequence pair ds with kmer of length = k
 def runPresentAbsent(  bothCnt, leftCnt, rightCnt, k):
@@ -656,7 +704,7 @@ def main():
         columns2.append( 'A (%d)' % ss)
         columns2.append( 'N (%d)' % ss)
 
-    columns3 = [ 'D2', 'Euclidean', 'Euclid_norm']
+    columns3 = [ 'D2', 'D2z', 'Euclidean', 'Euclid_norm']
 
     columns4 = ['NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
                 'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
@@ -669,6 +717,19 @@ def main():
 
 
 
+# data program profile:
+# main ->   splitPairs
+#           processPairs -> processLocalPair -> extractKmers(A)
+#                                            -> extractKmers(B)
+#                                            -> loadHistogram(A)    -> kmerDict(kmer, (cnt1, 0))
+#                                            -> loadHistogram(B)    -> kmerDict(kmer, (cnt1, cnt2))
+#                                                                   -> numpy.ndarray cnts(cnt1, cnt2)
+#                                            -> runCountBasedMeasures()
+#                                                                       -> NormalizedSquaredEuclideanDistance()
+#                                            -> extractStatistics()
+#                                            -> runPresentAbsent()
+#                                            -> runMash()
+#                                            -> entropyData()
 
 
 

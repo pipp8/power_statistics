@@ -1,26 +1,32 @@
-#! /usr/bin/python3
+#! /usr/local/bin/python3
 import re
 import os
 import os.path
 import sys
 import glob
-import csv
+import tempfile
+import shutil
+import copy
 import subprocess
 import math
+import csv
 
+import numpy
 import numpy as np
 import py_kmc_api as kmc
 
+import splitFasta
 
+hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data'
+hdfsPrefixPath = '/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data'
 
-
-hdfsPrefixPath = '/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data/PresentAbsent/8,32/tt'
 inputRE = '*.fasta'
+spark = []
 
 # models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
 models = ['ShuffledEColi', 'MotifRepl-Sh', 'PatTransf-Sh', 'ShuffledEColi-T1']
-# lengths = range(1000, 50001, 1000) # small dataset
-# gVals = [10, 50, 100]
+#lengths = range(1000, 50001, 1000) # small dataset
+#gVals = [10, 50, 100]
 nTests = 1000
 minK = 4
 maxK = 32
@@ -56,9 +62,25 @@ class MashData:
             self.N = 0
 
 
+def checkPathExists(path: str) -> bool:
+    global hdfsDataDir, spark
+    # spark is a SparkSession
+    sc = spark.sparkContext
+    fs = sc._jvm.org.apache.hadoop.fs.FileSystem.get(
+        sc._jvm.java.net.URI.create(hdfsDataDir),
+        sc._jsc.hadoopConfiguration(),)
+    return fs.exists(sc._jvm.org.apache.hadoop.fs.Path(path))
 
-# load histogram for both sequences (for ordinary measures such as D2)
-def loadHistogram(kmerDict, histFile, pairId):
+
+def hamming_distance(seq1: str, seq2: str) -> int:
+    return sum(c1 != c2 for c1, c2 in zip(seq1, seq2))
+
+def hamming_distance2(seq1: str, seq2: str) -> int:
+    return len(list(filter(lambda x : ord(x[0])^ord(x[1]), zip(seq1, seq2))))
+
+
+# load histogram for both sequences (for counter based measures such as D2)
+def loadHistogram(kmerDict: dict, histFile: str, pairId: str):
 
     ndx = 0 if pairId == 'A' else 1
     kmcFile = kmc.KMCFile()
@@ -122,20 +144,20 @@ def sequenceEntropy( seqDict, pairID, totalKmerCnt):
 
 def extractStatistics(cnts):
 
-    (left, right, both ) = (0,0,0)
+    (both, left, right) = (0,0,0)
     for i in range(cnts.shape[1]):
-        if cnts[0, i] == 0:
-            if cnts[1, i] > 0:
+        if (cnts[0, i] == 0):
+            if (cnts[1,i] > 0):
                 right += 1  # presente solo a destra
             else:
                 raise ValueError("double 0 in kmer histogram")
         else:
-            if cnts[1, i] == 0:
+            if (cnts[1,i] == 0):
                 left += 1   # solo a sinistra
             else:
                 both += 1   # in entrambi
 
-    return ( both, left, right)
+    return( both, left, right)
 
 
 
@@ -163,6 +185,7 @@ def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
     # -sr<value> - number of threads for 2nd stage
     # -hp - hide percentage progress (default: false)
 
+    # N.B. -b ==> NON canonici
     cmd = "/usr/local/bin/kmc -b -hp -k%d -m2 -fm -ci0 -cs1048575 -cx1000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
     p = subprocess.Popen(cmd.split())
     p.wait()
@@ -175,6 +198,7 @@ def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
     # print("cmd: %s returned: %s" % (cmd, p.returncode))
 
     return
+
 
 
 
@@ -212,9 +236,10 @@ def processLocalPair( ds, model, seqId, seqLen, gamma, k):
 
     kmerDict = None # free dictionary memory (=> counting are no longer necessary)
 
-    dati3 = runCountBasedMeasures(cnts, k)
-
+    (zScoreLeft, zScoreRight) = ZScoreNormalization( cnts, k)
     (bothCnt, leftCnt, rightCnt) = extractStatistics(cnts)
+
+    dati3 = runCountBasedMeasures(cnts, k, zScoreLeft, zScoreRight)
 
     cnts = None # free ndarray with kmer counting
 
@@ -235,16 +260,31 @@ def processLocalPair( ds, model, seqId, seqLen, gamma, k):
 
 
 
-def runCountBasedMeasures(cnts, k):
-    D2totValue = 0
-    EuclideanTotValue = 0
+def runCountBasedMeasures(cnts: numpy.ndarray, k: int, zScoreLeft, zScoreRight):
+    D2Tot = 0
+    D2zTot = 0.0
+    EuclidTot = 0
+    ZEuclidTot = 0
+    (mLeft, stdLeft) = zScoreLeft
+    (mRight, stdRight) = zScoreRight
     for i in range(cnts.shape[1]):
-        D2totValue = D2totValue + cnts[0,i] * cnts[1,i]
-        d = cnts[0,i] - cnts[1,i]
-        EuclideanTotValue = EuclideanTotValue + d * d
+        cl = cnts[0,i]
+        cr = cnts[1,i]
+        D2Tot += cl * cr
+        d = cl - cr
+        EuclidTot += d * d
 
-    NED = NormalizedSquaredEuclideanDistance( cnts)
-    return [int(D2totValue), math.sqrt(EuclideanTotValue), float(NED)]
+        # D2z
+        zcl = (cl - mLeft) / stdLeft
+        zcr = (cr - mRight) / stdRight
+
+        D2zTot += ((cl - mLeft) / stdLeft) * ((cr - mRight) / stdRight)
+        d = zcl - zcr
+        ZEuclidTot += d * d
+
+    # NED = NormalizedSquaredEuclideanDistance( cnts)
+
+    return [int(D2Tot), D2zTot, math.sqrt(EuclidTot), math.sqrt(ZEuclidTot)]
 
 
 
@@ -285,15 +325,54 @@ def NormalizedSquaredEuclideanDistance( vector):
     return NED
 
 
+def NormalizedSquaredEuclideanDistance2( vector):
+    avg = np.mean( vector, axis=1)
+    std = np.std( vector, axis=1)
+
+    z0_np = (vector[0] - avg[0]) / std[0]
+    z1_np = (vector[1] - avg[1]) / std[1]
+    tot = 0
+    for i in range(vector.shape[1]):
+        tot += ((z0_np[i] - z1_np[i]) ** 2)
+
+    ZEu = tot ** 0.5
+    return ZEu
+
+
+def ZScoreNormalization( vector :np.ndarray, k : int):
+
+    n = 4 ** k    # numero totale possibili kmers
+
+    # m = np.mean( vector, axis=1) # m[0] = average of vector[0] m[1] = average of vector[1]
+    (s0, s1, sq0, sq1) = (0, 0, 0, 0)
+    for i in range( len( vector[0])): # i due vettori hanno sempre la stessa lunghezza
+        v0 = vector[0, i]
+        v1 = vector[1, i]
+        s0 += v0
+        s1 += v1
+        sq0 += v0 * v0
+        sq1 += v1 * v1
+
+    m0 = s0 / n # average value of vector(0) including all 0 values (kmers absent)
+    m1 = s1 / n # average value of vector(1)
+    msqr0 = m0 ** 2 # mu(0)^2
+    msqr1 = m1 ** 2 # mu(1)^2
+
+    # std = sqrt((sum(h(x)^2) - n x m^2) / n)
+    std0 = math.sqrt((sq0 - n * msqr0) / n)
+    std1 = math.sqrt((sq1 - n * msqr1) / n)
+
+    return ((m0, std0), (m1, std1))
+
 
 
 # run jaccard on sequence pair ds with kmer of length = k
 def runPresentAbsent(  bothCnt, leftCnt, rightCnt, k):
 
     print("left: %d, right: %d" % (leftCnt, rightCnt))
-    A = bothCnt
-    B = leftCnt
-    C = rightCnt
+    A = int(bothCnt)
+    B = int(leftCnt)
+    C = int(rightCnt)
 
     NMax = pow(4, k)
     M01M10 = leftCnt + rightCnt
@@ -396,8 +475,8 @@ def runPresentAbsent(  bothCnt, leftCnt, rightCnt, k):
     # salva il risultato nel file CSV
     # dati present / absent e distanze present absent
     data1 = [ A, B, C, str(D), str(NMax),
-             anderberg, antidice, dice, gower, hamman, hamming, jaccard,
-             kulczynski, matching, ochiai, phi, russel, sneath, tanimoto, yule]
+              anderberg, antidice, dice, gower, hamman, hamming, jaccard,
+              kulczynski, matching, ochiai, phi, russel, sneath, tanimoto, yule]
 
     return data1
 
@@ -439,10 +518,12 @@ def runMash(inputDS1, inputDS2, k):
 
 
 
+
 def entropyData(entropySeqA, entropySeqB):
     # dati errore entropia e rappresentazione present/absent
     return  [entropySeqA.nKeys, 2 * entropySeqA.totalKmerCnt, entropySeqA.getDelta(), entropySeqA.Hk, entropySeqA.getError(),
              entropySeqB.nKeys, 2 * entropySeqB.totalKmerCnt, entropySeqB.getDelta(), entropySeqB.Hk, entropySeqB.getError()]
+
 
 
 
@@ -461,60 +542,125 @@ def saveSingleSequence(prefix, seq, header, sequence):
 
 
 # processo una coppia del tipo (id, (hdrA, seqA), (hdrB, seqB))
-def processPairs( pair):
-    dataset = pair[0]   # sequenza A
-    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*)-A.fasta', dataset)
+def processPairs(pair):
+
+    tempDir = os.path.dirname(pair[0])
+    filename = os.path.splitext(os.path.basename(pair[0]))[0]
+    filename = filename[:len(filename)-2]
+
+    # dataset = seqPair[0]
+    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*)', filename)
     if (m is None):
-        raise ValueError("Malformed sequences pair (name=<%s>)" % dataset)
+        raise ValueError("Malformed sequences pair (name=<%s>)" % filename)
     else:
-        model = os.path.basename(m.group(1))
-        pairId = int(m.group(2))
+        model = m.group(1)
+        seqId = int(m.group(2))
         seqLen = int(m.group(3))
         gamma = m.group(4)
 
-    # process local file system temporary directory
+    # header = seqPair[1][0]
+    # m = re.search(r'^>(.+)\.(\d+)(.*)-([AB]$)', header)
+    # if (m is not None):
+    #     # seqName = m.group(1)
+    #     seqId = int(m.group(2))
+    #     # gValue = m.group(3)
+    #     pairId = m.group(4)
+    #
+    # # process local file system temporary directory
     # tempDir = tempfile.mkdtemp()
-    tempDir = os.path.dirname(dataset)
 
     # common prefix
-    fileNamePrefix = "%s/%s-%04d.%d%s" % (tempDir, model, pairId, seqLen, gamma)
+    fileNamePrefix = "%s/%s-%04d.%d%s" % (tempDir, model, seqId, seqLen, gamma)
+    # save sequence seqId-A
+    # saveSingleSequence(fileNamePrefix, 'A', seqPair[1][0], seqPair[1][1])
+    # save sequence seqId-B
+    # saveSingleSequence(fileNamePrefix, 'B', seqPair[2][0], seqPair[2][1])
 
     results = []
-    for k in range(minK, maxK+1, stepK):
+    for k in range( minK, maxK+1, stepK):
+        print("**** starting local computation for k = %d *****" % k)
         # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
         g = float(gamma[3:]) if (len(gamma) > 0) else 0.0
-        row = processLocalPair(fileNamePrefix, model, pairId, seqLen, g, k)
-        # for i in range(len(row)):
-        #     print(i, type(row[i]))
-        results.append(row)
+        results.append(processLocalPair(fileNamePrefix, model, seqId, seqLen, g, k))
 
     # clean up
     # do not remove dataset on hdfs
     # remove histogram files (A & B) + mash sketch file and kmc temporary files
-    # try:
-    #     print("Cleaning temporary directory %s" % (tempDir))
-    #     shutil.rmtree(tempDir)
-    # except OSError as e:
-    #     print("Error removing: %s: %s" % (tempDir, e.strerror))
+    try:
+        print("Cleaning temporary directory %s" % (tempDir))
+        shutil.rmtree(tempDir)
+    except OSError as e:
+        print("Error removing: %s: %s" % (tempDir, e.strerror))
 
     return results
 
 
-def main():
-    global hdfsDataDir, hdfsPrefixPath,  outFilePrefix
-    
-    # argNum = len(sys.argv)
-    # if (argNum < 2 or argNum > 3):
-    #     """
-    #         Usage: LocalPresentAbsent4 seqLength [dataMode]
-    #     """
-    # else:
-    seqLen = 1000   # int(sys.argv[1])
-    # dataMode = sys.argv[2] if (argNum > 2) else ""
-    hdfsDataDir = hdfsPrefixPath   # '%s-%s-1000/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
-    outFile = '%s/dataset.%d.csv' % (hdfsPrefixPath, seqLen)
 
-    columns0 = ['model', 'gamma', 'seqLen', 'pairId', 'k']  # dati 0
+# produce a list of sequence pairs with len nSeq
+def splitPairs(ds):
+
+    m = re.search(r'^(.*)-(\d+)\.(\d+)(.*).fasta', os.path.basename(ds[0]))
+    if (m is None):
+        raise ValueError("Malformed file name <%s>" % ds[0])
+    else:
+        model = m.group(1)
+        nPair = int(m.group(2))
+        seqLen = int(m.group(3))
+        gamma = m.group(4)
+
+    # print("Splitting dataset: %s@%s" % (ds[0], os.uname()[1]))
+
+    lines = ds[1].split()
+    if (len(lines) != 4):
+        raise ValueError("missing sequence data (len = %d)" % len(lines))
+
+    ids = ['A', 'B']
+    seqPair = [ 'name', [ 'header', 'sequenceA'], ['headerB', 'sequenceB']]
+    seqLabel = "%s-%d.%d%s" % (model, nPair, seqLen, gamma) #uguale per tutto il dataset
+    seqPair[0] = seqLabel
+    for seq in range(2):
+        header = lines[2*seq]
+        m = re.search(r'^>(.+)\.(\d+)(.*)-([AB]$)', header)
+        if (m is not None):
+            # seqName = m.group(1) e gValue = m.group(3) sono unici per l'intero file
+            seqId = int(m.group(2))
+            pairId =  m.group(4)
+        else:
+            raise ValueError("Malformed sequence header: %s" % header)
+
+        seqPair[seq+1][0] = header
+        if (pairId != ids[seq]):
+            raise ValueError("sequence out of order %s vs %s" % (pairId, ids[seq]))
+
+        sequence = lines[2*seq + 1]
+        seqPair[seq+1][1] = sequence
+
+    return seqPair
+
+
+
+
+
+
+def main():
+    global hdfsDataDir, hdfsPrefixPath,  outFilePrefix, spark
+
+    argNum = len(sys.argv)
+    if (argNum < 2 or argNum > 3):
+        """
+            Usage: PySparkPresentAbsent4 seqLength [dataMode]
+        """
+    else:
+        seqLen = int(sys.argv[1])
+        dataMode = sys.argv[2] if (argNum > 2) else ""
+        hdfsDataDir = '%s/%s/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
+        outFile = '%s/%s/%s-%s.%d.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen)
+
+    print("hdfsDataDir = %s" % hdfsDataDir)
+
+    inputDataset = '%s/%s' % (hdfsDataDir, inputRE)
+
+    columns0 = ['model', 'gamma', 'seqLen', 'pairId', 'k'] # dati 0
     columns1 = [ 'A', 'B', 'C', 'D', 'N',
                  'Anderberg', 'Antidice', 'Dice', 'Gower', 'Hamman', 'Hamming',
                  'Jaccard', 'Kulczynski', 'Matching', 'Ochiai',
@@ -522,15 +668,17 @@ def main():
 
     columns2 = []
     for ss in sketchSizes:
-        columns2.append('Mash Pv (%d)' % ss)
-        columns2.append('Mash Distance(%d)' % ss)
-        columns2.append('A (%d)' % ss)
-        columns2.append('N (%d)' % ss)
+        columns2.append( 'Mash Pv (%d)' % ss)
+        columns2.append( 'Mash Distance(%d)' % ss)
+        columns2.append( 'A (%d)' % ss)
+        columns2.append( 'N (%d)' % ss)
 
-    columns3 = [ 'D2', 'Euclidean', 'Euclid-norm']
+    columns3 = [ 'D2', 'D2z', 'Euclidean', 'Euclid_norm']
 
     columns4 = ['NKeysA', '2*totalCntA', 'deltaA', 'HkA', 'errorA',
                 'NKeysB', '2*totalCntB', 'deltaB', 'HkB', 'errorB']
+
+    import splitFasta
 
     with open(outFile, 'w', encoding='UTF8', newline='') as f:
         writer = csv.writer(f)
@@ -540,11 +688,28 @@ def main():
 
         inputDataset = glob.glob( '%s/%s' % (hdfsDataDir, inputRE))
         inputDataset.sort()   # necessario perchè glob produce un output disordinato
-        a = iter(inputDataset)
-        for pair in zip(a, a):    # processa la lista a coppie
+        dataset = iter(inputDataset)
+        for ds in dataset:    # processa la lista a coppie
             # write multiple rows
+            tmpDir = 'seqDists'
+            pair = splitFasta.splitFastaSequences(ds,tmpDir)
             writer.writerows(processPairs(pair))
 
+
+
+# data program profile:
+# main ->   splitPairs
+#           processPairs -> processLocalPair -> extractKmers(A)
+#                                            -> extractKmers(B)
+#                                            -> loadHistogram(A)    -> kmerDict(kmer, (cnt1, 0))
+#                                            -> loadHistogram(B)    -> kmerDict(kmer, (cnt1, cnt2))
+#                                                                   -> numpy.ndarray cnts(cnt1, cnt2)
+#                                            -> runCountBasedMeasures()
+#                                                                       -> NormalizedSquaredEuclideanDistance()
+#                                            -> extractStatistics()
+#                                            -> runPresentAbsent()
+#                                            -> runMash()
+#                                            -> entropyData()
 
 
 
