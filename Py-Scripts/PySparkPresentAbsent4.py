@@ -9,7 +9,7 @@ import shutil
 import copy
 import subprocess
 import math
-import csv
+import time
 
 import numpy
 import numpy as np
@@ -24,21 +24,21 @@ from pyspark import SparkFiles
 
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data'
-hdfsPrefixPath = '/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data'
+# hdfsPrefixPath = '/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data'
 
 inputRE = '*.fasta'
 spark = []
 
 # models = ['Uniform', 'MotifRepl-U', 'PatTransf-U', 'Uniform-T1']
-models = ['ShuffledEColi', 'MotifRepl-Sh', 'PatTransf-Sh', 'ShuffledEColi-T1']
-#lengths = range(1000, 50001, 1000) # small dataset
-#gVals = [10, 50, 100]
+# models = ['ShuffledEColi', 'MotifRepl-Sh', 'PatTransf-Sh', 'ShuffledEColi-T1']
+# lengths = range(1000, 50001, 1000) # small dataset
+# gVals = [10, 50, 100]
 nTests = 1000
 minK = 4
 maxK = 32
 stepK = 4
 sketchSizes = [1000, 10000, 100000]
-outFilePrefix = 'PresentAbsentECData'
+outFilePrefix = 'PresentAbsentData'
 
 
 class EntropyData:
@@ -656,7 +656,7 @@ def main():
         seqLen = int(sys.argv[1])
         dataMode = sys.argv[2] if (argNum > 2) else ""
         hdfsDataDir = '%s/%s/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
-        outFile = '%s/%s/%s-%s.%d.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen)
+        outFile = '%s/%s/%s-%s.%d-%d.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen, int(time.time()))
 
     print("hdfsDataDir = %s" % hdfsDataDir)
     
