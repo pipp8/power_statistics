@@ -365,9 +365,16 @@ def ZScoreNormalization( vector :np.ndarray, k : int):
     msqr0 = m0 ** 2 # mu(0)^2
     msqr1 = m1 ** 2 # mu(1)^2
 
-    # std = sqrt((sum(h(x)^2) - n x m^2) / n)
-    std0 = math.sqrt((sq0 - n * msqr0) / n)
-    std1 = math.sqrt((sq1 - n * msqr1) / n)
+    try:
+        # std = sqrt((sum(h(x)^2) - n x m^2) / n)
+        std0 = math.sqrt((sq0 - n * msqr0) / n)
+        std1 = math.sqrt((sq1 - n * msqr1) / n)
+    except ValueError:  # Square root of a negative number.
+        print(f"**** ValueError: Math domain error for k:{k} ****")
+        print(f"**** sq0:{sq0} nxmu0{n * msqr0} ****")
+        print(f"**** sq1:{sq1} nxmu1{n * msqr1} ****")
+        std0 = 1
+        std1 = 1
 
     return ((m0, std0), (m1, std1))
 
