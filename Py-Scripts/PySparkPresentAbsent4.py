@@ -344,15 +344,15 @@ def NormalizedSquaredEuclideanDistance2( vector):
     return ZEu
 
 
-def ZScoreNormalization( vector :np.ndarray, k : int):
+def ZScoreNormalization( vector: np.ndarray, k: int):
 
-    n = 4 ** k    # numero totale possibili kmers
-
+    # n = 4 ** k    # numero totale possibili kmers
+    n = len( vector[0])
     # m = np.mean( vector, axis=1) # m[0] = average of vector[0] m[1] = average of vector[1]
     # N.B. non funziona perche' non include i valori 0
     # divide solo per il numero di elementi del vettore e non per n 4^k
     (s0, s1, sq0, sq1) = (0, 0, 0, 0)
-    for i in range( len( vector[0])): # i due vettori hanno sempre la stessa lunghezza
+    for i in range( n): # i due vettori hanno sempre la stessa lunghezza
         v0 = vector[0, i]
         v1 = vector[1, i]
         s0 += v0
@@ -371,8 +371,8 @@ def ZScoreNormalization( vector :np.ndarray, k : int):
         std1 = math.sqrt((sq1 - n * msqr1) / n)
     except ValueError:  # Square root of a negative number.
         print(f"**** ValueError: Math domain error for k:{k} ****")
-        print(f"**** sq0:{sq0} nxmu0{n * msqr0} ****")
-        print(f"**** sq1:{sq1} nxmu1{n * msqr1} ****")
+        print(f"**** sq0:{sq0} nxmu0:{n * msqr0} ****")
+        print(f"**** sq1:{sq1} nxmu1:{n * msqr1} ****")
         std0 = 1
         std1 = 1
 
