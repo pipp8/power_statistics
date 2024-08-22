@@ -341,11 +341,11 @@ def NormalizedSquaredEuclideanDistance2( vector):
 
 def ZScoreNormalization( vector :np.ndarray, k : int):
 
-    n = 4 ** k    # numero totale possibili kmers
-
+    # n = 4 ** k    # numero totale possibili kmers
+    n = len(vector[0])
     # m = np.mean( vector, axis=1) # m[0] = average of vector[0] m[1] = average of vector[1]
     (s0, s1, sq0, sq1) = (0, 0, 0, 0)
-    for i in range( len( vector[0])): # i due vettori hanno sempre la stessa lunghezza
+    for i in range( n): # i due vettori hanno sempre la stessa lunghezza
         v0 = vector[0, i]
         v1 = vector[1, i]
         s0 += v0

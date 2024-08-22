@@ -72,12 +72,16 @@ TerminologyServer <- function( key) {
 measure_names <- function( measure) {
   ris <- c()
   for( m in measure) {
-    ris <- c(ris , str_to_title( switch( m,
+    if (m != "D2") {
+      ris <- c(ris , str_to_title( switch( m,
                                          'Mash.Distance.1000.' = 'Mash (sz=10^3)',
                                          'Mash.Distance.10000.' = 'Mash (sz=10^4)',
                                          'Mash.Distance.100000.' = 'Mash (sz=10^5)',
                                          m)))
+    }
   }
+  # mette D2 in prima posizione
+  ris <- c("D2", ris)
   return( ris)
 }
 
@@ -146,11 +150,15 @@ scales_y <- list(
 measure_names <- function( measure) {
   ris <- c()
   for( m in measure) {
-    ris <- c(ris , str_to_title( switch( m,
+    if (as.character(m) != "D2") {
+      ris <- c(ris , str_to_title( switch( m,
                                          'Mash.Distance.1000.' = 'Mash (sz=10^3)',
                                          'Mash.Distance.10000.' = 'Mash (sz=10^4)',
                                          'Mash.Distance.100000.' = 'Mash (sz=10^5)',
                                          m)))
+    } else {
+      ris <- c("D2", ris)
+    }
   }
   return( ris)
 }
@@ -164,10 +172,10 @@ for( a in c( 0.01, 0.05, 0.10)) { # alpha values
   MaxT1 <- switch( sprintf("%.2f", a), "0.01" = 0.050, "0.05" = 0.150, "0.10" = 0.3) # fattore di amplificazione del valore di T1
   cat(sprintf("%.3f - %.3f\n", a, MaxT1))
 
-  dff <- filter(df, df$alpha == a & df$gamma == 0.10 & df$Model == AM) # T1 Error Check does not depend on gamma and Alternate Model
+  dff <- filter(df, df$alpha == a & df$gamma == 0.10 & df$Model == AM & df$Measure != "Euclidean") # T1 Error Check does not depend on gamma and Alternate Model
 
-  dff$measure2 <- dff$Measure
-  levels(dff$measure2) <- measure_names(levels(dff$Measure))
+  # dff$measure2 <- dff$Measure
+  dff$measure2 <- factor(dff$Measure, levels = measure_names(levels(dff$Measure)))
   dff$k <- factor(dff$k)
 
   sp <- ggplot( dff, aes(x = measure2, y = T1)) +
@@ -210,6 +218,7 @@ for (gammaTgt in gammaValues) {
     # solo per alpha = 0.10
     dff <- filter(df, df$alpha == alphaTgt & df$Model == am & df$gamma == gammaTgt) # tutte le misure per uno specifico AM, un valore di alpha ed un valore di gamma
     dff$k <- factor(dff$k)
+    dff$Measure <- factor(dff$Measure, levels = measure_names(levels(dff$Measure)))
 
     sp <- ggplot( dff, aes( x = len, y = power, alpha=0.8)) +
       geom_point( aes( color = k), alpha = 0.8, size = 1.1) +
