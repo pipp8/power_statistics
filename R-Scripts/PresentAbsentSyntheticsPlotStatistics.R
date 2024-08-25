@@ -189,7 +189,7 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
     kValues = levels(tgtDF$k)
     measures <- levels(factor(tgtDF$Measure))
 
-    cat(sprintf("Data Frame %s converted (%d observations).\n", sequenceName, nrow(tgtDF) - cnt * dfSize))
+    cat(sprintf("Data Frame %s filtered (%d observations).\n", sequenceName, nrow(tgtDF) - cnt * dfSize))
     # tgtDF$Theta = factor(tgtDF$Theta)
 
     df_total = data.frame()
