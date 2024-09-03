@@ -376,7 +376,7 @@ for( sequenceName in genomes) {
   sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
     geom_line(aes(color = k)) +
     geom_point() +
-    geom_text(aes(label = round(density, 2)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
+    geom_text(aes(label = round(density, 2)), size = 5, nudge_y = 0.2, show.legend = FALSE) +
     facet_grid( rows = vars(k), labeller = labeller( k = label_both)) +
     scale_y_continuous(name = "A/N",
                        breaks=c(0, 0.5, 1),
@@ -491,13 +491,14 @@ sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
   theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
                         axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                         panel.spacing=unit(0.1, "lines"),
-                        legend.position = "none") +
-  #                        axis.text.y = element_blank(),
-  #                        axis.title.y = element_blank()) +
+                        legend.position = "none",
+                        axis.text.y = element_blank(),
+                        axis.title.y = element_blank(),
+                        axis.title.x = element_blank())
   # scale_y_continuous(name = "CV")
   #                    breaks=c(0, 0.5, 1),
   #                    labels=c("0", "0.5", "1")) +
-  labs(y = "CV 1:11")
+  # labs(y = "CV 1:11")
 
 outfname <- sprintf( "%s/PanelCV-all.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
@@ -511,14 +512,14 @@ df = filter(cvDF, Measure == "Euclidean" & type == "all")
 sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
   geom_point(size = 0.8, aes(color = k)) +
   facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
-  theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                        panel.spacing=unit(0.1, "lines"),
-                        legend.position = "none",
-                        axis.title.y = element_blank(),
-                        axis.text.y = element_blank(),
-                        strip.text.y = element_blank()) +
-  labs( x = " ")
+  theme_light() + theme( legend.position = "none",
+                         panel.spacing = unit(0.1, "lines"),
+                         axis.title.x = element_blank(),
+                         axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                         strip.text.x = element_text( size = 8, angle = 0),
+                         axis.title.y = element_blank(),
+                         axis.text.y = element_blank(),
+                         strip.text.y = element_blank())
 
 outfname <- sprintf( "%s/PanelCVEuclid.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 0.9, height = 6, units = "in", dpi = 300)
@@ -530,13 +531,15 @@ df = filter(cvDF, Measure == "D2" & type == "all")
 sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
   geom_point(size = 0.8, aes(color = k)) +
   facet_grid( rows = vars(k), cols = vars(Measure), , labeller = labeller( k = label_both)) +
-  theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                        panel.spacing=unit(0.1, "lines"),
+  theme_light() + theme(panel.spacing=unit(0.1, "lines"),
                         legend.position = "none",
+                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                        axis.title.x = element_blank(),
+                        strip.text.x = element_text( size = 8, angle = 0),
                         axis.text.y = element_blank(),
                         strip.text.y = element_blank()) +
-  labs( x = " ", y = "Cofficiente di Variazione")
+
+  labs( y = "Variability Index")
 
 outfname <- sprintf( "%s/PanelCVD2.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
@@ -560,7 +563,7 @@ for( i in 1:5) {
     # scale_y_continuous(name = "CV")
     #                    breaks=c(0, 0.5, 1),
     #                    labels=c("0", "0.5", "1")) +
-    labs( x = " ", y = sprintf("Cofficiente di Variazione (%s)", elements[i]))
+    labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
 
   outfname <- sprintf( "%s/PanelCV-all-zoom%d.pdf", dirname,i)
   ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
@@ -579,7 +582,7 @@ for( i in 1:5) {
     #                      axis.title.y = element_blank(),
     #                      axis.text.y = element_blank(),
     #                      strip.text.y = element_blank()) +
-    labs( x = " ", y = sprintf("Cofficiente di Variazione (%s)", elements[i]))
+    labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
 
 outfname <- sprintf( "%s/PanelCVEuclid-zoom%d.pdf", dirname, i)
   ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
@@ -597,7 +600,7 @@ outfname <- sprintf( "%s/PanelCVEuclid-zoom%d.pdf", dirname, i)
                           legend.position = "none") +
     #                      axis.text.y = element_blank(),
     #                      strip.text.y = element_blank()) +
-    labs( x = " ", y = sprintf("Cofficiente di Variazione (%s)", elements[i]))
+    labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
 
   outfname <- sprintf( "%s/PanelCVD2-zoom%d.pdf", dirname,i)
   ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
@@ -619,7 +622,7 @@ sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = type)) +
   # scale_y_continuous(name = "CV")
   #                    breaks=c(0, 0.5, 1),
   #                    labels=c("0", "0.5", "1")) +
-  labs( x = " ", y = "Cofficiente di Variazione")
+  labs( x = " ", y = "Variability Index")
 
 outfname <- sprintf( "%s/PanelCV-all-zoomall.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
@@ -635,9 +638,9 @@ df$Genome <- factor(df$Genome, levels = sortedGenomes)
 sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
   geom_line(aes(color = k)) +
   geom_point() +
-  geom_text(aes(label = round(density, 1)), size = 1.5, nudge_y = 0.2, show.legend = FALSE) +
+  geom_text(aes(label = round(density, 1)), size = 1.8, nudge_y = 0.2, show.legend = FALSE) +
   facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both)) +
-  scale_y_continuous(name = "Density (A/N)",
+  scale_y_continuous(name = "Genome A/N Values",
                      breaks=c(0, 0.5, 1),
                      labels=c("0", "0.5", "1")) +
   theme_light() + theme( panel.spacing=unit(0.2, "lines"),

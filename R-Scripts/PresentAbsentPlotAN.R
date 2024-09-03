@@ -3,7 +3,7 @@ library(ggplot2)
 library(stringr)
 library(dplyr)
 library(RColorBrewer)
-library(facetscales)
+
 
 
 
@@ -26,16 +26,23 @@ setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 # Sets the name of the file containing the input dataframe
 dfFilename <- "PresentAbsent-RawData.RDS"
-dfFilename <- "PresentAbsentEC-RawData.RDS"
-csvFilename <- 'PresentAbsentData-all.csv'
-nullModel <- 'Uniform'
 csvFilename <- 'PresentAbsentECData.csv'
-nullModel <- 'ShuffledEColi'
+# nullModel <- 'ShuffledEColi'
+nullModel <- 'Uniform'
 T1Model <- paste( sep='', nullModel, '-T1')
 
 # Sets the output path for the images to be generated
 
-dirname <- "PlotAN2"
+setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
+
+bs <- "uniform"
+
+# Sets the name of the file containing the input dataframe
+dfFilename <- sprintf( "%s,32/%s", bs, dfFilename)
+
+# Sets the output path for the images to be generated
+dirname <- sprintf("%s,32/T1+Power-Plots", bs)
+
 if (!dir.exists(dirname)) {
   dir.create(dirname)
 }
@@ -101,41 +108,62 @@ alphaValues <- c( 0.01, 0.05, 0.10)
 dati$kf = factor(dati$k)
 dati$lf = factor(dati$seqLen)
 
-for (kvf in levels(factor(dati$k))) {
-    kv = as.integer( kvf)
-	# solo per alpha = 0.10
-    NM <- filter(dati, dati$k == kv & dati$model == nullModel) # tutte le misure per uno specifico AM e valore di alpha
-    dff <- filter(dati, dati$k == kv & dati$model != T1Model & dati$model != nullModel) # tutte le misure per uno specifico AM e valore di alpha
+NM <- filter(dati, dati$model == nullModel) # tutte le misure per uno specifico AM e valore di alpha
+dff <- filter(dati, dati$model != T1Model & dati$model != nullModel) # tutte le misure per uno specifico AM e valore di alpha
 
-    NM$gamma <- 0.01
-    dff <- rbind( dff, NM)
-    NM$gamma <- 0.05
-    dff <- rbind( dff, NM)
-    NM$gamma <- 0.10
-    dff <- rbind( dff, NM)
+NM$gamma <- 0.01
+dff <- rbind( dff, NM)
+NM$gamma <- 0.05
+dff <- rbind( dff, NM)
+NM$gamma <- 0.10
+dff <- rbind( dff, NM)
 
-    md = levels(dff$model)
-    dff$model <- factor(dff$model, levels = c( md[3], md[1], md[2])) # riordina le labels
+md = levels(dff$model)
+dff$model <- factor(dff$model, levels = c( md[3], md[1], md[2])) # riordina le labels
+dff$k = factor(dff$k)
 
-    cat(sprintf("k = %d -> %d rows\n", kv, nrow(dff)))
+sp <- ggplot( dff, aes(x = lf, y = A/N, alpha=0.8)) +
+      geom_boxplot( aes( color = model), alpha = 0.7, outlier.size = 0.3) +
+      facet_grid(cols = vars(gamma), rows = vars(k)) +
+      # facet_grid_sc(rows = vars( gamma), scales = 'free') +
+      scale_y_continuous(name = "A/N") +
+      scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                            labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
+      # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+      #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
+      theme_light() + theme(strip.text.x = element_text( size = 8),
+                            axis.text.x = element_text( size = rel( 0.8)),
+                            axis.text.y = element_text( size = rel( 0.8)),
+                            panel.spacing=unit(0.1, "lines")) +
+      guides(colour = guide_legend(override.aes = list(size=1)))
+      # ggtitle( am)
 
-    sp <- ggplot( dff, aes(x = lf, y = A/N, alpha=0.8)) +
-          geom_boxplot( aes( color = model), alpha = 0.7, outlier.size = 0.3) +
-          facet_grid(rows = vars(gamma)) +
-          # facet_grid_sc(rows = vars( gamma), scales = 'free') +
-          # scale_x_continuous(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-          #                   labels=c("", "1e+4", "", "1e+6", ""), limits = c(1000, 10000000), trans='log10') +
-          scale_y_continuous(name = "A/N") +
-          theme_light() + theme(strip.text.x = element_text( size = 8, angle = 70),
-                       axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                       panel.spacing=unit(0.1, "lines")) +
-          guides(colour = guide_legend(override.aes = list(size=1)))
-          # ggtitle( am)
-    
-	# dev.new(width = 9, height = 6)
-	# print(sp)
-	# stop("break")
-	outfname <- sprintf( "%s/PanelAN-k=%d.pdf", dirname, kv)
-	ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
-	dev.off() #only 129kb in size
-}
+# dev.new(width = 9, height = 6)
+# print(sp)
+outfname <- sprintf( "%s/PanelAN.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+dev.off() #only 129kb in size
+
+NM$k = factor(NM$k)
+
+# boxplot solo per il null model
+sp <- ggplot( NM, aes(x = lf, y = A/N, alpha=0.8)) +
+  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
+  facet_grid(rows = vars(k)) +
+  scale_y_continuous(name = "Null Model A/N values") +
+  scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                   labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
+  # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+  #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
+  theme_light() + theme(strip.text.x = element_text( size = 8),
+                        axis.text.x = element_text( size = rel( 0.8)),
+                        axis.text.y = element_text( size = rel( 0.8)),
+                        panel.spacing=unit(0.1, "lines")) +
+  guides(colour = guide_legend(override.aes = list(size=1)))
+# ggtitle( am)
+
+# dev.new(width = 9, height = 6)
+# print(sp)
+outfname <- sprintf( "%s/PanelANNM.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
+dev.off() #only 129kb in size

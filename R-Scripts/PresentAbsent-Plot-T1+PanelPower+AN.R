@@ -29,7 +29,6 @@ setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 bs <- "uniform"
 # Sets the name of the file containing the input dataframe
 dfFilename <- sprintf( "%s,32/PresentAbsentEC-Power+T1-%s,32.RDS", bs, bs)
-dfANFilename <- sprintf( "%s,32/PresentAbsentEC-AN-%s,32.RDS", bs, bs)
 
 # Sets the output path for the images to be generated
 dirname <- sprintf("%s,32/T1+Power-Plots", bs)
@@ -197,7 +196,7 @@ for( a in c( 0.01, 0.05, 0.10)) { # alpha values
   sp <- ggplot( dff, aes( x = len, y = T1, alpha=0.8)) +
     geom_point( aes( color = k), alpha = 0.8, size = 1.1) +
     scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                  labels=c("10+3", "", "10+5", "", "10+7"), limits = c(1000, 10000000)) +
+                  labels=c("10E3", "", "10E5", "", "10+E7"), limits = c(1000, 10000000)) +
     scale_y_continuous(name = "T1 Error", limits = c(0, MaxT1)) +
     geom_hline(yintercept = a, linetype="dashed", color = "black") +
     facet_grid( rows = vars( k), cols = vars( measure2),  labeller = plot_labeller) +
@@ -243,7 +242,7 @@ for (gammaTgt in gammaValues) {
       sp <- ggplot( dff, aes( x = len, y = power, alpha=0.8)) +
         geom_point( aes( color = k), alpha = 0.8, size = 1.1) +
         scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                           labels=c("10+3", "", "10+5", "", "10+7"), limits = c(1000, 10000000)) +
+                           labels=c("10E3", "", "10E5", "", "10E7"), limits = c(1000, 10000000)) +
         scale_y_continuous(name = "Power", limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
         facet_grid( rows = vars( k), cols = vars( Measure),  labeller = plot_labeller) +
         theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 70),
@@ -275,7 +274,7 @@ for (alphaTgt in alphaValues) {
     sp <- ggplot( dff, aes( x = len, y = power, alpha=0.8)) +
       geom_point( aes( color = k), alpha = 0.8, size = 1.1) +
       scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                    labels=c("10+3", "", "10+5", "", "10+7"), limits = c(1000, 10000000)) +
+                    labels=c("10E3", "", "10E5", "", "10E7"), limits = c(1000, 10000000)) +
       scale_y_continuous(name = "Power", limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
       facet_grid( rows = vars( k, gamma), cols = vars( Measure),  labeller = plot_labeller) +
       theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 70),
@@ -314,7 +313,7 @@ dff$k <- factor(dff$k)
 sp <- ggplot( dff, aes( x = len, y = nmDensity, alpha=0.8)) +
   geom_point( aes( color = k), alpha = 0.8, size = 1.8) +
   scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                labels=c("10+3", "10+4", "10+5", "10+6", "10+7"), limits = c(1000, 10000000)) +
+                labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
   scale_y_continuous(name = "Null Model A/N mean value", limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
   facet_grid( rows = vars( k), labeller = plot_labeller) +
   theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 70),
@@ -349,7 +348,7 @@ for (am in levels(factor(df$Model))) {
   sp <- ggplot( dff, aes( x = len, y = amDensity, alpha=0.8)) +
     geom_point( aes( color = k), alpha = 0.8, size = 1.8) +
     scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                  labels=c("10+3", "10+4", "10+5", "10+6", "10+7"), limits = c(1000, 10000000)) +
+                  labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
     scale_y_continuous(name = yTitle, limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
     facet_grid( rows = vars( k), cols = vars( gamma), labeller = plot_labeller) +
     theme_bw() + theme(strip.text.x = element_text( size = 10, angle = 00),
@@ -362,9 +361,31 @@ for (am in levels(factor(df$Model))) {
 
   # dev.new(width = 9, height = 6)
   # print(sp)
-  outfname <- sprintf( "%s/Panel-%s-ANAnalysis.png", dirname, am)
+  outfname <- sprintf( "%s/Panel-%s-ANAvAnalysis.png", dirname, am)
   ggsave( outfname, device = png(), width = 6, height = 9, units = "in", dpi = 300)
   dev.off() #only 129kb in size
+  totPrinted <- totPrinted + 1
+
+  sp <- ggplot( dff, aes( x = len, y = nmSD, alpha=0.8)) +
+    geom_point( aes( color = k), alpha = 0.8, size = 1.8) +
+    scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                  labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
+    scale_y_continuous(name = "Standard Deviation Null Model A/N") +
+    facet_grid( rows = vars( k), labeller = plot_labeller, scales = "free_y") +
+    theme_bw() + theme(strip.text.x = element_text( size = 10, angle = 00),
+                       strip.text.y = element_text( size = 10),
+                       axis.text.x = element_text( size = rel( 1), angle = 45, hjust=1),
+                       axis.text.y = element_text( size = rel( 1)),
+                       panel.spacing=unit(0.1, "lines")) +
+    guides(colour = guide_legend(override.aes = list(size=3)))
+  # ggtitle( am)
+
+  # dev.new(width = 9, height = 6)
+  # print(sp)
+  outfname <- sprintf( "%s/Panel-NullModel-ANSDAnalysis.png", dirname)
+  ggsave( outfname, device = png(), width = 6, height = 9, units = "in", dpi = 300)
+  dev.off() #only 129kb in size
+
   totPrinted <- totPrinted + 1
 }
 
