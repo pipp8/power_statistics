@@ -11,7 +11,7 @@ library(r2r)
 
 # Produces three different charts, reporting the results of the Type I check for
 # each considered values of alpha (i.e., 0.01, 0.05, 0.1). 
-# The output is a set PNG images with name T1Box-alpha=<x>.png
+# The output is a set PNG images with name T1Box-alpha=<x>.pdf
 # where <x> reflects the actual value of alpha
 
 # Note: this script must be executed after Power+T1-Json2RDS.R
@@ -68,23 +68,6 @@ TerminologyServer <- function( key) {
   }
 }
 
-# rename in a human readable format the measure names
-measure_names <- function( measure) {
-  ris <- c()
-  for( m in measure) {
-    if (m != "D2") {
-      ris <- c(ris , str_to_title( switch( m,
-                                         'Mash.Distance.1000.' = 'Mash (sz=10^3)',
-                                         'Mash.Distance.10000.' = 'Mash (sz=10^4)',
-                                         'Mash.Distance.100000.' = 'Mash (sz=10^5)',
-                                         m)))
-    }
-  }
-  # mette D2 in prima posizione
-  ris <- c("D2", ris)
-  return( ris)
-}
-
 
 plot_labeller <- function(variable, value){
   # cat(sprintf("variable: <%s>, value: <%s>\n", variable, as.character(value)))
@@ -122,6 +105,22 @@ measure_names <- function( measure) {
   return( ris)
 }
 
+# misure di riferimento
+l1 <- c("D2")
+# misure analizzate
+l2 <- c("Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel")
+# misure dominate da A e D (B e C diventano irrilevanti)
+l3 <- c("Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
+# misure escluse dal calcolo
+l4 <- c("Anderberg", "Gower", "Yule", "Mash.distance.1000.", "Mash.distance.10000.", "Mash.distance.100000.", "Euclidean")
+
+# riordina la lista delle misure
+sortedMeasures = c(l1, l2, l3)
+#measureNanesDF <- data.frame( ref = l1, g1 = l2, alt = l3, no = l4, stringsAsFactors = FALSE)
+
+
+
+
 # finally load input dataframe
 
 ###### CODE
@@ -150,9 +149,9 @@ df <- filter( df, Measure != "Anderberg" & Measure != "Gower" & Measure != "Phi"
   Measure != "Euclid_norm" & Measure != "Mash.Distance.1000." & Measure != "Mash.Distance.100000." &
   Measure != "Mash" & Measure != "Euclidean" )
 
-cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.Distance.1000, Mash.Distance.100000. (%d rows).\n",nrow(df)))
+cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.Distance.1000, Mash.Distance.10000., Mash.Distance.100000., Euclidean (%d rows).\n",nrow(df)))
 
-df$Measure <- replace( df$Measure, df$Measure == "Mash.Distance.10000.", "Mash")
+# df$Measure <- replace( df$Measure, df$Measure == "Mash.Distance.10000.", "Mash")
 df$Measure <- factor(df$Measure)
 df$Model = factor(df$Model)
 # df$len = factor(df$len)
@@ -175,11 +174,12 @@ for( a in c( 0.01, 0.05, 0.10)) { # alpha values
 
   dff <- filter(df, df$alpha == a & df$gamma == 0.10 & df$Model == AM) # T1 Error Check does not depend on gamma and Alternate Model
 
-  # dff$measure2 <- dff$Measure
-  dff$measure2 <- factor(dff$Measure, levels = measure_names(levels(dff$Measure)))
+  # riordina le misure
+  # dff$measure2 <- factor(dff$Measure, levels = measure_names(levels(dff$Measure)))
+  dff$Measure <- factor(dff$Measure, levels = sortedMeasures)
   dff$k <- factor(dff$k)
 
-  # sp <- ggplot( dff, aes(x = measure2, y = T1)) +
+  # sp <- ggplot( dff, aes(x = Measure, y = T1)) +
   #   geom_boxplot( aes( fill = k), alpha=0.7, outlier.size = 0.25, lwd = 0) +
   #   # geom_boxplot( aes(fill = k), alpha=0.7, outlier.size = 0.25) +
   #   scale_y_continuous(name = "T1 Value", limits = c(0, MaxT1)) +
@@ -199,7 +199,7 @@ for( a in c( 0.01, 0.05, 0.10)) { # alpha values
                   labels=c("10E3", "", "10E5", "", "10+E7"), limits = c(1000, 10000000)) +
     scale_y_continuous(name = "T1 Error", limits = c(0, MaxT1)) +
     geom_hline(yintercept = a, linetype="dashed", color = "black") +
-    facet_grid( rows = vars( k), cols = vars( measure2),  labeller = plot_labeller) +
+    facet_grid( rows = vars( k), cols = vars( Measure),  labeller = plot_labeller) +
     theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 70),
                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                        axis.text.y = element_text( size = rel( 0.7)),
@@ -237,7 +237,9 @@ for (gammaTgt in gammaValues) {
 
       dff <- filter(df, df$alpha == alphaTgt & df$Model == am & df$gamma == gammaTgt) # tutte le misure per uno specifico AM, un valore di alpha ed un valore di gamma
       dff$k <- factor(dff$k)
-      dff$Measure <- factor(dff$Measure, levels = measure_names(levels(dff$Measure)))
+      # riordina le misure
+      # dff$Measure <- factor(dff$Measure, levels = measure_names(levels(dff$Measure)))
+      dff$Measure <- factor(dff$Measure, levels = sortedMeasures)
 
       sp <- ggplot( dff, aes( x = len, y = power, alpha=0.8)) +
         geom_point( aes( color = k), alpha = 0.8, size = 1.1) +
@@ -255,7 +257,7 @@ for (gammaTgt in gammaValues) {
       # dev.new(width = 9, height = 6)
       # print(sp)
       # stop("break")
-      outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f-G=%.2f.png", dirname, str_replace(am, " ", ""), alphaTgt,gammaTgt)
+      outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f-G=%.2f.pdf", dirname, str_replace(am, " ", ""), alphaTgt,gammaTgt)
       ggsave( outfname, device = png(), width = 9, height = 4, units = "in", dpi = 300)
       dev.off() #only 129kb in size
       totPrinted <- totPrinted + 1
@@ -269,7 +271,9 @@ for (alphaTgt in alphaValues) {
 
     dff <- filter(df, df$alpha == alphaTgt & df$Model == am) # tutte le misure per uno specifico AM, un valore di alpha ed un valore di gamma
     dff$k <- factor(dff$k)
-    dff$Measure <- factor(dff$Measure, levels = measure_names(levels(dff$Measure)))
+    # riordina le misure
+    # dff$Measure <- factor(dff$Measure, levels = measure_names(levels(dff$Measure)))
+    dff$Measure <- factor(dff$Measure, levels = sortedMeasures)
 
     sp <- ggplot( dff, aes( x = len, y = power, alpha=0.8)) +
       geom_point( aes( color = k), alpha = 0.8, size = 1.1) +
@@ -287,7 +291,7 @@ for (alphaTgt in alphaValues) {
 
     # dev.new(width = 9, height = 6)
     # print(sp)
-    outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f.png", dirname, str_replace(am, " ", ""), alphaTgt)
+    outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f.pdf", dirname, str_replace(am, " ", ""), alphaTgt)
     ggsave( outfname, device = png(), width = 6, height = 9, units = "in", dpi = 300)
     dev.off() #only 129kb in size
     totPrinted <- totPrinted + 1
@@ -326,7 +330,7 @@ sp <- ggplot( dff, aes( x = len, y = nmDensity, alpha=0.8)) +
 
 # dev.new(width = 9, height = 6)
 # print(sp)
-outfname <- sprintf( "%s/Panel-NullModel-ANAnalysis.png", dirname)
+outfname <- sprintf( "%s/Panel-NullModel-ANAnalysis.pdf", dirname)
 ggsave( outfname, device = png(), width = 6, height = 9, units = "in", dpi = 300)
 dev.off() #only 129kb in size
 totPrinted <- totPrinted + 1
@@ -361,7 +365,7 @@ for (am in levels(factor(df$Model))) {
 
   # dev.new(width = 9, height = 6)
   # print(sp)
-  outfname <- sprintf( "%s/Panel-%s-ANAvAnalysis.png", dirname, am)
+  outfname <- sprintf( "%s/Panel-%s-ANAvAnalysis.pdf", dirname, am)
   ggsave( outfname, device = png(), width = 6, height = 9, units = "in", dpi = 300)
   dev.off() #only 129kb in size
   totPrinted <- totPrinted + 1
@@ -382,7 +386,7 @@ for (am in levels(factor(df$Model))) {
 
   # dev.new(width = 9, height = 6)
   # print(sp)
-  outfname <- sprintf( "%s/Panel-NullModel-ANSDAnalysis.png", dirname)
+  outfname <- sprintf( "%s/Panel-NullModel-ANSDAnalysis.pdf", dirname)
   ggsave( outfname, device = png(), width = 6, height = 9, units = "in", dpi = 300)
   dev.off() #only 129kb in size
 

@@ -49,6 +49,20 @@ if (!dir.exists(dirname)) {
 
 ###### CODE
 
+# misure di riferimento
+l1 <- c("D2")
+# misure analizzate
+l2 <- c("Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel")
+# misure dominate da A e D (B e C diventano irrilevanti)
+l3 <- c("Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
+# misure escluse dal calcolo
+l4 <- c("Anderberg", "Gower", "Yule", "Mash.distance.1000.", "Mash.distance.10000.", "Mash.distance.100000.", "Euclidean")
+
+# riordina la lista delle misure
+sortedMeasures = c(l1, l2, l3)
+#measureNanesDF <- data.frame( ref = l1, g1 = l2, alt = l3, no = l4, stringsAsFactors = FALSE)
+
+
 scales_y <- list(
   '0.01' = scale_y_continuous(limits = c(0, 1e-10)),
   '0.05' = scale_y_continuous(limits = c(0, 136)),

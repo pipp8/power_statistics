@@ -38,6 +38,18 @@ df1Filename <- sprintf("%s/distanceAll.RDS", dirname )
 df2Filename <- sprintf("%s/cvAll.RDS", dirname )
 
 similarities = c('D2')
+# misure di riferimento
+l1 <- c("D2")
+# misure analizzate
+l2 <- c("Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel")
+# misure dominate da A e D (B e C diventano irrilevanti)
+l3 <- c("Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
+# misure escluse dal calcolo
+l4 <- c("Anderberg", "Gower", "Yule", "Mash.distance.1000.", "Mash.distance.10000.", "Mash.distance.100000.", "Euclidean")
+
+# riordina la lista delle misure
+sortedMeasures = c(l1, l2, l3)
+#measureNanesDF <- data.frame( ref = l1, g1 = l2, alt = l3, no = l4, stringsAsFactors = FALSE)
 
 zoomLevels = c(95, 90, 80, 70, 60) # soglia sul valore di theta per avere 1, 2, 3, 4, 5 valori sull'asse delle x
 zoom = 5
@@ -234,7 +246,7 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
 
   # ordina i genomi per lunghezza crescente
   cvDF$Genome <- factor(cvDF$Genome, levels = sortedGenomes)
-  cvDF$Measure <- factor(cvDF$Measure)
+  cvDF$Measure <- factor(cvDF$Measure, levels = sortedMeasures)
   cvDF$k <-factor(cvDF$k,levels(factor(cvDF$k)))
   cvDF$type <-factor(cvDF$type)
   # salva il datafrme con i coefficienti di variazione
@@ -260,6 +272,7 @@ for( sequenceName in genomes) {
 
   #  grafico distanze per ciascuna misura (Theta sull'asse delle x)
   df = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean")
+  df$Measure = factor( df$Measure, levels = sortedMeasures)
 
   sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
       geom_line(aes(color = k)) +
@@ -345,6 +358,7 @@ for( sequenceName in genomes) {
   # Pannello della density x k *******************************************************************
   #  grafico distanze per ciascuna misura (Theta sull'asse delle x)
   df = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean")
+  df$Measure = factor( df$Measure, levels = sortedMeasures)
 
   sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
     geom_line(aes(color = k)) +
@@ -398,6 +412,7 @@ for( sequenceName in genomes) {
 
   #  grafico distanze per ciascuna misura (Theta sull'asse delle x)
   df = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean" & Theta >= zoomLevels[zoom])
+  df$Measure = factor( df$Measure, levels = sortedMeasures)
 
   sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
     geom_line(aes(color = k)) +
@@ -484,6 +499,7 @@ for( sequenceName in genomes) {
 # cvDF = 728 observations = 4 genome x 13 misure x 8 k
 
 df = filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type == "all")
+df$Measure = factor( df$Measure, levels = sortedMeasures)
 
 sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
   geom_point(size = 0.8, aes(color = k)) +
@@ -550,6 +566,7 @@ totPrinted <- totPrinted + 1
 
 for( i in 1:5) {
   df = filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type == types[i])
+  df$Measure = factor( df$Measure, levels = sortedMeasures)
 
   sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
     geom_point(size = 0.8, aes(color = k)) +
@@ -584,7 +601,7 @@ for( i in 1:5) {
     #                      strip.text.y = element_blank()) +
     labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
 
-outfname <- sprintf( "%s/PanelCVEuclid-zoom%d.pdf", dirname, i)
+  outfname <- sprintf( "%s/PanelCVEuclid-zoom%d.pdf", dirname, i)
   ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
   dev.off() # only 129kb in size
   totPrinted <- totPrinted + 1
@@ -609,6 +626,7 @@ outfname <- sprintf( "%s/PanelCVEuclid-zoom%d.pdf", dirname, i)
 }
 
 df = filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type != "all" & type != "4:11")
+df$Measure = factor( df$Measure, levels = sortedMeasures)
 
 sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = type)) +
   geom_point(size = 0.8, aes(color = type)) +
