@@ -181,3 +181,25 @@ sp <- ggplot( NM, aes(x = lf, y = A/N, alpha=0.8)) +
 outfname <- sprintf( "%s/PanelANNM.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
 dev.off() #only 129kb in size
+
+# boxplot solo per il null model (A+D)/N
+sp <- ggplot( NM, aes(x = lf, y = (A+D)/N, alpha=0.8)) +
+  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
+  facet_grid(rows = vars(k)) +
+  scale_y_continuous(name = "Null Model (A+D)/N values") +
+  scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                   labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
+  # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+  #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
+  theme_light() + theme(strip.text.x = element_text( size = 8),
+                        axis.text.x = element_text( size = rel( 0.8)),
+                        axis.text.y = element_text( size = rel( 0.8)),
+                        panel.spacing=unit(0.1, "lines")) +
+  guides(colour = guide_legend(override.aes = list(size=1)))
+# ggtitle( am)
+
+# dev.new(width = 9, height = 6)
+# print(sp)
+outfname <- sprintf( "%s/PanelADNM.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
+dev.off() #only 129kb in size

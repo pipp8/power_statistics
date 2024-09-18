@@ -266,6 +266,8 @@ cvDF$Measure <- factor(cvDF$Measure)
 cvDF$k <-factor(cvDF$k,levels(factor(cvDF$k)))
 cvDF$type <-factor(cvDF$type)
 
+tgtDF$AD <- (tgtDF$A+tgtDF$D) / tgtDF$N
+
 for( sequenceName in genomes) {
 
   totPrinted <- 0
@@ -673,5 +675,29 @@ ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300
 dev.off()
 totPrinted <- totPrinted + 1
 
+# grafico delle densità (A+D)/N x tutti i genomi
+df = filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard")
+
+df$Genome <- factor(df$Genome, levels = sortedGenomes)
+
+sp1 <- ggplot(data=df, aes(x=Theta, y=AD, label=density)) +
+  geom_line(aes(color = k)) +
+  geom_point() +
+  geom_text(aes(label = round(AD, 1)), size = 1.8, nudge_y = 0.2, show.legend = FALSE) +
+  facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both)) +
+  scale_y_continuous(name = "Genome (A+D)/N Values",
+                     breaks=c(0, 0.5, 1),
+                     labels=c("0", "0.5", "1")) +
+  theme_light() + theme( panel.spacing=unit(0.2, "lines"),
+                         legend.position = "none",
+                         strip.text.x = element_text( size = 8, angle = 0),
+                         axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                         axis.title.x = element_blank())
+#                         axis.text.x=element_blank())
+
+outfname <- sprintf( "%s/PanelRari-all.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300)
+dev.off()
+totPrinted <- totPrinted + 1
 
 cat(sprintf("CV plot Done. %d plot printed\n", totPrinted))
