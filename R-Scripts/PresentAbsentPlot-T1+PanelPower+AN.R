@@ -252,6 +252,7 @@ for (gammaTgt in gammaValues) {
                            axis.text.y = element_text( size = rel( 0.7)),
                            panel.spacing=unit(0.1, "lines")) +
         guides(colour = guide_legend(override.aes = list(size=3)))
+
       # ggtitle( am)
 
       # dev.new(width = 9, height = 6)
@@ -289,6 +290,13 @@ for (alphaTgt in alphaValues) {
       guides(colour = guide_legend(override.aes = list(size=3)))
     # ggtitle( am)
 
+    if (alphaTgt == 0.05) {
+      if (as.character(am) == "MotifRepl-U") {
+        sp <- sp + theme( axis.title.y = element_blank())
+      } else {
+        sp <- sp + theme(legend.position = "none")
+      }
+    }
     # dev.new(width = 9, height = 6)
     # print(sp)
     outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f.pdf", dirname, str_replace(am, " ", ""), alphaTgt)

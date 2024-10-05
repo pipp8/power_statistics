@@ -135,6 +135,7 @@ dff <- rbind( dff, NM)
 md = levels(dff$model)
 dff$model <- factor(dff$model, levels = c( md[3], md[1], md[2])) # riordina le labels
 dff$k = factor(dff$k)
+dff$AD = (dff$A+dff$D) / dff$N
 
 sp <- ggplot( dff, aes(x = lf, y = A/N, alpha=0.8)) +
       geom_boxplot( aes( color = model), alpha = 0.7, outlier.size = 0.3) +
@@ -160,7 +161,7 @@ dev.off() #only 129kb in size
 
 NM$k = factor(NM$k)
 
-# boxplot solo per il null model
+# boxplot A/N solo per il null model
 sp <- ggplot( NM, aes(x = lf, y = A/N, alpha=0.8)) +
   geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
   facet_grid(rows = vars(k)) +
