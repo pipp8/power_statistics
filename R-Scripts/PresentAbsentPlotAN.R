@@ -118,7 +118,6 @@ altModels = levels(dati$model)[1:2]
 
 alphaValues <- c( 0.01, 0.05, 0.10)
 
-# carica il dataframe dal file
 dati$kf = factor(dati$k)
 dati$lf = factor(dati$seqLen)
 
@@ -136,6 +135,32 @@ md = levels(dff$model)
 dff$model <- factor(dff$model, levels = c( md[3], md[1], md[2])) # riordina le labels
 dff$k = factor(dff$k)
 dff$AD = (dff$A+dff$D) / dff$N
+
+# crea un nuovo dataframe per 3 misure
+
+nmDist <- data.frame( seqLen = numeric(), pairId = numeric(), k = numeric(), distance = double(),
+                      model = character(), Measure = character(), stringsAsFactors=FALSE)
+
+pltMeasures = c("D2", "Jaccard", "Hamman")
+
+# solo per gamma = 0
+tt <- filter(dati, dati$model == nullModel & dati$gamma == 0 ) # tutte le misure per il solo NM  
+for (mes in pltMeasures) { # per tutte le misure previste
+  df1 = data.frame( tt$seqLen, tt$pairId, tt$k, tt[[mes]])
+  colnames(df1)[1] = "seqLen"
+  colnames(df1)[2] = "pairId"
+  colnames(df1)[3] = "k"
+  colnames(df1)[4] = "distance"
+  
+  df1$model = nullModel
+  df1$Measure = mes
+  
+  nmDist = rbind(nmDist, df1)
+}
+
+nmDist$lf = factor(nmDist$seqLen)
+nmDist$k = factor(nmDist$k)
+
 
 sp <- ggplot( dff, aes(x = lf, y = A/N, alpha=0.8)) +
       geom_boxplot( aes( color = model), alpha = 0.7, outlier.size = 0.3) +
@@ -204,3 +229,54 @@ sp <- ggplot( NM, aes(x = lf, y = (A+D)/N, alpha=0.8)) +
 outfname <- sprintf( "%s/PanelADNM.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
 dev.off() #only 129kb in size
+
+tt <- filter(nmDist, nmDist$Measure != "D2") # tutte le misure Present / Absent 
+
+# boxplot con le distanze per il null model
+sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
+  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
+  facet_grid(cols = vars(Measure), rows = vars(k)) +
+  scale_y_continuous(name = "Null Model Distance values") +
+  scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                   labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
+  # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+  #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
+  theme_light() + theme(strip.text.x = element_text( size = 8),
+                        axis.text.x = element_text( size = rel( 0.8)),
+                        axis.text.y = element_text( size = rel( 0.8)),
+                        axis.title.y = element_blank(),
+                        panel.spacing=unit(0.1, "lines")) +
+  guides(colour = guide_legend(override.aes = list(size=1)))
+# ggtitle( am)
+
+# dev.new(width = 9, height = 6)
+# print(sp)
+outfname <- sprintf( "%s/PanelAllDistancesNM.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
+dev.off() #only 129kb in size
+
+tt <- filter(nmDist, nmDist$Measure == "D2") # solo la misura D2 
+
+# boxplot con le distanze per il null model
+sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
+  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
+  facet_grid(cols = vars(Measure), rows = vars(k), scales = "free_y") +
+  scale_y_continuous(name = "Null Model Distance values") +
+  scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                   labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
+  # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+  #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
+  theme_light() + theme(strip.text.x = element_text( size = 8),
+                        axis.text.x = element_text( size = rel( 0.8)),
+                        axis.text.y = element_text( size = rel( 0.8)),
+                        legend.position = "none",  
+                        panel.spacing=unit(0.1, "lines")) +
+  guides(colour = guide_legend(override.aes = list(size=1)))
+# ggtitle( am)
+
+# dev.new(width = 9, height = 6)
+# print(sp)
+outfname <- sprintf( "%s/PanelD2DistancesNM.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 3, height = 6, units = "in", dpi = 300)
+dev.off() #only 129kb in size
+
