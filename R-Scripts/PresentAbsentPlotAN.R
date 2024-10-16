@@ -136,31 +136,39 @@ dff$model <- factor(dff$model, levels = c( md[3], md[1], md[2])) # riordina le l
 dff$k = factor(dff$k)
 dff$AD = (dff$A+dff$D) / dff$N
 
-# crea un nuovo dataframe per 3 misure
-
-nmDist <- data.frame( seqLen = numeric(), pairId = numeric(), k = numeric(), distance = double(),
-                      model = character(), Measure = character(), stringsAsFactors=FALSE)
+# crea un nuovo dataframe per 3 misure per il grafico boxplot delle distanze
+distancesDF <- data.frame(seqLen = numeric(), pairId = numeric(), k = numeric(), gamma = double(), distance = double(),
+                          model = character(), Measure = character(), stringsAsFactors=TRUE)
 
 pltMeasures = c("D2", "Jaccard", "Hamman")
 
-# solo per gamma = 0
-tt <- filter(dati, dati$model == nullModel & dati$gamma == 0 ) # tutte le misure per il solo NM  
-for (mes in pltMeasures) { # per tutte le misure previste
-  df1 = data.frame( tt$seqLen, tt$pairId, tt$k, tt[[mes]])
-  colnames(df1)[1] = "seqLen"
-  colnames(df1)[2] = "pairId"
-  colnames(df1)[3] = "k"
-  colnames(df1)[4] = "distance"
+# filter model == "Uniform-T1"
+tt <- filter(dati, as.character(dati$model) != "Uniform-T1" ) # tutte le misure per NM, MR e PT
+tt$model <- factor(tt$model, levels = c( md[3], md[1], md[2])) # riordina le labels
+models <- levels(factor(tt$model))
+for( m in models ) {
+  gammas <- if (as.character(m) == "Uniform") c(0) else c(0.01, 0.05, 0.10)
+  for(g in gammas) {
+    for (mes in pltMeasures) { # per tutte le misure previste
+      t1 <- filter(tt, tt$model == m & tt$gamma == g ) # tutte le misure per il solo NM
+      df1 <- data.frame( t1$seqLen, t1$pairId, t1$k, t1$gamma, t1[[mes]])
+      colnames(df1)[1] <- "seqLen"
+      colnames(df1)[2] <- "pairId"
+      colnames(df1)[3] <- "k"
+      colnames(df1)[4] <- "gamma"
+      colnames(df1)[5] <- "distance"
   
-  df1$model = nullModel
-  df1$Measure = mes
+      df1$model <- switch(as.character(m), "Uniform" = "NM", "MotifRepl-U" = "MR", "PatTransf-U" = "PT")
+      df1$Measure <- mes
   
-  nmDist = rbind(nmDist, df1)
+      distancesDF <- rbind(distancesDF, df1)
+    }
+  }
 }
 
-nmDist$lf = factor(nmDist$seqLen)
-nmDist$k = factor(nmDist$k)
-
+distancesDF$lf = factor(distancesDF$seqLen)
+distancesDF$k = factor(distancesDF$k)
+distancesDF$model <- factor(distancesDF$model, levels = c( "NM", "MR", "PT"))# riordina le labels
 
 sp <- ggplot( dff, aes(x = lf, y = A/N, alpha=0.8)) +
       geom_boxplot( aes( color = model), alpha = 0.7, outlier.size = 0.3) +
@@ -198,6 +206,7 @@ sp <- ggplot( NM, aes(x = lf, y = A/N, alpha=0.8)) +
   theme_light() + theme(strip.text.x = element_text( size = 8),
                         axis.text.x = element_text( size = rel( 0.8)),
                         axis.text.y = element_text( size = rel( 0.8)),
+                        legend.position = "none",
                         panel.spacing=unit(0.1, "lines")) +
   guides(colour = guide_legend(override.aes = list(size=1)))
 # ggtitle( am)
@@ -220,6 +229,7 @@ sp <- ggplot( NM, aes(x = lf, y = (A+D)/N, alpha=0.8)) +
   theme_light() + theme(strip.text.x = element_text( size = 8),
                         axis.text.x = element_text( size = rel( 0.8)),
                         axis.text.y = element_text( size = rel( 0.8)),
+                        legend.position = "none",
                         panel.spacing=unit(0.1, "lines")) +
   guides(colour = guide_legend(override.aes = list(size=1)))
 # ggtitle( am)
@@ -230,9 +240,10 @@ outfname <- sprintf( "%s/PanelADNM.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
 dev.off() #only 129kb in size
 
-tt <- filter(nmDist, nmDist$Measure != "D2") # tutte le misure Present / Absent 
-
 # boxplot con le distanze per il null model
+#
+tt <- filter(distancesDF, as.character(distancesDF$model) == "NM" & distancesDF$Measure != "D2") # tutte le misure Present / Absent
+
 sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
   geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
   facet_grid(cols = vars(Measure), rows = vars(k)) +
@@ -245,6 +256,7 @@ sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
                         axis.text.x = element_text( size = rel( 0.8)),
                         axis.text.y = element_text( size = rel( 0.8)),
                         axis.title.y = element_blank(),
+                        legend.position = "none",
                         panel.spacing=unit(0.1, "lines")) +
   guides(colour = guide_legend(override.aes = list(size=1)))
 # ggtitle( am)
@@ -255,13 +267,12 @@ outfname <- sprintf( "%s/PanelAllDistancesNM.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
 dev.off() #only 129kb in size
 
-tt <- filter(nmDist, nmDist$Measure == "D2") # solo la misura D2 
-
-# boxplot con le distanze per il null model
+# boxplot con le distanze per il null model solo per D2
+tt <- filter(distancesDF, as.character(distancesDF$model) == "NM" & distancesDF$Measure == "D2") # Solo D2
 sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
   geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
   facet_grid(cols = vars(Measure), rows = vars(k), scales = "free_y") +
-  scale_y_continuous(name = "Null Model Distance values") +
+  # scale_y_continuous(name = "Null Model Distance values") +
   scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
                    labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
   # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
@@ -269,6 +280,7 @@ sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
   theme_light() + theme(strip.text.x = element_text( size = 8),
                         axis.text.x = element_text( size = rel( 0.8)),
                         axis.text.y = element_text( size = rel( 0.8)),
+                        axis.title.y = element_blank(),
                         legend.position = "none",  
                         panel.spacing=unit(0.1, "lines")) +
   guides(colour = guide_legend(override.aes = list(size=1)))
@@ -280,3 +292,28 @@ outfname <- sprintf( "%s/PanelD2DistancesNM.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 3, height = 6, units = "in", dpi = 300)
 dev.off() #only 129kb in size
 
+
+for(mes in pltMeasures) {
+  # panel boxplot con le distanze per tutti i model solo per la misura mes
+  tt <- filter(distancesDF, distancesDF$Measure == mes) # Solo D2
+  sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
+    geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
+    facet_grid(cols = vars(model, gamma), rows = vars(k), scales = "free_y") +
+    # scale_y_continuous(name = sprintf("%s distances for each model", mes)) +
+    scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                     labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
+    # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+    #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
+    theme_light() + theme(strip.text.x = element_text( size = 8),
+                          axis.text.x = element_text( size = rel( 0.6), angle = 45),
+                          axis.text.y = element_text( size = rel( 0.8)),
+                          legend.position = "none",
+                          panel.spacing=unit(0.1, "lines")) +
+    guides(colour = guide_legend(override.aes = list(size=1)))
+  # ggtitle( am)
+  # dev.new(width = 9, height = 6)
+  # print(sp)
+  outfname <- sprintf( "%s/Panel-Distances-%s-AllModels.pdf", dirname, mes)
+  ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
+  dev.off() #only 129kb in size
+}

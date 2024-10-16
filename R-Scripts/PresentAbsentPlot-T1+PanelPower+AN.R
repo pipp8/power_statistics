@@ -203,6 +203,7 @@ for( a in c( 0.01, 0.05, 0.10)) { # alpha values
     theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 70),
                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                        axis.text.y = element_text( size = rel( 0.7)),
+                       legend.position = "none",
                        panel.spacing=unit(0.1, "lines")) +
     guides(colour = guide_legend(override.aes = list(size=3)))
   # ggtitle( am)
@@ -250,6 +251,7 @@ for (gammaTgt in gammaValues) {
         theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 70),
                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                            axis.text.y = element_text( size = rel( 0.7)),
+                           legend.position = "none",
                            panel.spacing=unit(0.1, "lines")) +
         guides(colour = guide_legend(override.aes = list(size=3)))
 
@@ -286,6 +288,7 @@ for (alphaTgt in alphaValues) {
                          strip.text.y = element_text( size = 6),
                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                          axis.text.y = element_text( size = rel( 0.7)),
+                         legend.position = "none",
                          panel.spacing=unit(0.1, "lines")) +
       guides(colour = guide_legend(override.aes = list(size=3)))
     # ggtitle( am)
@@ -332,6 +335,7 @@ sp <- ggplot( dff, aes( x = len, y = nmDensity, alpha=0.8)) +
                      strip.text.y = element_text( size = 10),
                      axis.text.x = element_text( size = rel( 1), angle = 45, hjust=1),
                      axis.text.y = element_text( size = rel( 1)),
+                     legend.position = "none",
                      panel.spacing=unit(0.1, "lines")) +
   guides(colour = guide_legend(override.aes = list(size=3)))
 # ggtitle( am)
@@ -367,6 +371,7 @@ for (am in levels(factor(df$Model))) {
                        strip.text.y = element_text( size = 10),
                        axis.text.x = element_text( size = rel( 1), angle = 45, hjust=1),
                        axis.text.y = element_text( size = rel( 1)),
+                       legend.position = "none",
                        panel.spacing=unit(0.1, "lines")) +
     guides(colour = guide_legend(override.aes = list(size=3)))
   # ggtitle( am)
@@ -388,6 +393,7 @@ for (am in levels(factor(df$Model))) {
                        strip.text.y = element_text( size = 10),
                        axis.text.x = element_text( size = rel( 1), angle = 45, hjust=1),
                        axis.text.y = element_text( size = rel( 1)),
+                       legend.position = "none",
                        panel.spacing=unit(0.1, "lines")) +
     guides(colour = guide_legend(override.aes = list(size=3)))
   # ggtitle( am)
