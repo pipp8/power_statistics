@@ -27,7 +27,7 @@ import pyspark.sql.functions as sf
 
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
-hdfsPrefixPath = '/Users/pipp8'
+# hdfsPrefixPath = '/Users/pipp8'
 hdfsDataDir = ''
 spark = []
 sc = []
