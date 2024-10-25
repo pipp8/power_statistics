@@ -3,8 +3,9 @@
 scriptDir='/home/cattaneo/spark/power_statistics/Py-Scripts'
 dataDir='/home/cattaneo/spark/power_statistics/Datasets'
 # dataDir=/mnt/VolumeDati1/Dataset/PresentAbsentDatasets/ncbi_dataset
-remoteDataDir=MmulSynthetic
+remoteDataDir=Synthetics
 baseSeq=GCF_003339765.1_Mmul_1.0.fna
+baseSeq='GCF_000001405.40_GRCh38.p14_coding-all.fna' # homo-sapiens coding sequence
 baseSeq=fish1.fna
 
 
