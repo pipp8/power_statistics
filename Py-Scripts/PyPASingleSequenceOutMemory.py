@@ -27,7 +27,7 @@ import pyspark.sql.functions as sf
 
 
 hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
-# hdfsPrefixPath = '/Users/pipp8'
+hdfsPrefixPath = '/Users/pipp8'
 
 hdfsDataDir = ''
 spark = []
@@ -495,13 +495,12 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: 
     # inner solo l'intersezione
     # inner = df1.join(df2, df1.kmer == df2.kmer, "inner")
     # full outer join di tutte le righe (poiche' le colonne chiave hanno lo stesso nome possiamo usare una lista
-    outer = df1.join(df2, ['kmer'], how='full')
+    # al termine tutti i valori null (i valori di cnt per k-mer non definiti) vengono posti a 0
+    outer = df1.join(df2, ['kmer'], how='full').na.fill(value=0, subset=['cnt1','cnt2'])
     # questa produce 2 colonne kmer
     # outer = df1.join(df2, df1.kmer == df2.kmer, "outer")
 
     # df4 = outer.select(EuclidUDF(col('cnt1'), col('cnt2'))).show()
-    # elimina i NULL vslues
-    outer.fillna(value=0)
 
     # calcola media e deviazione standard delle frequenze.
     stats = outer.select(sf.mean(sf.col('cnt1')).alias('mean1'),
