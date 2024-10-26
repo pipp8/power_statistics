@@ -402,13 +402,19 @@ def countBasedMeasures(partData):
     mean1 = float(kmerStats.value.mean1)
     mean2 = float(kmerStats.value.mean2)
     std1 = float(kmerStats.value.std1)
+    if (std1 == 0):
+        std1 = 10**-40
     std2 = float(kmerStats.value.std2)
+    if (std2 == 0):
+        std2 = 10**-40
 
     for row in partData:
         # cnt1 = 0 if row.cnt1 is None else row.cnt1
         # cnt2 = 0 if row.cnt2 is None else row.cnt2
         cnt1 = row.cnt1
         cnt2 = row.cnt2
+        # zcnt1 = 0 if std1 == 0 else (cnt1 - mean1) / std1
+        # zcnt2 = 0 if std2 == 0 else (cnt2 - mean2) / std2
         zcnt1 = (cnt1 - mean1) / std1
         zcnt2 = (cnt2 - mean2) / std2
 
