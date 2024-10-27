@@ -22,7 +22,7 @@ plot_labeller <- function(variable, value){
   }  else if (variable == 'lenFac') {
     # lenFac è un factor
     return(formatC(as.numeric(as.character(value)), format="f", digits=0, big.mark="."))
-  }else {
+  } else {
     return(as.character(value))
   }
 }
@@ -33,11 +33,11 @@ plot_labeller <- function(variable, value){
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 bs <- "uniform"
-dirname <- sprintf("%s,32/ReportSynthetics", bs)
-df1Filename <- sprintf("%s/distanceAll.RDS", dirname )
-df2Filename <- sprintf("%s/cvAll.RDS", dirname )
+dirname <- sprintf("%s,32/ReportCodingSeq", bs)
+df1Filename <- sprintf("%s/CodingSeqDistancesAll.RDS", dirname )
+df2Filename <- sprintf("%s/CodingSeqCVAll.RDS", dirname )
 
-similarities = c('D2')
+similarities  <- c('D2')
 # misure di riferimento
 l1 <- c("D2")
 # misure analizzate
@@ -48,20 +48,22 @@ l3 <- c("Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
 l4 <- c("Anderberg", "Gower", "Yule", "Mash.distance.1000.", "Mash.distance.10000.", "Mash.distance.100000.", "Euclidean")
 
 # riordina la lista delle misure
-sortedMeasures = c(l1, l2, l3)
+sortedMeasures  <- c(l1, l2, l3)
 #measureNanesDF <- data.frame( ref = l1, g1 = l2, alt = l3, no = l4, stringsAsFactors = FALSE)
 
-zoomLevels = c(95, 90, 80, 70, 60) # soglia sul valore di theta per avere 1, 2, 3, 4, 5 valori sull'asse delle x
-zoom = 5
+zoomLevels <- c(95, 90, 80, 70, 60) # soglia sul valore di theta per avere 1, 2, 3, 4, 5 valori sull'asse delle x
+zoom <- 5
 
 # Defines the name of the file containing a copy of the dataframe created by this script
 #  Yeast, CElegans, HomoSapiens, Schistosoma, Lemur, MacacaMulatta, PiceaAbies
 # genomes <- c( "Yeast", "CElegans", "HomoSapiens", "Schistosoma", "Lemur", "MacacaMulatta", "PiceaAbies")
 genomes <- c( "Yeast", "CElegans", "HomoSapiens", "PiceaAbies")
+genomes <- c( "Yeast-codingSeq", "CElegans-codingSeq", "HomoSapiens-codingSeq")
 sortedGenomes <- c("Yeast", "CElegans", "HomoSapiens", "PiceaAbies")
+sortedGenomes <- c( "Yeast-codingSeq", "CElegans-codingSeq", "HomoSapiens-codingSeq")
 
-types = c("1:3", "4:6", "7:9", "9:11", "4:11", "all")
-elements = c("1:3", "4:6", "7:9", "9:11", "4:11", "1:11")
+types <- c("1:3", "4:6", "7:9", "9:11", "4:11", "all")
+elements <- c("1:3", "4:6", "7:9", "9:11", "4:11", "1:11")
 cvDF <- data.frame( Genome = character(), Measure = character(), k = integer(),
                     type = character(), cv = double(), stringsAsFactors=FALSE)
 
@@ -69,14 +71,14 @@ tgtDF <- data.frame( Genome = character(), Measure = character(), Theta = intege
                      A = numeric(), B = numeric(), C = numeric(), D = numeric(), N = numeric(), density = numeric(),
                      distance=double(), stringsAsFactors=FALSE)
 
-nObs = 88
-nRowXObs = 13
-dfSize = nObs * nRowXObs
+nObs  <- 88
+nRowXObs  <- 13
+dfSize  <- nObs * nRowXObs
 
 
 if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
   # calcola i 2 dataframe
-  cnt = 0
+  cnt  <- 0
   for( sequenceName in genomes) {
 
     dfFilename <- sprintf( "%s,32/Synthetics-DatiEsperimento/Report%s.RDS", bs, sequenceName)
@@ -85,14 +87,14 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
     if (!dir.exists(dirname)) {
       dir.create(dirname)
     }
-    tgtDir = sprintf("%s/%s", dirname, sequenceName)
+    tgtDir  <- sprintf("%s/%s", dirname, sequenceName)
     if (!dir.exists( tgtDir)) {
       dir.create(tgtDir)
     }
 
     if (!file.exists(dfFilename)) {
       # carica il CSV dell'esperimento
-      columnClasses = c(
+      columnClasses  <- c(
         #   sequenceA  sequenceB  start.time  real.time    Theta        k
         "character", "character", "numeric", "numeric", "integer", "integer",
         #   A	        B	      C	         D	        N         A/N
@@ -165,13 +167,13 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
     df <-readRDS( file = dfFilename)
     cat(sprintf("Dataset %s loaded. (%d rows).\n", dfFilename, nrow(df)))
 
-    df$kf = factor(df$k)
-    df$tf = factor(df$Theta)
+    df$kf  <- factor(df$k)
+    df$tf  <- factor(df$Theta)
 
-    measures = colnames(df)[13:27]
+    measures  <- colnames(df)[13:27]
     # extras = c("Mash.Distance.10000.", "D2", "Euclidean")
-    extras = c("D2", "Euclidean")
-    measures = append(measures, extras)
+    extras  <- c("D2", "Euclidean")
+    measures  <- append(measures, extras)
 
     # calcola la trasposta ... un rigo per ogni misura
     for(i in 1:nrow(df)) {
@@ -195,16 +197,16 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
 
     cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.Distance.1000, Mash.Distance.10000, Mash.Distance.100000. (%d rows).\n",nrow(df)))
 
-    tgtDF$k = factor(tgtDF$k)
-    # tgtDF$Theta = factor(tgtDF$Theta)
+    tgtDF$k  <- factor(tgtDF$k)
+    # tgtDF$Theta  <- factor(tgtDF$Theta)
 
-    kValues = levels(tgtDF$k)
+    kValues  <- levels(tgtDF$k)
     measures <- levels(factor(tgtDF$Measure))
 
     cat(sprintf("Data Frame %s filtered (%d observations).\n", sequenceName, nrow(tgtDF) - cnt * dfSize))
-    # tgtDF$Theta = factor(tgtDF$Theta)
+    # tgtDF$Theta  <- factor(tgtDF$Theta)
 
-    df_total = data.frame()
+    df_total  <- data.frame()
     for( km in kValues) {
       for ( mes in measures) {
         df <- filter(tgtDF, Genome == sequenceName & k == km & Measure == mes)
@@ -218,14 +220,14 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
         # }
         # solo per i 4 genomi
         if (sequenceName %in% sortedGenomes) {
-          b = c( 0, 0, 0, 0, 0)
+          b  <- c( 0, 0, 0, 0, 0)
           for( i in 0:3 ) {
-            s = if (i<3) i * 3 + 1 else i * 3
-            cv = sd(df$distance[s:(s+2)]) / mean(df$distance[s:(s+2)])
+            s  <- if (i<3) i * 3 + 1 else i * 3
+            cv  <- sd(df$distance[s:(s+2)]) / mean(df$distance[s:(s+2)])
             nr <- list( sequenceName, mes, as.integer(km), types[i+1], cv)
             cvDF[nrow( cvDF)+1,] <- nr
           }
-          cv = sd(df$distance[4:11]) / mean(df$distance[4:11])
+          cv  <- sd(df$distance[4:11]) / mean(df$distance[4:11])
           nr <- list( sequenceName, mes, as.integer(km), types[5], cv)
           cvDF[nrow( cvDF)+1,] <- nr
           nr <- list( sequenceName, mes, as.integer(km), types[6], sd(df$distance)/mean(df$distance))
@@ -235,7 +237,7 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
       }
     }
 
-    cnt = cnt + 1
+    cnt  <- cnt + 1
     if (nrow(tgtDF) != cnt * dfSize || nrow(df_total) != dfSize)   {
       stop("errore nel calcolo di df_total per il calcolo delle distanze relative")
     }
@@ -252,7 +254,7 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
   # salva il datafrme con i coefficienti di variazione
   saveRDS( cvDF, df2Filename)
   for( mes in measures) {
-  df = filter( cvDF, Measure == mes)
+  df  <- filter( cvDF, Measure == mes)
   cat(sprintf("%s -> min: %f, max: %f\n", mes, min(df$cv, na.rm = TRUE), max(df$cv,na.rm = TRUE)))
   }
 }
@@ -273,8 +275,8 @@ for( sequenceName in genomes) {
   totPrinted <- 0
 
   #  grafico distanze per ciascuna misura (Theta sull'asse delle x)
-  df = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean")
-  df$Measure = factor( df$Measure, levels = sortedMeasures)
+  df  <- filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean")
+  df$Measure  <- factor( df$Measure, levels = sortedMeasures)
 
   sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
       geom_line(aes(color = k)) +
@@ -303,7 +305,7 @@ for( sequenceName in genomes) {
 
 
   # secondo grafico di riferimento per Euclide
-  df = filter(tgtDF, Genome == sequenceName & Measure == "Euclidean")
+  df  <- filter(tgtDF, Genome == sequenceName & Measure == "Euclidean")
 
   sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
     # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
@@ -331,7 +333,7 @@ for( sequenceName in genomes) {
   totPrinted <- totPrinted + 1
 
   # Qterzo grafico di riferimento per simmilarità D2
-  df = filter(tgtDF, Genome == sequenceName & Measure == "D2")
+  df  <- filter(tgtDF, Genome == sequenceName & Measure == "D2")
 
   sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
     # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
@@ -359,8 +361,8 @@ for( sequenceName in genomes) {
 
   # Pannello della density x k *******************************************************************
   #  grafico distanze per ciascuna misura (Theta sull'asse delle x)
-  df = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean")
-  df$Measure = factor( df$Measure, levels = sortedMeasures)
+  df  <- filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean")
+  df$Measure  <- factor( df$Measure, levels = sortedMeasures)
 
   sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
     geom_line(aes(color = k)) +
@@ -387,7 +389,7 @@ for( sequenceName in genomes) {
 
 
   # grafico delle densità A/N
-  df = filter(tgtDF, Genome == sequenceName & Measure == "Jaccard")
+  df  <- filter(tgtDF, Genome == sequenceName & Measure == "Jaccard")
 
   sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
     geom_line(aes(color = k)) +
@@ -413,8 +415,8 @@ for( sequenceName in genomes) {
   # Zooming ******************************************************************
 
   #  grafico distanze per ciascuna misura (Theta sull'asse delle x)
-  df = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean" & Theta >= zoomLevels[zoom])
-  df$Measure = factor( df$Measure, levels = sortedMeasures)
+  df  <- filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean" & Theta >= zoomLevels[zoom])
+  df$Measure  <- factor( df$Measure, levels = sortedMeasures)
 
   sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
     geom_line(aes(color = k)) +
@@ -442,7 +444,7 @@ for( sequenceName in genomes) {
   totPrinted <- totPrinted + 1
 
 
-  df = filter(tgtDF, Genome == sequenceName & Measure == "Euclidean" & Theta >= zoomLevels[zoom])
+  df  <- filter(tgtDF, Genome == sequenceName & Measure == "Euclidean" & Theta >= zoomLevels[zoom])
 
   sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
     # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
@@ -470,7 +472,7 @@ for( sequenceName in genomes) {
   totPrinted <- totPrinted + 1
 
 
-  df = filter(tgtDF, Genome == sequenceName & Measure == "D2" & Theta >= zoomLevels[zoom])
+  df  <- filter(tgtDF, Genome == sequenceName & Measure == "D2" & Theta >= zoomLevels[zoom])
 
   sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
     geom_line(aes(color = k)) +
@@ -500,7 +502,7 @@ for( sequenceName in genomes) {
 # per ultimo il grafico con il coefficiente di variazione
 # cvDF = 728 observations = 4 genome x 13 misure x 8 k
 
-df = filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type == "all")
+df  <- filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type == "all")
 df$Measure = factor( df$Measure, levels = sortedMeasures)
 
 sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
@@ -513,7 +515,7 @@ sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
                         axis.text.y = element_blank(),
                         axis.title.y = element_blank(),
                         axis.title.x = element_blank())
-  # scale_y_continuous(name = "CV")
+  # scale_y_continuous(name  <- "CV")
   #                    breaks=c(0, 0.5, 1),
   #                    labels=c("0", "0.5", "1")) +
   # labs(y = "CV 1:11")
@@ -525,7 +527,7 @@ totPrinted <- totPrinted + 1
 
 
 
-df = filter(cvDF, Measure == "Euclidean" & type == "all")
+df  <- filter(cvDF, Measure == "Euclidean" & type == "all")
 
 sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
   geom_point(size = 0.8, aes(color = k)) +
@@ -544,7 +546,7 @@ ggsave( outfname, device = pdf(), width = 0.9, height = 6, units = "in", dpi = 3
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
-df = filter(cvDF, Measure == "D2" & type == "all")
+df  <- filter(cvDF, Measure == "D2" & type == "all")
 
 sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
   geom_point(size = 0.8, aes(color = k)) +
@@ -567,7 +569,7 @@ totPrinted <- totPrinted + 1
 # zooming ---------------------------------------------------------------------------
 
 for( i in 1:5) {
-  df = filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type == types[i])
+  df  <- filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type == types[i])
   df$Measure = factor( df$Measure, levels = sortedMeasures)
 
   sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
@@ -589,7 +591,7 @@ for( i in 1:5) {
   dev.off() # only 129kb in size
   totPrinted <- totPrinted + 1
 
-  df = filter(cvDF, Measure == "Euclidean" & type == types[i])
+  df  <- filter(cvDF, Measure == "Euclidean" & type == types[i])
 
   sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
     geom_point(size = 0.8, aes(color = k)) +
@@ -608,7 +610,7 @@ for( i in 1:5) {
   dev.off() # only 129kb in size
   totPrinted <- totPrinted + 1
 
-  df = filter(cvDF, Measure == "D2" & type == types[i])
+  df  <- filter(cvDF, Measure == "D2" & type == types[i])
 
   sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
     geom_point(size = 0.8, aes(color = k)) +
@@ -627,8 +629,8 @@ for( i in 1:5) {
   totPrinted <- totPrinted + 1
 }
 
-df = filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type != "all" & type != "4:11")
-df$Measure = factor( df$Measure, levels = sortedMeasures)
+df  <- filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type != "all" & type != "4:11")
+df$Measure  <- factor( df$Measure, levels = sortedMeasures)
 
 sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = type)) +
   geom_point(size = 0.8, aes(color = type)) +
@@ -651,7 +653,7 @@ totPrinted <- totPrinted + 1
 
 
 # grafico delle densità A/N x tutti i genomi
-df = filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard")
+df  <- filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard")
 
 df$Genome <- factor(df$Genome, levels = sortedGenomes)
 
@@ -676,7 +678,7 @@ dev.off()
 totPrinted <- totPrinted + 1
 
 # grafico delle densità (A+D)/N x tutti i genomi
-df = filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard")
+df  <- filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard")
 
 df$Genome <- factor(df$Genome, levels = sortedGenomes)
 
