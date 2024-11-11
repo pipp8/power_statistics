@@ -50,13 +50,13 @@ if (!dir.exists(dirname)) {
 ###### CODE
 
 # misure di riferimento
-l1 <- c("D2")
+l1 <- c("D2", "Euclidean")
 # misure analizzate
 l2 <- c("Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel")
 # misure dominate da A e D (B e C diventano irrilevanti)
 l3 <- c("Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
 # misure escluse dal calcolo
-l4 <- c("Anderberg", "Gower", "Yule", "Mash.distance.1000.", "Mash.distance.10000.", "Mash.distance.100000.", "Euclidean")
+l4 <- c("Anderberg", "Gower", "Yule", "Mash.distance.1000.", "Mash.distance.10000.", "Mash.distance.100000.")
 
 # riordina la lista delle misure
 sortedMeasures = c(l1, l2, l3)
@@ -71,7 +71,7 @@ scales_y <- list(
 if (!file.exists(dfFilename)) {
   # converte il file CSV in dataframe
   columnClasses = c(
-                #   model	    gamma	    seqLen	   pairId	       k
+                #   model	   gamma	  seqLen	 pairId	       k
                 "character", "numeric", "integer", "integer", "integer",
                 #   A	        B	         C	        D	        N
                 "numeric", "numeric", "numeric", "numeric", "numeric",
@@ -140,7 +140,7 @@ dff$AD = (dff$A+dff$D) / dff$N
 distancesDF <- data.frame(seqLen = numeric(), pairId = numeric(), k = numeric(), gamma = double(), distance = double(),
                           model = character(), Measure = character(), stringsAsFactors=TRUE)
 
-pltMeasures = c("D2", "Jaccard", "Hamman")
+pltMeasures = c("D2", "Euclidean", "Jaccard", "Hamman")
 
 # filter model == "Uniform-T1"
 tt <- filter(dati, as.character(dati$model) != "Uniform-T1" ) # tutte le misure per NM, MR e PT
@@ -242,7 +242,8 @@ dev.off() #only 129kb in size
 
 # boxplot con le distanze per il null model
 #
-tt <- filter(distancesDF, as.character(distancesDF$model) == "NM" & distancesDF$Measure != "D2") # tutte le misure Present / Absent
+tt <- filter(distancesDF, as.character(distancesDF$model) == "NM" &
+  distancesDF$Measure != "D2" & distancesDF$Measure != "Euclidean") # tutte le misure Present / Absent
 
 sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
   geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
@@ -284,11 +285,30 @@ sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
                         legend.position = "none",  
                         panel.spacing=unit(0.1, "lines")) +
   guides(colour = guide_legend(override.aes = list(size=1)))
-# ggtitle( am)
 
-# dev.new(width = 9, height = 6)
-# print(sp)
 outfname <- sprintf( "%s/PanelD2DistancesNM.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 3, height = 6, units = "in", dpi = 300)
+dev.off() #only 129kb in size
+
+# Panel distanze NM solo per Euclide
+tt <- filter(distancesDF, as.character(model) == "NM" & Measure == "Euclidean") #  Solo Euclide
+sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
+  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
+  facet_grid(cols = vars(Measure), rows = vars(k), scales = "free_y") +
+  # scale_y_continuous(name = "Null Model Distance values") +
+  scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                   labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
+  # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+  #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
+  theme_light() + theme(strip.text.x = element_text( size = 8),
+                        axis.text.x = element_text( size = rel( 0.8)),
+                        axis.text.y = element_text( size = rel( 0.8)),
+                        axis.title.y = element_blank(),
+                        legend.position = "none",
+                        panel.spacing=unit(0.1, "lines")) +
+  guides(colour = guide_legend(override.aes = list(size=1)))
+
+outfname <- sprintf( "%s/PanelEuclideanDistancesNM.pdf", dirname)
 ggsave( outfname, device = pdf(), width = 3, height = 6, units = "in", dpi = 300)
 dev.off() #only 129kb in size
 

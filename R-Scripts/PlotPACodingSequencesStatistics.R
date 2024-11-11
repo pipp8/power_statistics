@@ -671,7 +671,7 @@ sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
 #                         axis.text.x=element_blank())
 
 outfname <- sprintf( "%s/PanelDensities-all.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 6, height = 8, units = "in", dpi = 300)
 dev.off()
 totPrinted <- totPrinted + 1
 
@@ -696,7 +696,7 @@ sp1 <- ggplot(data=df, aes(x=Theta, y=AD, label=density)) +
 #                         axis.text.x=element_blank())
 
 outfname <- sprintf( "%s/PanelRari-all.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 6, height = 8, units = "in", dpi = 300)
 dev.off()
 totPrinted <- totPrinted + 1
 

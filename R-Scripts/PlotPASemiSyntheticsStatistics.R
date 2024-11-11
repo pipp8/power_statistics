@@ -39,13 +39,13 @@ df2Filename <- sprintf("%s/cvAll.RDS", dirname )
 
 similarities = c('D2')
 # misure di riferimento
-l1 <- c("D2")
+l1 <- c("D2", "Euclidean")
 # misure analizzate
 l2 <- c("Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel")
 # misure dominate da A e D (B e C diventano irrilevanti)
 l3 <- c("Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
 # misure escluse dal calcolo
-l4 <- c("Anderberg", "Gower", "Yule", "Mash.distance.1000.", "Mash.distance.10000.", "Mash.distance.100000.", "Euclidean")
+l4 <- c("Anderberg", "Gower", "Yule", "Mash.distance.1000.", "Mash.distance.10000.", "Mash.distance.100000.")
 
 # riordina la lista delle misure
 sortedMeasures = c(l1, l2, l3)
@@ -330,7 +330,7 @@ for( sequenceName in genomes) {
   dev.off() # only 129kb in size
   totPrinted <- totPrinted + 1
 
-  # Qterzo grafico di riferimento per simmilarità D2
+  # Terzo grafico di riferimento per simmilarità D2
   df = filter(tgtDF, Genome == sequenceName & Measure == "D2")
 
   sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
@@ -671,7 +671,7 @@ sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
 #                         axis.text.x=element_blank())
 
 outfname <- sprintf( "%s/PanelDensities-all.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 6, height = 7, units = "in", dpi = 300)
 dev.off()
 totPrinted <- totPrinted + 1
 
@@ -696,8 +696,34 @@ sp1 <- ggplot(data=df, aes(x=Theta, y=AD, label=density)) +
 #                         axis.text.x=element_blank())
 
 outfname <- sprintf( "%s/PanelRari-all.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300)
+ggsave( outfname, device = pdf(), width = 6, height = 7, units = "in", dpi = 300)
 dev.off()
 totPrinted <- totPrinted + 1
+
+# grafico delle distanze di euclide x tutti i genomi
+for( gen in sortedGenomes) {
+  df <- filter(tgtDF, Genome == gen & Measure == "Euclidean")
+
+  df$Genome <- factor(df$Genome, levels = sortedGenomes)
+
+  sp1 <- ggplot(data=df, aes(x=Theta, y=distance)) +
+    geom_line(aes(color = k)) +
+    geom_point() +
+    facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both), scales = "free_y") +
+    # scale_y_continuous(name = "Distance") +
+    theme_light() + theme( panel.spacing = unit(0.2, "lines"),
+                           legend.position = "none",
+                           strip.text.x = element_text( size = 8, angle = 0),
+                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                           axis.title.x = element_blank(),
+                           axis.title.y = element_blank(),
+                           axis.text.y = element_blank(),
+                           strip.text.y = if (gen == "PiceaAbies") element_text( size = 8, angle = -90) else element_blank())
+
+  outfname <- sprintf( "%s/PanelDistancesEuclidean-%s.pdf", dirname, gen)
+  ggsave( outfname, device = pdf(), width = 2, height = 6, units = "in", dpi = 300)
+  dev.off()
+  totPrinted <- totPrinted + 1
+}
 
 cat(sprintf("CV plot Done. %d plot printed\n", totPrinted))
