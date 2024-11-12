@@ -38,10 +38,10 @@ nTests = 1000
 minK = 4
 maxK = 32
 stepK = 4
-# sketchSizes = [1000, 10000, 100000]
-sketchSizes = [10000]
+sketchSizes = [1000, 10000, 100000]
+# sketchSizes = [10000]
 
-outFilePrefix = 'PresentAbsentECData'
+outFilePrefix = 'PresentAbsentRealGenomeData'
 
 # global broadcast variables
 totDistinctKmerAAcc = []
