@@ -19,38 +19,38 @@ library(r2r)
 ###### OPTIONS
 
 # Defines the name of the file containing a copy of the dataframe created by this script
-# dfFilename <- "PresentAbsent-Power+T1.RDS"
-# csvFilename <- 'PresentAbsentData-all.csv'
-# nullModel <- 'Uniform'
 
-setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
+###### CODE
 
 
 bs <- "uniform"
+wd <- sprintf("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent/%s,32", bs)
+setwd(wd)
+
 # Sets the name of the file containing the input dataframe
-dfFilename <- sprintf( "%s,32/PresentAbsentEC-Power+T1-%s,32.RDS", bs, bs)
+dfPowerT1 <- sprintf("PresentAbsentEC-Power+T1-%s,32.RDS", bs)
+
+# Sets the name of the file containing the input dataframe
+dfRawData <- "PresentAbsent-RawData.RDS"
 
 # Sets the output path for the images to be generated
-dirname <- sprintf("%s,32/MashT1+Power-Plots", bs)
-
-if (!dir.exists(dirname)) {
-  dir.create(dirname)
-}
-
+dirname <- "MashT1+Power-Plots"
 
 nullModel <- 'Uniform'
-# nullModel <- 'ShuffledEColi'
-T1Model <- paste( sep='', nullModel, '-T1')
 
-###### CODE
+T1Model <- paste( sep='', nullModel, '-T1')
 
 if (!dir.exists(dirname)) {
 	dir.create(dirname)
 }
 
 
-if (!file.exists(dfFilename)) {
-  cat( sprintf("Input Dataframe (%s) does not exist. Exiting\n", dfFilename))
+if (!file.exists(dfPowerT1)) {
+  cat( sprintf("Input Dataframe (%s) does not exist. Exiting\n", dfPowerT1))
+  quit(save = "ask")
+}
+if (!file.exists(dfRawData)) {
+  cat( sprintf("Raw Dataframe (%s) does not exist. Exiting\n", dfRawData))
   quit(save = "ask")
 }
 
@@ -89,23 +89,15 @@ scales_y <- list(
 
 
 # misure di riferimento
-l1 <- c("Jaccard", "Mash.Distance.1000.", "Mash", "Mash.Distance.100000.")
-# misure analizzate
-l2 <- c( "Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel")
-# misure dominate da A e D (B e C diventano irrilevanti)
-l3 <- c("Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
-# misure escluse dal calcolo
-l4 <- c("Anderberg", "Gower", "Yule")
+sortedMeasures <- c("Jaccard", "Mash.Distance.1000.", "Mash", "Mash.Distance.100000.")
+pltMeasures <- c("Jaccard", "Mash.Distance.1000.", "Mash.Distance.10000.", "Mash.Distance.100000.")
 
-# riordina la lista delle misure
-# sortedMeasures <- c(l1, l2, l3)
-sortedMeasures <- l1
-#measureNanesDF <- data.frame( ref = l1, g1 = l2, alt = l3, no = l4, stringsAsFactors = FALSE)
-
-
-
-
-# finally load input dataframe
+measure2Pv <- function( mes) {
+  return( switch(mes,
+                 "Mash.Distance.1000." = "Mash.Pv..1000.",
+                 "Mash.Distance.10000." = "Mash.Pv..10000.",
+                 "Mash.Distance.100000." = "Mash.Pv..100000."))
+}
 
 ###### CODE
 
@@ -125,8 +117,8 @@ sortedMeasures <- l1
 # $ amDensity: num  0.912 0.96 0.912 0.96 0.912 ...
 # $ amSD     : num  0.0289 0.013 0.0289 0.013 0.0289 ...
 
-df <-readRDS( file = dfFilename)
-cat(sprintf("Dataset %s loaded. (%d rows).\n", dfFilename, nrow(df)))
+df <-readRDS( file = dfPowerT1)
+cat(sprintf("Dataset %s loaded. (%d rows).\n", dfPowerT1, nrow(df)))
 
 # prendiamo SOLO le misure in sortedMeasures
 df <- filter( df, Measure %in% sortedMeasures)
@@ -227,6 +219,7 @@ for (gammaTgt in gammaValues) {
   }
 }
 
+# Grafico della power per ciascun AM e per ciascun alpha con tutti i valori di gamma in un unico pannello
 for (alphaTgt in alphaValues) {
   cat(sprintf("Power for alpha = %.2f - all values of gamma\n", alphaTgt))
   for (am in levels(df$Model)) {
@@ -236,7 +229,7 @@ for (alphaTgt in alphaValues) {
     # riordina le misure
     dff$Measure <- factor(dff$Measure, levels = sortedMeasures)
 
-    # Grafico della power per ciascun AM e per ciascun alpha con tutti i valori di gamma in un unico pannello
+    # Pannello della power
     sp <- ggplot( dff, aes( x = len, y = power, alpha=0.8)) +
       geom_point( aes( color = k), alpha = 0.8, size = 1.1) +
       scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
@@ -366,6 +359,94 @@ for (am in levels(factor(df$Model))) {
 
   totPrinted <- totPrinted + 1
 }
+
+# 320.000 observations
+dfRaw <- readRDS(dfRawData)
+# crea un nuovo dataframe per le misure selezionate
+distancesDF <- data.frame(seqLen = numeric(), pairId = numeric(), k = numeric(), gamma = double(),
+                          distance = double(), pvalue = double(),
+                          model = character(), Measure = character(), stringsAsFactors=TRUE)
+
+# filter model == "Uniform-T1"
+tt <- filter(dfRaw, as.character(model) != "Uniform-T1" ) # tutte le misure per NM, MR e PT
+tt$model <- factor(tt$model, levels = c( md[3], md[1], md[2])) # riordina le labels
+models <- levels(factor(tt$model))
+for( m in models ) {
+  gammas <- if (as.character(m) == "Uniform") c(0) else c(0.01, 0.05, 0.10)
+  for(g in gammas) {
+    for (mes in pltMeasures) { # per tutte le misure previste
+      t1 <- filter(tt, tt$model == m & tt$gamma == g ) # tutte le misure per il solo NM
+      pv <- if (startsWith(mes, "Mash")) t1[[measure2Pv(mes)]] else 0
+      df1 <- data.frame( t1$seqLen, t1$pairId, t1$k, t1$gamma, t1[[mes]], pv, stringsAsFactors=TRUE)
+      colnames(df1)[1] <- "seqLen"
+      colnames(df1)[2] <- "pairId"
+      colnames(df1)[3] <- "k"
+      colnames(df1)[4] <- "gamma"
+      colnames(df1)[5] <- "distance"
+      colnames(df1)[6] <- "pvalue"
+
+      df1$model <- switch(as.character(m), "Uniform" = "NM", "MotifRepl-U" = "MR", "PatTransf-U" = "PT")
+      df1$Measure <- mes
+
+      distancesDF <- rbind(distancesDF, df1)
+    }
+  }
+}
+
+distancesDF$lf = factor(distancesDF$seqLen)
+distancesDF$k = factor(distancesDF$k)
+distancesDF$model <- factor(distancesDF$model, levels = c( "NM", "MR", "PT"))# riordina le labels
+
+
+#
+# boxplot con le distanze per il null model (tutte le misure selezionate da pltMeasures)
+#
+tt <- filter(distancesDF, model == levels(distancesDF$model)[1]) # tutte le misure
+
+sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
+  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
+  facet_grid(cols = vars(Measure), rows = vars(k)) +
+  scale_y_continuous(name = "Null Model Distance values") +
+  scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                   labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
+  # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+  #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
+  theme_light() + theme(strip.text.x = element_text( size = 8),
+                        axis.text.x = element_text( size = rel( 0.8)),
+                        axis.text.y = element_text( size = rel( 0.8)),
+                        axis.title.y = element_blank(),
+                        legend.position = "none",
+                        panel.spacing=unit(0.1, "lines")) +
+  guides(colour = guide_legend(override.aes = list(size=1)))
+# ggtitle( am)
+
+outfname <- sprintf( "%s/PanelAllDistancesNM.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
+dev.off()
+
+#
+# boxplot con i P-Value per il null model (tutte le misure selezionate da pltMeasures)
+#
+sp <- ggplot( tt, aes(x = lf, y = pvalue, alpha=0.8)) +
+  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
+  facet_grid(cols = vars(Measure), rows = vars(k)) +
+  scale_y_continuous(name = "Null Model P-Values") +
+  scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                   labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
+  # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+  #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
+  theme_light() + theme(strip.text.x = element_text( size = 8),
+                        axis.text.x = element_text( size = rel( 0.8)),
+                        axis.text.y = element_text( size = rel( 0.8)),
+                        axis.title.y = element_blank(),
+                        legend.position = "none",
+                        panel.spacing=unit(0.1, "lines")) +
+  guides(colour = guide_legend(override.aes = list(size=1)))
+# ggtitle( am)
+
+outfname <- sprintf( "%s/PanelAllPValuesNM.pdf", dirname)
+ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
+dev.off()
 
 cat(sprintf("%d plot printed", totPrinted))
 
