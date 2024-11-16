@@ -22,7 +22,7 @@ from pyspark.sql import SparkSession
 from pyspark import SparkFiles
 
 
-hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data'
+
 # hdfsPrefixPath = '/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data'
 
 inputRE = '*.fasta'
@@ -67,14 +67,18 @@ class MashData:
             self.N = 0
 
 
-def checkPathExists(path: str) -> bool:
-    global hdfsDataDir, spark
-    # spark is a SparkSession
-    sc = spark.sparkContext
-    fs = sc._jvm.org.apache.hadoop.fs.FileSystem.get(
-        sc._jvm.java.net.URI.create(hdfsDataDir),
-        sc._jsc.hadoopConfiguration(),)
-    return fs.exists(sc._jvm.org.apache.hadoop.fs.Path(path))
+
+def checkPathExists(path: str, use_local_mode: bool) -> bool:
+    global dataDir, spark
+    if use_local_mode:
+        return os.path.exists(path)
+    else:
+        sc = spark.sparkContext
+        fs = sc._jvm.org.apache.hadoop.fs.FileSystem.get(
+            sc._jvm.java.net.URI.create(path),
+            sc._jsc.hadoopConfiguration(),)
+        return fs.exists(sc._jvm.org.apache.hadoop.fs.Path(path))
+
 
 
 def hamming_distance(seq1: str, seq2: str) -> int:
@@ -652,7 +656,9 @@ def splitPairs(ds):
 
 def main():
     global hdfsDataDir, hdfsPrefixPath,  outFilePrefix, spark
-    
+
+    use_local_mode = True
+
     argNum = len(sys.argv)
     if (argNum < 2 or argNum > 3):
         """
@@ -661,11 +667,21 @@ def main():
     else:
         seqLen = int(sys.argv[1])
         dataMode = sys.argv[2] if (argNum > 2) else ""
-        hdfsDataDir = '%s/%s/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
-        outFile = '%s/%s/%s-%s.%d-%s.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen, dt.today().strftime("%Y%m%d-%H%M"))
 
-    print("hdfsDataDir = %s" % hdfsDataDir)
-    
+        if use_local_mode:
+            prefixPath = '/Users/umberto/PycharmProjects/power_statistics'
+            dataDir = '%s/%s/len=%d' % (prefixPath, dataMode, seqLen)
+            outFile = '%s/%s/%s-%s.%d-%s.csv' % (
+            prefixPath, dataMode, outFilePrefix, dataMode, seqLen, dt.today().strftime("%Y%m%d-%H%M"))
+            print("dataDir = %s" % dataDir)
+        else:
+            hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data'
+            dataDir = '%s/%s/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
+            outFile = '%s/%s/%s-%s.%d-%s.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen, dt.today().strftime("%Y%m%d-%H%M"))
+            print("hdfsDataDir = %s" % hdfsDataDir)
+
+
+
     spark = SparkSession \
         .builder \
         .appName("%s %d" % (os.path.basename( sys.argv[0]), seqLen)) \
@@ -675,15 +691,21 @@ def main():
 
     sc2 = spark._jsc.sc()
     nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) -1
-    inputDataset = '%s/%s' % (hdfsDataDir, inputRE)
 
-    if (not checkPathExists( hdfsDataDir)):
-        print("Data dir: %s does not exist. Program terminated." % hdfsDataDir)
-        exit( -1)
+    if (not checkPathExists(dataDir,use_local_mode)):
+        print(f"Data dir {dataDir} does not exist. Program terminated.")
+        exit(-1)
 
-    print("%d workers, hdfsDataDir: %s, dataMode: %s" % (nWorkers, hdfsDataDir, dataMode))
+    print("%d workers, dataDir: %s, dataMode: %s" % (nWorkers, dataDir, dataMode))
 
-    rdd = sc.wholeTextFiles( inputDataset, minPartitions = 48*100) # 100 tasks per 48 executors
+
+    if use_local_mode:
+        inputDataset = '%s/%s' % (dataDir, inputRE)
+        rdd = sc.wholeTextFiles(inputDataset)
+    else:
+        inputDataset = '%s/%s' % (dataDir, inputRE)
+        rdd = sc.wholeTextFiles(inputDataset, minPartitions=48 * 100)  # 100 tasks per 48 executors
+
     # print("Number of Partitions: " + str(rdd.getNumPartitions()))
     #
     # .map(lambda x: (x[0], x[1][0], x[1][1], x[2][0], x[2][1]))
