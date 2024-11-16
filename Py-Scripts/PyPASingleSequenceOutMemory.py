@@ -32,7 +32,7 @@ hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo'
 hdfsDataDir = ''
 spark = []
 sc = []
-thetaValue = 0
+thetaValue = 0.0
 
 nTests = 1000
 minK = 4
@@ -450,7 +450,7 @@ def countBasedMeasures(partData):
 
 
 # run jaccard on sequence pair ds with kmer of length = k
-def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: int, tempDir: str):
+def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir: str):
     global totDistinctKmerAAcc, totDistinctKmerBAcc, totKmerAAcc, totKmerBAcc, kmerStats
 
     start = time.time()
@@ -634,7 +634,7 @@ def processPairs(seqFile1: str, seqFile2: str, theta: int):
         os.mkdir(tempDir)
 
     # local file system result file
-    outFile = "%s/%s-%s-%02d-%d.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile2).stem, theta, int(time.time()))
+    outFile = "%s/%s-%s-T=%.3f-%d.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile2).stem, theta, int(time.time()))
     with open(outFile, 'w') as file:
         csvWriter = csv.writer(file)        
         writeHeader(csvWriter)
@@ -643,12 +643,12 @@ def processPairs(seqFile1: str, seqFile2: str, theta: int):
         if (seqFile2 == "synthetic"):
             # produce il file allontanato da seqFile1 di un fattore theta
             (f, ext) = os.path.splitext(seqFile1)
-            seqFile2 = f"{f}-{theta}{ext}"
+            seqFile2 = f"{f}-{theta:.3f}{ext}"
             mkd.MoveAwaySequence(seqFile1, seqFile2, theta)
 
         for k in range( minK, maxK+1, stepK):
             # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
-            print(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta} ******")
+            print(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta:.3f} ******")
             res = processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
             csvWriter.writerow( res)
             file.flush()
@@ -681,7 +681,7 @@ def main():
         """
     else:
         # theta viene utilizzato SOLO se Sequence2 == "synthetic" altrimenti viene ignorato
-        thetaValue = int(sys.argv[3])
+        thetaValue = float(sys.argv[3])
         hdfsDataDir = '%s/%s' % (hdfsPrefixPath, sys.argv[4])
 
     if (argNum == 6):
@@ -694,13 +694,13 @@ def main():
     # outFile = '%s/%s-%s.csv' % (hdfsDataDir, Path( seqFile1).stem, Path(seqFile2).stem )
 
     if (seqFile2 == "synthetic"):
-        print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} and Theta = {thetaValue} in hdfsDataDir = {hdfsDataDir} ******")
+        print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} and Theta = {thetaValue:.3f} in hdfsDataDir = {hdfsDataDir} ******")
     else:
         print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} in hdfsDataDir = {hdfsDataDir} ******")
 
     spark = SparkSession \
         .builder \
-        .appName( f"{Path( sys.argv[0]).stem} {Path(seqFile1).stem} {Path(seqFile2).stem} {minK} <= k <= {maxK} theta = {thetaValue}") \
+        .appName( f"{Path( sys.argv[0]).stem} {Path(seqFile1).stem} {Path(seqFile2).stem} {minK} <= k <= {maxK} theta = {thetaValue:.3f}") \
         .getOrCreate()
 
     sc = spark.sparkContext

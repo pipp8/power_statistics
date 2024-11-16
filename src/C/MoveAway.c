@@ -16,14 +16,14 @@ int main(int argc, char *argv[]) {
 
   char outFile[1000], *inputFile, ext[100] = "";
   char *dirc, *basec, *bname, *dname;
-  int theta;
+  double theta;
     
   if (argc != 3) {
     printf("Errore nei parametri:\nUsage: %s InputSequence thetaProbability", argv[0]);
     exit(-1);
   }
   inputFile = argv[1];
-  theta = atoi(argv[2]);
+  theta = atof(argv[2]);
 
   dirc = strdup(inputFile);
   basec = strdup(inputFile);
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 
   bname[strlen(bname)-strlen(ext)] = '\0';
   printf("basename:%s\n", bname);  
-  sprintf(outFile, "%s/%s-%02d%s", dname, bname, theta, ext);
+  sprintf(outFile, "%s/%s-T=%.3f%s", dname, bname, theta, ext);
 
   struct stat stat1, stat2;
 
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
   }
   
   printf( "*********************************************************\n");
-  printf( "Creating sequence: %s from sequence: %s theta: %d\n", outFile, bname, theta);
+  printf( "Creating sequence: %s from sequence: %s theta: %.3f\n", outFile, bname, theta);
   printf( "*********************************************************\n");
     
   long written = 0, subst = 0, totLen = 0;
@@ -86,13 +86,14 @@ int main(int argc, char *argv[]) {
     exit(-2);
   }
 
+  int t2 = theta * 1000; // 0.005 -> 5, 0.05 -> 50, 0.5 -> 500
   while((nr = fread(bufin, (size_t) 1, bufDim, fi)) > 0) {
       
       po = bufout;
       for( pi = bufin, i = 0; i < nr; i++, pi++) {
       
 	char c = toupper(*pi);
-	if ((random() % 100) < theta) {
+	if ((random() % 1000) < t2) {
 	  
 	  int j = random() % 3;
 	  

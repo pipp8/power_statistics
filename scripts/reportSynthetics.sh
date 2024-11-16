@@ -1,18 +1,23 @@
 #! /usr/bin/bash
 
 
-base=$1
-t=5
-tt=$(printf "%s-%s-%02d-%02d*.csv" $base $base $t $t)
-report=${base}-$(date +%s).csv
+baseSeq=$1
+
+dataDir='/home/cattaneo/spark/power_statistics/Datasets'
+
+
+base=$(basename $baseSeq .fna)
+t=0.005
+tt=$(printf "%s/%s-%s-T=%.3f-T=%.3f*.csv" $dataDir $base $base $t $t)
+report=$(mktemp)
 
 # salva l'header
 head -1 $tt > $report
 i=0
-for f in ${base}-${base}*.csv; do
-    # f=$(printf "%s-%s-%02d-%02d*.csv" $base $base $t $t)
+for f in ${dataDir}/${base}-${base}*.csv; do
+    # f=$(printf "%s-%s-T=%.3f-T=%.3f*.csv" $base $base $t $t)
     echo -n "Processing file: $f -> "
-    # aggiunge i risoltati per ogni theta (senza header)
+    # aggiunge i risultati per ogni theta (senza header)
     tail +2 $f >> $report
     wc -l $report
     ((i++))
@@ -23,7 +28,12 @@ l=$(wc -l $report | cut -d ' ' -f 1)
 tot=$((i * 8 + 1))
 if (($l != $tot)); then
    echo "wrong number of lines $l"
-   wc ${base}*.csv
+   wc ${dataDir}/${base}*.csv
 else
     echo $base ok $l
 fi
+
+final=${dataDir}/${base}-$(date +%s).csv
+
+mv $report $final
+

@@ -6,7 +6,7 @@ if (( $# != 1 )); then
 fi
     
 inFile=$1
-tmpFile=/tmp/tt.csv
+tmpFile=$(mktemp)
 
 (head -1 $inFile; grep -v "^model" $inFile) > $tmpFile
 
