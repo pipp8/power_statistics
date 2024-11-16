@@ -627,7 +627,7 @@ def writeHeader( writer):#
 
 
 # processa localmente una coppia di sequenze seqFile1 e seqFile2
-def processPairs(seqFile1: str, seqFile2: str, theta: int):
+def processPairs(seqFile1: str, seqFile2: str, theta: float):
     # process local sequence files in the same local directory (temporary named ttt)
     tempDir = os.path.dirname( seqFile1)+'/ttt'
     if (not os.path.isdir(tempDir)):
