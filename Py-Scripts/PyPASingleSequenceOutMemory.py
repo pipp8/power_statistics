@@ -5,10 +5,7 @@ import os
 import os.path
 from pathlib import Path
 import sys
-import glob
-import tempfile
 import shutil
-import copy
 import subprocess
 import math
 import csv
@@ -16,7 +13,6 @@ import time
 import makeDistance as mkd
 
 import numpy as np
-import py_kmc_api as kmc
 
 from operator import add
 import pyspark
@@ -274,20 +270,22 @@ def runPresentAbsent(  bothCnt: int, leftCnt: int, rightCnt: int, k: int):
 
 
 
-def runMash(inputDS1, inputDS2, k):
+def runMash(inputDS1: str, inputDS2: str, k: int):
     # run mash on the same sequence pair
     mashValues = []
     for i in range(len(sketchSizes)):
         # extract mash sketch from the first sequence
-        cmd = "/usr/local/bin/mash sketch -s %d -k %d %s" % (sketchSizes[i], k, inputDS1)
+        mashout1 = f"{os.path.splitext(inputDS1)[0]}-k={k}"
+        cmd = f"/usr/local/bin/mash sketch -s {sketchSizes[i]} -p 8 -k {k} -o {mashout1} {inputDS1}"
         p = subprocess.Popen(cmd.split())
         p.wait()
 
-        cmd = "/usr/local/bin/mash sketch -s %d -k %d %s" % (sketchSizes[i], k, inputDS2)
+        mashout2 = f"{os.path.splitext(inputDS2)[0]}-k={k}"
+        cmd = f"/usr/local/bin/mash sketch -s {sketchSizes[i]} -p 8 -k {k} -o {mashout2} {inputDS2}"
         p = subprocess.Popen(cmd.split())
         p.wait()
 
-        cmd = "/usr/local/bin/mash dist %s.msh %s.msh" % (inputDS1, inputDS2)
+        cmd = f"/usr/local/bin/mash dist {mashout1}.msh {mashout2}.msh"
         out = subprocess.check_output(cmd.split())
 
         mashValues.append( MashData( out))
@@ -298,8 +296,8 @@ def runMash(inputDS1, inputDS2, k):
         data2 = data2 + mashValues[i].toString()
 
     # clean up remove kmc temporary files
-    os.remove(inputDS1 + '.msh')
-    os.remove(inputDS2 + '.msh')
+    os.remove(mashout1 + '.msh')
+    os.remove(mashout2 + '.msh')
 
     return data2
 
@@ -310,7 +308,6 @@ def runMash(inputDS1, inputDS2, k):
 # and calculate Entropy of the sequence
 # dest file è la path sull'HDFS già nel formato hdfs://host:port/xxx/yyy
 def loadHistogramOnHDFS(histFile: str, destFile: str):
-
     # tmp = histFile + '.txt'
     #
     # # dump the result -> kmer histogram
@@ -339,8 +336,7 @@ def loadHistogramOnHDFS(histFile: str, destFile: str):
 
 
 
-def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
-
+def extractKmers( inputDataset: str, k: int, tempDir: str, kmcOutputPrefix: str):
     # run kmc on the first sequence
     # -v - verbose mode (shows all parameter settings); default: false
     # -k<len> - k-mer length (k from 1 to 256; default: 25)
@@ -360,7 +356,7 @@ def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
     # -sr<value> - number of threads for 2nd stage
     # -hp - hide percentage progress (default: false)
 
-    cmd = "/usr/local/bin/kmc -b -hp -k%d -m12 -fm -ci0 -cs1048575000 -cx2000000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
+    cmd = f"/usr/local/bin/kmc -b -hp -k{k} -m12 -fm -ci0 -cs1048575000 -cx2000000000 {inputDataset} {kmcOutputPrefix} {tempDir}"
 
     print(f"****** (local) Kmer Counting {cmd} ******")
 
@@ -591,9 +587,9 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir
     # p.wait()
 
     # remove textual histogram files from hdfs
-    # cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
-    # p = subprocess.Popen(cmd.split())
-    # p.wait()
+    cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
+    p = subprocess.Popen(cmd.split())
+    p.wait()
     
     return dati0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
 
@@ -609,10 +605,10 @@ def writeHeader( writer):#
 
     columns2 = []
     for ss in sketchSizes:
-        columns2.append( 'Mash Pv (%d)' % ss)
-        columns2.append( 'Mash Distance(%d)' % ss)
-        columns2.append( 'A (%d)' % ss)
-        columns2.append( 'N (%d)' % ss)
+        columns2.append( f"Mash Pv ({ss})")
+        columns2.append( f"Mash Distance({ss})")
+        columns2.append( f"A ({ss})")
+        columns2.append( f"N ({ss})")
 
     columns3 = [ 'D2', 'D2Z', 'Euclidean', 'EuclideanZ']
 
@@ -634,7 +630,7 @@ def processPairs(seqFile1: str, seqFile2: str, theta: float):
         os.mkdir(tempDir)
 
     # local file system result file
-    outFile = "%s/%s-%s-T=%.3f-%d.csv" % (os.path.dirname( seqFile1), Path(seqFile1).stem,Path(seqFile2).stem, theta, int(time.time()))
+    outFile = f"{os.path.dirname( seqFile1)}/{Path(seqFile1).stem}-{Path(seqFile2).stem}-T={theta:.3f}-{int(time.time())}.csv"
     with open(outFile, 'w') as file:
         csvWriter = csv.writer(file)        
         writeHeader(csvWriter)
@@ -661,7 +657,7 @@ def processPairs(seqFile1: str, seqFile2: str, theta: float):
         print(f"****** Cleaning temporary directory {tempDir} ******")
         shutil.rmtree(tempDir)
     except OSError as e:
-        print("Error removing: %s: %s" % (tempDir, e.strerror))
+        print(f"Error removing: {tempDir}: {e.strerror}")
 
 
 
@@ -682,7 +678,7 @@ def main():
     else:
         # theta viene utilizzato SOLO se Sequence2 == "synthetic" altrimenti viene ignorato
         thetaValue = float(sys.argv[3])
-        hdfsDataDir = '%s/%s' % (hdfsPrefixPath, sys.argv[4])
+        hdfsDataDir = f"{hdfsPrefixPath}/{sys.argv[4]}"
 
     if (argNum == 6):
         # use just one k value instead of all values from minK to maxK (step)
@@ -719,7 +715,27 @@ def main():
     spark.stop()
 
 
-    
+# program profile:
+# main ->   processPairs(seqFile1, seqFile2, thetaValue)
+#           processPairs -> processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
+#                           processLocalPairs -> extractKmers(seqFile1, k, tempDir, kmcOutputPrefixA)
+#                                                loadHistogramOnHDFS(kmcOutputPrefixA, destFilenameA)
+#                                                extractKmers(seqFile2, k, tempDir, kmcOutputPrefixB)
+#                                                loadHistogramOnHDFS(kmcOutputPrefixB, destFilenameB)
+#           -> extractKmers(A)
+#                                            -> extractKmers(B)
+#                                            -> loadHistogram(A)    -> kmerDict(kmer, (cnt1, 0))
+#                                            -> loadHistogram(B)    -> kmerDict(kmer, (cnt1, cnt2))
+#                                                                   -> numpy.ndarray cnts(cnt1, cnt2)
+#                                            -> runCountBasedMeasures()
+#                                                                       -> NormalizedSquaredEuclideanDistance()
+#                                            -> extractStatistics()
+#                                            -> runPresentAbsent()
+#                                            -> runMash()
+#                                            -> entropyData()
+
+
+
 
 
 

@@ -3,6 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(hrbrthemes)
 library(r2r)
+library(stringr)
 
 
 
@@ -76,8 +77,8 @@ GammaLabeller <- function(keys) {
 # Defines the name of the file containing a copy of the dataframe created by this script
 #  Yeast, CElegans, HomoSapiens, Schistosoma, Lemur, MacacaMulatta, PiceaAbies
 # genomes <- c( "Yeast", "CElegans", "HomoSapiens", "Schistosoma", "Lemur", "MacacaMulatta", "PiceaAbies")
-genomes <- c( "Yeast", "CElegans")
-sortedGenomes <- c("Yeast", "CElegans")
+genomes <- c( "Yeast", "CElegans", "HomoSapiens")
+sortedGenomes <- c("Yeast", "CElegans", "HomoSapiens")
 
 tgtDF <- data.frame( Genome = character(), Measure = character(), Theta = integer(), k = integer(),
                      A = numeric(), B = numeric(), C = numeric(), D = numeric(), N = numeric(), density = numeric(),
