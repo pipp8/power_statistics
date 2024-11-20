@@ -12,9 +12,12 @@ tput cup $lastLine 0
 echo -n "waiting results                        "
 while true; do
     sleep $delay
-    new=$(hdfs dfs -ls  -t synthetics | head -2 | tail -1 | awk '{ print $5 }')
+    line=$(hdfs dfs -ls  -t synthetics | head -2 | tail -1)
+    new=$(echo $line | awk '{ print $5 }')
+    file=$(echo $line | awk '{ print $8 }')
+    file=$(basename $file)
     tput cup $lastLine 0
-    echo -n "$(numfmt --grouping $new) -> $(((new - prev) / (1024*1024*delay))) Mb/s   "
+    echo -n "$file: $(numfmt --grouping $new) -> $(((new - prev) / (1024*1024*delay))) Mb/s   "
     prev=$new
 done
 
