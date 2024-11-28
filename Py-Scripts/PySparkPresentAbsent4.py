@@ -89,7 +89,7 @@ def hamming_distance2(seq1: str, seq2: str) -> int:
 
 
 # load histogram for both sequences (for counter based measures such as D2)
-def loadHistogram(kmerDict: dict, histFile: str, pairId: str):
+def loadHistogramFromKMC(kmerDict: dict, histFile: str, pairId: str):
 
     ndx = 0 if pairId == 'A' else 1
     kmcFile = kmc.KMCFile()
@@ -125,6 +125,47 @@ def loadHistogram(kmerDict: dict, histFile: str, pairId: str):
 
     return (totalDistinct, totalKmerCnt, Hk)
 
+
+
+# calcola anche i valori dell'entropia per non caricare due volte l'istogramma
+def loadHistogramFromTextFile(kmerDict: dict, histFile: str, pairId: str):
+
+    # dump the result -> kmer histogram
+    dumpFile = f"{histFile}.hist"
+    cmd = f"/usr/local/bin/kmc_dump {histFile} {dumpFile}"
+    p = subprocess.Popen(cmd.split())
+    p.wait()
+    print(f"cmd: {cmd} returned: {p.returncode}")
+    # load kmers from histogram file
+
+    ndx = 0 if pairId == 'A' else 1
+
+    totalKmerCnt = 0
+    totalDistinct = 0
+    # ogni file contiene l'istogramma di una sola sequenza prodotto con kmc 3
+    with open(dumpFile) as inFile:
+        for line in inFile:
+            s = line.split()   # molto piu' veloce della re
+            if (len(s) != 2):
+                print( "%sMalformed histogram file (%d token)" % (line, len(s)))
+                exit()
+            else:
+                strKmer = s[0]
+                count = int(s[1])
+
+            if strKmer in kmerDict:
+                cntTuple = kmerDict[strKmer]
+                kmerDict[strKmer] = (cntTuple[0] + count, 0) if ndx == 0 else (cntTuple[0], cntTuple[1] + count)
+            else:
+                # first time meet or kmer not present in sequence A
+                kmerDict[strKmer] = (count, 0) if ndx == 0 else (0, count)
+
+            totalDistinct += 1
+            totalKmerCnt = totalKmerCnt + count
+
+    os.remove(dumpFile) # remove histogram file
+    Hk = sequenceEntropy( kmerDict, pairId, totalKmerCnt)
+    return (totalDistinct, totalKmerCnt, Hk)
 
 
 
@@ -218,23 +259,45 @@ def processLocalPair( ds, model, seqId, seqLen, gamma, k):
     tempDir = os.path.dirname( ds)
     baseDS = os.path.basename( ds)
 
-    inputDatasetA = '%s-A.fasta' % (ds)
-    kmcOutputPrefixA = "%s/k=%d-%s-A" % (tempDir, k, baseDS)
+    inputDatasetA = f"{ds}-A.fasta"
+    kmcOutputPrefixA = f"{tempDir}/k={k}-{baseDS}-A"
     extractKmers(inputDatasetA, k, tempDir, kmcOutputPrefixA)
 
-    inputDatasetB = '%s-B.fasta' % (ds)
-    kmcOutputPrefixB = "%s/k=%d-%s-B" % (tempDir, k, baseDS)
+    inputDatasetB = f"{ds}-B.fasta"
+    kmcOutputPrefixB = f"{tempDir}/k={k}-{baseDS}-B"
     extractKmers(inputDatasetB, k, tempDir, kmcOutputPrefixB)
 
     data0 = [model, gamma, seqLen, seqId, k]
 
     # load kmers statistics from histogram files
     kmerDict = dict()
-    (totalDistinctA, totalKmerCntA, HkA) = loadHistogram(kmerDict, kmcOutputPrefixA, 'A')
+    (totalDistinctA, totalKmerCntA, HkA) = loadHistogramFromTextFile(kmerDict, kmcOutputPrefixA, 'A')
     entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
 
-    (totalDistinctB, totalKmerCntB, HkB) = loadHistogram(kmerDict, kmcOutputPrefixB, 'B')
+    (totalDistinctB, totalKmerCntB, HkB) = loadHistogramFromTextFile(kmerDict, kmcOutputPrefixB, 'B')
     entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
+
+    kmerDict2 = dict()
+    extractKmers(inputDatasetA, k, tempDir, kmcOutputPrefixA)
+    extractKmers(inputDatasetB, k, tempDir, kmcOutputPrefixB)
+
+    (totalDistinctA2, totalKmerCntA2, HkA2) = loadHistogramFromKMC(kmerDict2, kmcOutputPrefixA, 'A')
+    entropySeqA = EntropyData( totalDistinctA, totalKmerCntA, HkA)
+
+    (totalDistinctB2, totalKmerCntB2, HkB2) = loadHistogramFromKMC(kmerDict2, kmcOutputPrefixB, 'B')
+    entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
+
+    if (not kmerDict == kmerDict2):
+        print("different dictionaris")
+        exit()
+
+    if (totalDistinctA != totalDistinctA2 or totalDistinctB != totalDistinctB2 ):
+        print("different counters")
+        exit()
+
+    if (HkA != HkA2 or HkB != HkB2 ):
+        print(f"different entropy {HkA} vs {HkA2} or {HkB} vs {HkB2}")
+        exit()
 
     i = 0
     cnts = np.empty( shape=(2, len( kmerDict.values())), dtype='int32')
@@ -669,7 +732,7 @@ def main():
         dataMode = sys.argv[2] if (argNum > 2) else ""
 
         if use_local_mode:
-            prefixPath = '/Users/umberto/PycharmProjects/power_statistics'
+            prefixPath = '/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data'
             dataDir = '%s/%s/len=%d' % (prefixPath, dataMode, seqLen)
             outFile = '%s/%s/%s-%s.%d-%s.csv' % (
             prefixPath, dataMode, outFilePrefix, dataMode, seqLen, dt.today().strftime("%Y%m%d-%H%M"))

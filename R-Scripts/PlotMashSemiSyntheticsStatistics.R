@@ -25,8 +25,13 @@ df1Filename <- "ReportMashSynthetics/distancesAll.RDS"
 similarities <- c('D2')
 
 # misure di riferimento
-sortedMeasures <- c("Jaccard", "Mash.Distance.1000.", "Mash.Distance.10000.", "Mash.Distance.100000.")
-pltMeasures <- c("Jaccard", "Mash.Distance.1000.", "Mash.Distance.10000.", "Mash.Distance.100000.")
+
+# sortedMeasures <- c("Jaccard", "Mash.Distance.1000.", "Mash.Distance.10000.", "Mash.Distance.100000.")
+# pltMeasures <- c("Jaccard", "Mash.Distance.1000.", "Mash.Distance.10000.", "Mash.Distance.100000.")
+sortedMeasures <- c("D2", "Euclidean", "Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel",
+                    "Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
+pltMeasures <- c("D2", "Euclidean", "Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel",
+                 "Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
 
 
 plot_labeller <- function(variable, value){
@@ -304,29 +309,29 @@ for( sequenceName in genomes) {
 }
 
 # grafico dei pvalues  x tutti i genomi
-df <- filter(tgtDF, Genome %in% sortedGenomes & Measure == "Mash.Distance.10000.")
-
-df$Genome <- factor(df$Genome, levels = sortedGenomes)
-
-sp1 <- ggplot(data=df, aes(x=Theta, y=pvalue, label=pvalue)) +
-  geom_line(aes(color = k)) +
-  geom_point() +
-  geom_text(aes(label = round(pvalue, 1)), size = 1.8, nudge_y = 0.2, show.legend = FALSE) +
-  facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both)) +
-  scale_y_continuous( breaks = c(0, 0.5, 1),
-                      labels = c("0", "0.5", "1")) +
-  labs(y = "Mash P-Values (sketch=10.000)") +
-  theme_light() + theme( panel.spacing=unit(0.2, "lines"),
-                         legend.position = "none",
-                         strip.text.x = element_text( size = 8, angle = 0),
-                         axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                         axis.title.x = element_blank())
-#                         axis.text.x=element_blank())
-
-outfname <- sprintf( "%s/PanelPValues-all.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 6, height = 7, units = "in", dpi = 300)
-dev.off()
-totPrinted <- totPrinted + 1
+# df <- filter(tgtDF, Genome %in% sortedGenomes & Measure == "Mash.Distance.10000.")
+#
+# df$Genome <- factor(df$Genome, levels = sortedGenomes)
+#
+# sp1 <- ggplot(data=df, aes(x=Theta, y=pvalue, label=pvalue)) +
+#   geom_line(aes(color = k)) +
+#   geom_point() +
+#   geom_text(aes(label = round(pvalue, 1)), size = 1.8, nudge_y = 0.2, show.legend = FALSE) +
+#   facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both)) +
+#   scale_y_continuous( breaks = c(0, 0.5, 1),
+#                       labels = c("0", "0.5", "1")) +
+#   labs(y = "Mash P-Values (sketch=10.000)") +
+#   theme_light() + theme( panel.spacing=unit(0.2, "lines"),
+#                          legend.position = "none",
+#                          strip.text.x = element_text( size = 8, angle = 0),
+#                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+#                          axis.title.x = element_blank())
+# #                         axis.text.x=element_blank())
+#
+# outfname <- sprintf( "%s/PanelPValues-all.pdf", dirname)
+# ggsave( outfname, device = pdf(), width = 6, height = 7, units = "in", dpi = 300)
+# dev.off()
+# totPrinted <- totPrinted + 1
 
 # grafico delle distance x tutti i genomi
 sp1 <- ggplot(data=df, aes(x=Theta, y=distance, label=distance)) +
