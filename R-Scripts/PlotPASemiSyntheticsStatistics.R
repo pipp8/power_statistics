@@ -2,7 +2,8 @@ library(DescTools)
 library(dplyr)
 library(ggplot2)
 library(hrbrthemes)
-
+library(r2r)
+library(stringr)
 
 
 ###### DESCRIPTION
@@ -12,44 +13,53 @@ library(hrbrthemes)
 
 ###### OPTIONS
 ###### CODE
-plot_labeller <- function(variable, value){
-  # cat(sprintf("variable: <%s>, value: <%s>\n", variable, as.character(value)))
-  if (variable == 'kv') {
-    # N.B. kv e' un factor
-    return(sprintf("k = %s", as.character(value)))
-  } else if (variable == 'k') {
-    return(sprintf("k = %d", value))
-  }  else if (variable == 'lenFac') {
-    # lenFac è un factor
-    return(formatC(as.numeric(as.character(value)), format="f", digits=0, big.mark="."))
-  }else {
-    return(as.character(value))
-  }
-}
-
-###### CODE
-
-# Sets the path of the directory containing the output of FADE
-setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
 bs <- "uniform"
-dirname <- sprintf("%s,32/ReportSynthetics", bs)
+wd <- sprintf("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent/%s,32", bs)
+setwd(wd)
+
+dirname <- "ReportSyntheticsV2"
+
+similarities <- c('D2')
 df1Filename <- sprintf("%s/distanceAll.RDS", dirname )
 df2Filename <- sprintf("%s/cvAll.RDS", dirname )
 
 similarities = c('D2')
 # misure di riferimento
-l1 <- c("D2", "Euclidean")
-# misure analizzate
-l2 <- c("Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel")
-# misure dominate da A e D (B e C diventano irrilevanti)
-l3 <- c("Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
-# misure escluse dal calcolo
-l4 <- c("Anderberg", "Gower", "Yule", "Mash.distance.1000.", "Mash.distance.10000.", "Mash.distance.100000.")
+sortedMeasures <- c("D2", "Euclidean", "Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel",
+                    "Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
+pltMeasures <- c("D2", "Euclidean", "Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel",
+                 "Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
 
-# riordina la lista delle misure
-sortedMeasures = c(l1, l2, l3)
-#measureNanesDF <- data.frame( ref = l1, g1 = l2, alt = l3, no = l4, stringsAsFactors = FALSE)
+# modifica i fattori di scala per ciascuna riga del pannello
+TranslationTable  <- hashmap(default = 0)
+TranslationTable[["Mash.Distance.1000."]] <- "Mash (sketch=1.000)"
+TranslationTable[["Mash.Distance.10000."]] <- "Mash (sketch=10.000)"
+TranslationTable[["Mash.Distance.100000."]] <- "Mash (sketch=10.0000)"
+
+
+TerminologyServer <- function( key) {
+  v <- TranslationTable[[key]]
+  return( if (v == 0) key else v)
+}
+
+MeasureLabeller <- function(keys) {
+  values <- c()
+  for(k in keys) {
+    values <- c(values, TerminologyServer(k))
+  }
+  return( values)
+}
+
+GammaLabeller <- function(keys) {
+  values <- c()
+  for(k in keys) {
+    values <- c(values, sprintf("G:%.2f", as.numeric(k)))
+  }
+  return( values)
+}
+
+
 
 zoomLevels <- c(95, 90, 80, 70, 60) # soglia sul valore di theta per avere 1, 2, 3, 4, 5 valori sull'asse delle x
 zoom <- 5
@@ -69,32 +79,37 @@ tgtDF <- data.frame( Genome = character(), Measure = character(), Theta = intege
                      A = numeric(), B = numeric(), C = numeric(), D = numeric(), N = numeric(), density = numeric(),
                      distance=double(), stringsAsFactors=FALSE)
 
-nObs = 88
-nRowXObs = 13
-dfSize = nObs * nRowXObs
+# Theta1 = 14 (0.005, 0.01 - 0.10, 0.15, 0.20, 0.30)
+# Theta2 = 11 (0.05, 0.10 - 0.90, 0.95
+# Thetat = totale 25
+# K = 8
+
+nObs <- 200 # Thetat x k
+nRowXObs <- length(pltMeasures)
+dfSize <- nObs * nRowXObs
 
 
 if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
   # calcola i 2 dataframe
-  cnt = 0
+  cnt <- 0
   for( sequenceName in genomes) {
 
-    dfFilename <- sprintf( "%s,32/Synthetics-DatiEsperimento/Report%s.RDS", bs, sequenceName)
-    csvFilename <- sprintf("%s,32/Synthetics-DatiEsperimento/%s.csv", bs, sequenceName)
+    dfFilename <- sprintf( "%s/Report%s.RDS", dirname, sequenceName)
+    csvFilename <- sprintf("%s/%s.csv", dirname, sequenceName)
 
     if (!dir.exists(dirname)) {
       dir.create(dirname)
     }
-    tgtDir = sprintf("%s/%s", dirname, sequenceName)
+    tgtDir <- sprintf("%s/%s", dirname, sequenceName)
     if (!dir.exists( tgtDir)) {
       dir.create(tgtDir)
     }
 
     if (!file.exists(dfFilename)) {
       # carica il CSV dell'esperimento
-      columnClasses = c(
+      columnClasses <- c(
         #   sequenceA  sequenceB  start.time  real.time    Theta        k
-        "character", "character", "numeric", "numeric", "integer", "integer",
+        "character", "character", "numeric", "numeric", "numeric", "integer",
         #   A	        B	      C	         D	        N         A/N
         "numeric", "numeric", "numeric", "numeric", "numeric", "numeric",
         # 15 x misure present absent
@@ -111,7 +126,7 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
         # NKeysB   totalCntB   deltaB       HkB      errorB
         "numeric", "numeric", "numeric", "numeric","numeric")
 
-      df <-read.csv( file = csvFilename, sep = ",", dec = ".", colClasses = columnClasses)
+      df <-read.csv( file = csvFilename, sep = ";", dec = ",", colClasses = columnClasses)
       saveRDS( df, file = dfFilename)
       cat(sprintf("Dataset %s %d rows saved.\n", dfFilename, nrow(df)))
     }
@@ -150,7 +165,7 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
     # $ N..10000.           : int  136 136 136 136 136 136 10000 10000 10000 10000 ...
     # $ D2                  : Factor w/ 46 levels "0","1,00952E+12",..: 34 33 31 26 25 24 23 19 17 8 ...
     # $ Euclidean           : Factor w/ 42 levels "1.832.067,52",..: 7 24 36 4 5 6 30 38 42 8 ...
-    # $ Euclid_norm         : int  0 0 0 0 0 0 0 0 0 0 ...
+    # $ EuclideanZ          : int  0 0 0 0 0 0 0 0 0 0 ...
     # $ NKeysA              : num  256 256 256 256 256 ...
     # $ X2.totalCntA        : num  5.87e+09 5.87e+09 5.87e+09 5.87e+09 5.87e+09 ...
     # $ deltaA              : Factor w/ 8 levels "0,002831776",..: 8 8 8 8 8 8 7 7 7 7 ...
@@ -165,13 +180,13 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
     df <-readRDS( file = dfFilename)
     cat(sprintf("Dataset %s loaded. (%d rows).\n", dfFilename, nrow(df)))
 
-    df$kf = factor(df$k)
-    df$tf = factor(df$Theta)
+    df$kf <- factor(df$k)
+    df$tf <- factor(df$Theta)
 
-    measures = colnames(df)[13:27]
+    measures <- colnames(df)[13:27]
     # extras = c("Mash.Distance.10000.", "D2", "Euclidean")
-    extras = c("D2", "Euclidean")
-    measures = append(measures, extras)
+    extras <- c("Mash.Distance.10000.", "D2", "Euclidean")
+    measures <- append(measures, extras)
 
     # calcola la trasposta ... un rigo per ogni misura
     for(i in 1:nrow(df)) {
@@ -185,26 +200,23 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
 
 
     # escludiamo le misure: euclidean norm, anderberg, gowel , phi e yule. 864 -> 672 observations
-    tgtDF <- filter(tgtDF, Measure != "Anderberg" & Measure != "Gower" & Measure != "Phi" & Measure != "Yule" &
-      Measure != "Euclid_norm" &
-      Measure != "Mash.Distance.1000." & Measure != "Mash.Distance.10000." & Measure != "Mash.Distance.100000.")
-
+    tgtDF <- filter(tgtDF, Measure %in% pltMeasures)
 
     # nessun filtro 864 -> 864
     # tgtDF <- filter( tgtDF, Measure != "Euclid_norm" & Measure != "Mash.Distance.1000." & Measure != "Mash.Distance.100000.")
 
-    cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.Distance.1000, Mash.Distance.10000, Mash.Distance.100000. (%d rows).\n",nrow(df)))
+    cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, EuclideanZ, Mash.Distance.1000, Mash.Distance.10000, Mash.Distance.100000. (%d rows).\n",nrow(df)))
 
-    tgtDF$k = factor(tgtDF$k)
+    tgtDF$k <- factor(tgtDF$k)
     # tgtDF$Theta = factor(tgtDF$Theta)
 
-    kValues = levels(tgtDF$k)
+    kValues <- levels(tgtDF$k)
     measures <- levels(factor(tgtDF$Measure))
 
     cat(sprintf("Data Frame %s filtered (%d observations).\n", sequenceName, nrow(tgtDF) - cnt * dfSize))
     # tgtDF$Theta = factor(tgtDF$Theta)
 
-    df_total = data.frame()
+    df_total <- data.frame()
     for( km in kValues) {
       for ( mes in measures) {
         df <- filter(tgtDF, Genome == sequenceName & k == km & Measure == mes)
@@ -235,7 +247,7 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
       }
     }
 
-    cnt = cnt + 1
+    cnt <- cnt + 1
     if (nrow(tgtDF) != cnt * dfSize || nrow(df_total) != dfSize)   {
       stop("errore nel calcolo di df_total per il calcolo delle distanze relative")
     }
@@ -272,235 +284,130 @@ for( sequenceName in genomes) {
 
   totPrinted <- 0
 
-  #  grafico distanze per ciascuna misura (Theta sull'asse delle x)
-  df = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean")
-  df$Measure = factor( df$Measure, levels = sortedMeasures)
+  for( i in 1:3) {
 
-  sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
+    df <- switch(as.character(i),
+                "1" = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean" & Theta <= 0.3),
+                "2" = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean" & Theta > 0.3),
+                "3" = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean")
+      )
+
+    df$Measure <- factor( df$Measure, levels = sortedMeasures)
+
+    #  grafico distanze per ciascuna misura (Theta sull'asse delle x)
+    sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
+        geom_line(aes(color = k)) +
+        geom_point(size = 0.8) +
+        facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
+        theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                               axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                               panel.spacing=unit(0.1, "lines"),
+                               legend.position = "none",
+                               axis.text.y = element_blank(),
+                               axis.title.y = element_blank())
+
+    # dev.new(width = 6, height = 6)
+    # print(sp1)
+    outfname <- sprintf( "%s/%s/PanelDistances-%s-%d.pdf", dirname, sequenceName, sequenceName, i)
+    ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+    dev.off() # only 129kb in size
+    totPrinted <- totPrinted + 1
+
+
+    # secondo grafico di riferimento per Euclide
+    df <- switch(as.character(i),
+                "1" = filter(tgtDF, Genome == sequenceName & Measure == "Euclidean" & Theta <= 0.3),
+                "2" = filter(tgtDF, Genome == sequenceName & Measure == "Euclidean" & Theta > 0.3),
+                "3" = filter(tgtDF, Genome == sequenceName & Measure == "Euclidean")
+    )
+
+    sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
+      # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
+      geom_line(aes(color = k)) +
+      geom_point(size = 0.8) +
+      # geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
+      facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
+      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                            panel.spacing=unit(0.1, "lines"),
+                            legend.position = "none",
+                            axis.title.y = element_blank(),
+                            axis.text.y = element_blank(),
+                            strip.text.y = element_blank()) +
+      labs( x = " ")
+
+    # dev.new(width = 6, height = 9)
+    # print(sp1)
+    outfname <- sprintf( "%s/%s/PanelEuclid-%s-%d.pdf", dirname, sequenceName, sequenceName, i)
+    ggsave( outfname, device = pdf(), width = 0.9, height = 6, units = "in", dpi = 300)
+    dev.off() # only 129kb in size
+    totPrinted <- totPrinted + 1
+
+    # Terzo grafico di riferimento per simmilarità D2
+    df <- switch(as.character(i),
+                 "1" = filter(tgtDF, Genome == sequenceName & Measure == "D2" & Theta <= 0.3),
+                 "2" = filter(tgtDF, Genome == sequenceName & Measure == "D2" & Theta > 0.3),
+                 "3" = filter(tgtDF, Genome == sequenceName & Measure == "D2")
+    )
+
+    sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
+      # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
+      geom_line(aes(color = k)) +
+      geom_point(size = 0.8) +
+      # geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
+      facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
+      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                            panel.spacing=unit(0.1, "lines"),
+                            legend.position = "none",
+                            axis.text.y = element_blank(),
+                            strip.text.y = element_blank()) +
+      labs( x = " ", y = "Distances")
+    # labs(y = "D2 Similarity")
+    # guides(colour = guide_legend(override.aes = list(size=1)))
+
+    # dev.new(width = 6, height = 9)
+    # print(sp1)
+    outfname <- sprintf( "%s/%s/PanelD2-%s-%d.pdf", dirname, sequenceName, sequenceName, i)
+    ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
+    dev.off() # only 129kb in size
+    totPrinted <- totPrinted + 1
+
+
+    # Pannello della density x k *******************************************************************
+    # grafico delle densità A/N
+    df <- switch(as.character(i),
+                 "1" = filter(tgtDF, Genome == sequenceName & Measure == "Jaccard" & Theta <= 0.3),
+                 "2" = filter(tgtDF, Genome == sequenceName & Measure == "Jaccard" & Theta > 0.3),
+                 "3" = filter(tgtDF, Genome == sequenceName & Measure == "Jaccard")
+    )
+
+    sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
       geom_line(aes(color = k)) +
       geom_point() +
-      #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
-      facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
-      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                             panel.spacing=unit(0.1, "lines"),
+      # geom_text(aes(label = round(density, 2)), size = 5, nudge_y = 0.2, show.legend = FALSE) +
+      facet_grid( rows = vars(k), labeller = labeller( k = label_both)) +
+      scale_y_continuous(name = "A/N",
+                         breaks=c(0, 0.5, 1),
+                         labels=c("0", "0.5", "1")) +
+      theme_light() + theme( panel.spacing=unit(0.2, "lines"),
                              legend.position = "none",
-                             axis.text.y = element_blank(),
-                             axis.title.y = element_blank())
-      # scale_y_continuous(name = "Distance")
-      #                 breaks=c(0, 0.5, 1),
-      #                 labels=c("0", "0.5", "1"))
-      # labs(y = "Distance") +
-      # guides(colour = guide_legend(override.aes = list(size=1)))
+                             strip.text.x = element_text( size = 8, angle = 0),
+                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                             axis.title.x = element_blank())
+    #                         axis.text.x=element_blank())
 
-
-  # dev.new(width = 6, height = 6)
-  # print(sp1)
-  outfname <- sprintf( "%s/%s/PanelDistances-%s.pdf", dirname, sequenceName, sequenceName)
-  ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
-  dev.off() # only 129kb in size
-  totPrinted <- totPrinted + 1
-
-
-  # secondo grafico di riferimento per Euclide
-  df = filter(tgtDF, Genome == sequenceName & Measure == "Euclidean")
-
-  sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
-    # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
-    geom_line(aes(color = k)) +
-    geom_point() +
-    # geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
-    facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                          panel.spacing=unit(0.1, "lines"),
-                          legend.position = "none",
-                          axis.title.y = element_blank(),
-                          axis.text.y = element_blank(),
-                          strip.text.y = element_blank()) +
-    labs( x = " ")
-
-  # labs(y = "Euclidean Distance")
-  # guides(colour = guide_legend(override.aes = list(size=1)))
-
-  # dev.new(width = 6, height = 9)
-  # print(sp1)
-  outfname <- sprintf( "%s/%s/PanelEuclid-%s.pdf", dirname, sequenceName, sequenceName)
-  ggsave( outfname, device = pdf(), width = 0.9, height = 6, units = "in", dpi = 300)
-  dev.off() # only 129kb in size
-  totPrinted <- totPrinted + 1
-
-  # Terzo grafico di riferimento per simmilarità D2
-  df = filter(tgtDF, Genome == sequenceName & Measure == "D2")
-
-  sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
-    # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
-    geom_line(aes(color = k)) +
-    geom_point() +
-    # geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
-    facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                          panel.spacing=unit(0.1, "lines"),
-                          legend.position = "none",
-                          axis.text.y = element_blank(),
-                          strip.text.y = element_blank()) +
-    labs( x = " ", y = "Distances")
-  # labs(y = "D2 Similarity")
-  # guides(colour = guide_legend(override.aes = list(size=1)))
-
-  # dev.new(width = 6, height = 9)
-  # print(sp1)
-  outfname <- sprintf( "%s/%s/PanelD2-%s.pdf", dirname, sequenceName, sequenceName)
-  ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
-  dev.off() # only 129kb in size
-  totPrinted <- totPrinted + 1
-
-
-  # Pannello della density x k *******************************************************************
-  #  grafico distanze per ciascuna misura (Theta sull'asse delle x)
-  df = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean")
-  df$Measure = factor( df$Measure, levels = sortedMeasures)
-
-  sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
-    geom_line(aes(color = k)) +
-    geom_point( size = 0.8) +
-    #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
-    facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                          panel.spacing=unit(0.1, "lines"),
-                          legend.position = "none",
-                          axis.text.y = element_blank(),
-                          axis.title.y = element_blank())
-  # scale_y_continuous(name = "Distance")
-  #                 breaks=c(0, 0.5, 1),
-  #                 labels=c("0", "0.5", "1"))
-  # labs(y = "Distance") +
-  # guides(colour = guide_legend(override.aes = list(size=1)))
-
-  # dev.new(width = 6, height = 6)
-  outfname <- sprintf( "%s/%s/PanelDistances-%s.pdf", dirname, sequenceName, sequenceName)
-  ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
-  dev.off() # only 129kb in size
-  totPrinted <- totPrinted + 1
-
-
-  # grafico delle densità A/N
-  df = filter(tgtDF, Genome == sequenceName & Measure == "Jaccard")
-
-  sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
-    geom_line(aes(color = k)) +
-    geom_point() +
-    geom_text(aes(label = round(density, 2)), size = 5, nudge_y = 0.2, show.legend = FALSE) +
-    facet_grid( rows = vars(k), labeller = labeller( k = label_both)) +
-    scale_y_continuous(name = "A/N",
-                       breaks=c(0, 0.5, 1),
-                       labels=c("0", "0.5", "1")) +
-    theme_light() + theme( panel.spacing=unit(0.2, "lines"),
-                           legend.position = "none",
-                           strip.text.x = element_text( size = 8, angle = 0),
-                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                           axis.title.x = element_blank())
-  #                         axis.text.x=element_blank())
-
-  outfname <- sprintf( "%s/%s/PanelDensities-%s.pdf", dirname, sequenceName, sequenceName)
-  ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300)
-  dev.off()
-  totPrinted <- totPrinted + 1
-
-
-  # Zooming ******************************************************************
-
-  #  grafico distanze per ciascuna misura (Theta sull'asse delle x)
-  df = filter(tgtDF, Genome == sequenceName & Measure != "D2" & Measure != "Euclidean" & Theta >= zoomLevels[zoom])
-  df$Measure = factor( df$Measure, levels = sortedMeasures)
-
-  sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
-    geom_line(aes(color = k)) +
-    geom_point(size = 0.8) +
-    #  geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
-    facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                          panel.spacing=unit(0.1, "lines"),
-                          legend.position = "none",
-                          axis.text.y = element_blank(),
-                          axis.title.y = element_blank()) +
-    scale_y_continuous(name = "Distance",
-                          breaks=c(0, 0.5, 1),
-                          labels=c("0", "0.5", "1")) +
-    labs(y = "CV")
-  # guides(colour = guide_legend(override.aes = list(size=1)))
-
-
-  # dev.new(width = 6, height = 6)
-  # print(sp1)
-  outfname <- sprintf( "%s/%s/PanelDistances-%s-zoom%d.pdf", dirname, sequenceName, sequenceName, zoom)
-  ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
-  dev.off() # only 129kb in size
-  totPrinted <- totPrinted + 1
-
-
-  df = filter(tgtDF, Genome == sequenceName & Measure == "Euclidean" & Theta >= zoomLevels[zoom])
-
-  sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
-    # geom_bar( width = 0.7, position = "dodge", stat = "identity") +
-    geom_line(aes(color = k)) +
-    geom_point(size = 0.8) +
-    # geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
-    facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                          panel.spacing=unit(0.1, "lines"),
-                          legend.position = "none",
-                          axis.title.y = element_blank(),
-                          axis.text.y = element_blank(),
-                          strip.text.y = element_blank()) +
-    labs( x = " ")
-
-  # labs(y = "Euclidean Distance")
-  # guides(colour = guide_legend(override.aes = list(size=1)))
-
-  # dev.new(width = 6, height = 9)
-  # print(sp1)
-  outfname <- sprintf( "%s/%s/PanelEuclid-%s-zoom%d.pdf", dirname, sequenceName, sequenceName, zoom)
-  ggsave( outfname, device = pdf(), width = 0.9, height = 6, units = "in", dpi = 300)
-  dev.off() # only 129kb in size
-  totPrinted <- totPrinted + 1
-
-
-  df = filter(tgtDF, Genome == sequenceName & Measure == "D2" & Theta >= zoomLevels[zoom])
-
-  sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
-    geom_line(aes(color = k)) +
-    geom_point(size = 0.8) +
-    # geom_text(aes(label = round(distance, 5)), size = 3, nudge_y = 0.2, show.legend = FALSE) +
-    facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                          panel.spacing=unit(0.1, "lines"),
-                          legend.position = "none",
-                          axis.text.y = element_blank(),
-                          strip.text.y = element_blank()) +
-    labs( x = " ", y = "Distances")
-  # labs(y = "D2 Similarity")
-  # guides(colour = guide_legend(override.aes = list(size=1)))
-
-  # dev.new(width = 6, height = 9)
-  # print(sp1)
-  outfname <- sprintf( "%s/%s/PanelD2-%s-zoom%d.pdf", dirname, sequenceName, sequenceName, zoom)
-  ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
-  dev.off() # only 129kb in size
-  totPrinted <- totPrinted + 1
-
-  cat(sprintf("%s synthetics Done. %d plot printed\n", sequenceName, totPrinted))
+    outfname <- sprintf( "%s/%s/PanelDensities-%s-%d.pdf", dirname, sequenceName, sequenceName, i)
+    ggsave( outfname, device = pdf(), width = 6, height = 9, units = "in", dpi = 300)
+    dev.off()
+    totPrinted <- totPrinted + 1
+  }
 }
 
 # per ultimo il grafico con il coefficiente di variazione
 # cvDF = 728 observations = 4 genome x 13 misure x 8 k
 
-df = filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type == "all")
+df <- filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type == "all")
 df$Measure = factor( df$Measure, levels = sortedMeasures)
 
 sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
@@ -525,7 +432,7 @@ totPrinted <- totPrinted + 1
 
 
 
-df = filter(cvDF, Measure == "Euclidean" & type == "all")
+df <- filter(cvDF, Measure == "Euclidean" & type == "all")
 
 sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
   geom_point(size = 0.8, aes(color = k)) +
@@ -564,70 +471,70 @@ ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 3
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
-# zooming ---------------------------------------------------------------------------
+# # zooming ---------------------------------------------------------------------------
+#
+# for( i in 1:5) {
+#   df <- filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type == types[i])
+#   df$Measure = factor( df$Measure, levels = sortedMeasures)
+#
+#   sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
+#     geom_point(size = 0.8, aes(color = k)) +
+#     facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
+#     theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+#                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+#                           panel.spacing=unit(0.1, "lines"),
+#                           legend.position = "none") +
+#     #                       axis.text.y = element_blank(),
+#     #                       axis.title.y = element_blank()) +
+#     # scale_y_continuous(name = "CV")
+#     #                    breaks=c(0, 0.5, 1),
+#     #                    labels=c("0", "0.5", "1")) +
+#     labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
+#
+#   outfname <- sprintf( "%s/PanelCV-all-zoom%d.pdf", dirname,i)
+#   ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+#   dev.off() # only 129kb in size
+#   totPrinted <- totPrinted + 1
+#
+#   df <- filter(cvDF, Measure == "Euclidean" & type == types[i])
+#
+#   sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
+#     geom_point(size = 0.8, aes(color = k)) +
+#     facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
+#     theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+#                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+#                           panel.spacing=unit(0.1, "lines"),
+#                           legend.position = "none") +
+#     #                      axis.title.y = element_blank(),
+#     #                      axis.text.y = element_blank(),
+#     #                      strip.text.y = element_blank()) +
+#     labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
+#
+#   outfname <- sprintf( "%s/PanelCVEuclid-zoom%d.pdf", dirname, i)
+#   ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
+#   dev.off() # only 129kb in size
+#   totPrinted <- totPrinted + 1
+#
+#   df <- filter(cvDF, Measure == "D2" & type == types[i])
+#
+#   sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
+#     geom_point(size = 0.8, aes(color = k)) +
+#     facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
+#     theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+#                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+#                           panel.spacing=unit(0.1, "lines"),
+#                           legend.position = "none") +
+#     #                      axis.text.y = element_blank(),
+#     #                      strip.text.y = element_blank()) +
+#     labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
+#
+#   outfname <- sprintf( "%s/PanelCVD2-zoom%d.pdf", dirname,i)
+#   ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
+#   dev.off() # only 129kb in size
+#   totPrinted <- totPrinted + 1
+# }
 
-for( i in 1:5) {
-  df = filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type == types[i])
-  df$Measure = factor( df$Measure, levels = sortedMeasures)
-
-  sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
-    geom_point(size = 0.8, aes(color = k)) +
-    facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                          panel.spacing=unit(0.1, "lines"),
-                          legend.position = "none") +
-    #                       axis.text.y = element_blank(),
-    #                       axis.title.y = element_blank()) +
-    # scale_y_continuous(name = "CV")
-    #                    breaks=c(0, 0.5, 1),
-    #                    labels=c("0", "0.5", "1")) +
-    labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
-
-  outfname <- sprintf( "%s/PanelCV-all-zoom%d.pdf", dirname,i)
-  ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
-  dev.off() # only 129kb in size
-  totPrinted <- totPrinted + 1
-
-  df = filter(cvDF, Measure == "Euclidean" & type == types[i])
-
-  sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
-    geom_point(size = 0.8, aes(color = k)) +
-    facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                          panel.spacing=unit(0.1, "lines"),
-                          legend.position = "none") +
-    #                      axis.title.y = element_blank(),
-    #                      axis.text.y = element_blank(),
-    #                      strip.text.y = element_blank()) +
-    labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
-
-  outfname <- sprintf( "%s/PanelCVEuclid-zoom%d.pdf", dirname, i)
-  ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
-  dev.off() # only 129kb in size
-  totPrinted <- totPrinted + 1
-
-  df = filter(cvDF, Measure == "D2" & type == types[i])
-
-  sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
-    geom_point(size = 0.8, aes(color = k)) +
-    facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                          panel.spacing=unit(0.1, "lines"),
-                          legend.position = "none") +
-    #                      axis.text.y = element_blank(),
-    #                      strip.text.y = element_blank()) +
-    labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
-
-  outfname <- sprintf( "%s/PanelCVD2-zoom%d.pdf", dirname,i)
-  ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
-  dev.off() # only 129kb in size
-  totPrinted <- totPrinted + 1
-}
-
-df = filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type != "all" & type != "4:11")
+df <- filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type != "all" & type != "4:11")
 df$Measure = factor( df$Measure, levels = sortedMeasures)
 
 sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = type)) +
@@ -650,80 +557,94 @@ dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
 
-# grafico delle densità A/N x tutti i genomi
-df = filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard")
+for( i in 1:3) {
 
-df$Genome <- factor(df$Genome, levels = sortedGenomes)
-
-sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
-  geom_line(aes(color = k)) +
-  geom_point() +
-  geom_text(aes(label = round(density, 1)), size = 1.8, nudge_y = 0.2, show.legend = FALSE) +
-  facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both)) +
-  scale_y_continuous(name = "Genome A/N Values",
-                     breaks=c(0, 0.5, 1),
-                     labels=c("0", "0.5", "1")) +
-  theme_light() + theme( panel.spacing=unit(0.2, "lines"),
-                         legend.position = "none",
-                         strip.text.x = element_text( size = 8, angle = 0),
-                         axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                         axis.title.x = element_blank())
-#                         axis.text.x=element_blank())
-
-outfname <- sprintf( "%s/PanelDensities-all.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 6, height = 7, units = "in", dpi = 300)
-dev.off()
-totPrinted <- totPrinted + 1
-
-# grafico delle densità (A+D)/N x tutti i genomi
-df = filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard")
-
-df$Genome <- factor(df$Genome, levels = sortedGenomes)
-
-sp1 <- ggplot(data=df, aes(x=Theta, y=AD, label=density)) +
-  geom_line(aes(color = k)) +
-  geom_point() +
-  geom_text(aes(label = round(AD, 1)), size = 1.8, nudge_y = 0.2, show.legend = FALSE) +
-  facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both)) +
-  scale_y_continuous(name = "Genome (A+D)/N Values",
-                     breaks=c(0, 0.5, 1),
-                     labels=c("0", "0.5", "1")) +
-  theme_light() + theme( panel.spacing=unit(0.2, "lines"),
-                         legend.position = "none",
-                         strip.text.x = element_text( size = 8, angle = 0),
-                         axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                         axis.title.x = element_blank())
-#                         axis.text.x=element_blank())
-
-outfname <- sprintf( "%s/PanelRari-all.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 6, height = 7, units = "in", dpi = 300)
-dev.off()
-totPrinted <- totPrinted + 1
-
-# grafico delle distanze di euclide x tutti i genomi
-for( gen in sortedGenomes) {
-  df <- filter(tgtDF, Genome == gen & Measure == "Euclidean")
-
+  df <- switch(as.character(i),
+               "1" = filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard" & Theta <= 0.3),
+               "2" = filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard" & Theta > 0.3),
+               "3" = filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard")
+  )
+  # grafico delle densità A/N x tutti i genomi
   df$Genome <- factor(df$Genome, levels = sortedGenomes)
 
-  sp1 <- ggplot(data=df, aes(x=Theta, y=distance)) +
+  sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
     geom_line(aes(color = k)) +
     geom_point() +
-    facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both), scales = "free_y") +
-    # scale_y_continuous(name = "Distance") +
-    theme_light() + theme( panel.spacing = unit(0.2, "lines"),
+    # geom_text(aes(label = round(density, 1)), size = 1.8, nudge_y = 0.2, show.legend = FALSE) +
+    facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both)) +
+    scale_y_continuous(name = "Genome A/N Values",
+                       breaks=c(0, 0.5, 1),
+                       labels=c("0", "0.5", "1")) +
+    theme_light() + theme( panel.spacing=unit(0.2, "lines"),
                            legend.position = "none",
                            strip.text.x = element_text( size = 8, angle = 0),
                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-                           axis.title.x = element_blank(),
-                           axis.title.y = element_blank(),
-                           axis.text.y = element_blank(),
-                           strip.text.y = if (gen == "PiceaAbies") element_text( size = 8, angle = -90) else element_blank())
+                           axis.title.x = element_blank())
+  #                         axis.text.x=element_blank())
 
-  outfname <- sprintf( "%s/PanelDistancesEuclidean-%s.pdf", dirname, gen)
-  ggsave( outfname, device = pdf(), width = 2, height = 6, units = "in", dpi = 300)
+  outfname <- sprintf( "%s/PanelDensities-all-%d.pdf", dirname,i)
+  ggsave( outfname, device = pdf(), width = 6, height = 7, units = "in", dpi = 300)
   dev.off()
   totPrinted <- totPrinted + 1
+
+  df <- switch(as.character(i),
+               "1" = filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard" & Theta <= 0.3),
+               "2" = filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard" & Theta > 0.3),
+               "3" = filter(tgtDF, Genome %in% sortedGenomes, Measure == "Jaccard")
+  )
+  df$Genome <- factor(df$Genome, levels = sortedGenomes)
+
+  # grafico delle densità (A+D)/N x tutti i genomi
+  sp1 <- ggplot(data=df, aes(x=Theta, y=AD, label=density)) +
+    geom_line(aes(color = k)) +
+    geom_point() +
+    # geom_text(aes(label = round(AD, 1)), size = 1.8, nudge_y = 0.2, show.legend = FALSE) +
+    facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both)) +
+    scale_y_continuous(name = "Genome (A+D)/N Values",
+                       breaks=c(0, 0.5, 1),
+                       labels=c("0", "0.5", "1")) +
+    theme_light() + theme( panel.spacing=unit(0.2, "lines"),
+                           legend.position = "none",
+                           strip.text.x = element_text( size = 8, angle = 0),
+                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                           axis.title.x = element_blank())
+  #                         axis.text.x=element_blank())
+
+  outfname <- sprintf( "%s/PanelRari-all-%d.pdf", dirname, i)
+  ggsave( outfname, device = pdf(), width = 6, height = 7, units = "in", dpi = 300)
+  dev.off()
+  totPrinted <- totPrinted + 1
+
+
+  # grafico delle distanze di euclide x tutti i genomi
+  for( gen in sortedGenomes) {
+    df <- switch(as.character(i),
+                 "1" = filter(tgtDF, Genome == gen, Measure == "Euclidean" & Theta <= 0.3),
+                 "2" = filter(tgtDF, Genome == gen, Measure == "Euclidean" & Theta > 0.3),
+                 "3" = filter(tgtDF, Genome == gen, Measure == "Euclidean")
+    )
+
+    df$Genome <- factor(df$Genome, levels = sortedGenomes)
+
+    sp1 <- ggplot(data=df, aes(x=Theta, y=distance)) +
+      geom_line(aes(color = k)) +
+      geom_point() +
+      facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both), scales = "free_y") +
+      # scale_y_continuous(name = "Distance") +
+      theme_light() + theme( panel.spacing = unit(0.2, "lines"),
+                             legend.position = "none",
+                             strip.text.x = element_text( size = 8, angle = 0),
+                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                             axis.title.x = element_blank(),
+                             axis.title.y = element_blank(),
+                             axis.text.y = element_blank(),
+                             strip.text.y = if (gen == "PiceaAbies") element_text( size = 8, angle = -90) else element_blank())
+
+    outfname <- sprintf( "%s/PanelDistancesEuclidean-%s-%d.pdf", dirname, gen, i)
+    ggsave( outfname, device = pdf(), width = 2, height = 6, units = "in", dpi = 300)
+    dev.off()
+    totPrinted <- totPrinted + 1
+  }
 }
 
 cat(sprintf("CV plot Done. %d plot printed\n", totPrinted))

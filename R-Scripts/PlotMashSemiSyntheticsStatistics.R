@@ -34,22 +34,6 @@ pltMeasures <- c("D2", "Euclidean", "Antidice", "Dice", "Jaccard", "Kulczynski",
                  "Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
 
 
-plot_labeller <- function(variable, value){
-  # cat(sprintf("variable: <%s>, value: <%s>\n", variable, as.character(value)))
-  if (variable == 'kv') {
-    # N.B. kv e' un factor
-    return(sprintf("k = %s", as.character(value)))
-  } else if (variable == 'k') {
-    return(sprintf("k = %d", value))
-  }  else if (variable == 'lenFac') {
-    # lenFac è un factor
-    return(formatC(as.numeric(as.character(value)), format="f", digits=0, big.mark="."))
-  }else {
-    return(as.character(value))
-  }
-}
-
-
 # modifica i fattori di scala per ciascuna riga del pannello
 TranslationTable  <- hashmap(default = 0)
 TranslationTable[["Mash.Distance.1000."]] <- "Mash (sketch=1.000)"
