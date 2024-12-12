@@ -17,18 +17,16 @@ library(filelock)
 # Sets the path of the directory containing the output of FADE
 setwd("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent")
 
-bs <- "1"
 bs <- "uniform"
-similarities = c('D2')
+similarities <- c('D2')
 
 # Defines the name of the file containing a copy of the dataframe created by this script
 # dfFilename <- "PresentAbsent-Power+T1.RDS"
 # csvFilename <- 'PresentAbsentData-all.csv'
 # nullModel <- 'Uniform'
 
-dfFilename <- sprintf( "%s,32/PresentAbsentEC-Power+T1-%s,32.RDS", bs, bs)
-csvFilename <- sprintf("%s,32/PresentAbsentECData-%s-32.csv", bs, bs)
-csvFilename <- sprintf("%s,32/PresentAbsentECData-uniform-32-1000.csv", bs)
+dfFilename <- sprintf( "%s,32/PresentAbsentEC-Power+T1-%s,32-test.RDS", bs, bs)
+csvFilename <- sprintf("%s,32/PresentAbsentECData-%s-32-4.csv", bs, bs)
 
 trsh <- sprintf("%s,32/Thresholds.csv", bs)
 
@@ -133,12 +131,13 @@ T1Power <- function( len) {
           # ndx <- round(length(nmDistances) * alpha)
           # threshold <- nmDistances[ndx] # solo vettore delle distanze
           ndx <- round(nrow(nmSrt) * alpha)
+          ndx <- if (ndx < 1) 1 else ndx
           threshold <- nmSrt[ndx, mes] # row = ndx, col = measure mes
-          cc = getDensity(nmSrt, mes, nrow(nm)) # getDensity(nmSrt, mes, ndx) => fino alla threshold
+          cc <- getDensity(nmSrt, mes, nrow(nm)) # getDensity(nmSrt, mes, ndx) => fino alla threshold
           nmDensity = cc[1]
-          nmSD = cc[2]
+          nmSD <- cc[2]
           # if (threshold == 1) {
-          lck = lock( trsh, exclusive = TRUE, timeout = Inf)
+          lck <- lock( trsh, exclusive = TRUE, timeout = Inf)
           if (!is.null(lck)) {
             logLine <- sprintf("%d, %d, %s, %.3f, %.3f, %.3f", len, kv, mes, g, alpha, threshold)
             write( logLine, file = trsh, append = TRUE)
@@ -146,10 +145,10 @@ T1Power <- function( len) {
           }
           for(altMod in altModels ) {  # 2 alternative models "MotifRepl-U" "PatTransf-U"
             am <- filter( df, df$model == altMod & df$gamma == g & df$seqLen == len & df$k == kv)
-            power = getPower(am, mes, threshold, similarityP)
-            cc = getDensity(am, mes, nrow(am)) # per gli alternate model prende tutte ???
+            power <- getPower(am, mes, threshold, similarityP)
+            cc <- getDensity(am, mes, nrow(am)) # per gli alternate model prende tutte ???
             amDensity = cc[1]
-            amSD = cc[2]
+            amSD <- cc[2]
             #            cat(sprintf("AM: %s, power = %f  -  ", altMod, power))
             cat('.')
             if(altMod == altModels[1]) {
@@ -185,31 +184,31 @@ columnClasses = c(
       "numeric", "numeric", "numeric", "numeric",
       "numeric", "numeric", "numeric", "numeric",
       "numeric", "numeric", "numeric", "numeric",
-      # 38 D2, Euclidean, NormalizedEuclidean
-      "numeric", "numeric", "numeric",
+      # 38 D2,     D2z,      Euclidean, NormalizedEuclidean
+      "numeric", "numeric", "numeric", "numeric",
       #  dati entropia 5 x seq x 2 (A-B)
       # sequence-A
-      # 41 NKeysA 2*totalCntA deltaA	   HkA	      errorA
+      # 42 NKeysA 2*totalCntA deltaA	   HkA	      errorA
       "numeric", "numeric", "numeric", "numeric", "numeric",
       # sequence-B
-      # 46 NKeysB	2*totalCntB deltaB	   HkB	      errorB
+      # 47 NKeysB	2*totalCntB deltaB	   HkB	      errorB
       "numeric", "numeric", "numeric", "numeric", "numeric")
 
 
 df <-read.csv( file = csvFilename, colClasses = columnClasses)
-df$model = factor(df$model)
+df$model <- factor(df$model)
 # df$gamma = factor(df$gamma)
 # df$k = factor(df$k)
 # df$seqLen = factor(df$seqLen)
 
 
-ll = levels(factor(df$gamma))
-gValues = as.double(ll[2:length(ll)])
-kValues = as.integer(levels(factor(df$k)))
-lengths = as.integer(levels(factor(df$seqLen)))
+ll <- levels(factor(df$gamma))
+gValues <- as.double(ll[2:length(ll)])
+kValues <- as.integer(levels(factor(df$k)))
+lengths <- as.integer(levels(factor(df$seqLen)))
 col <- colnames(df)
 measures <- c(col[11:25], col[27], col[31], col[35], col[38:40])
-altModels = levels(df$model)[1:2]
+altModels <- levels(df$model)[1:2]
 
 alphaValues <- c( 0.01, 0.05, 0.10)
 
