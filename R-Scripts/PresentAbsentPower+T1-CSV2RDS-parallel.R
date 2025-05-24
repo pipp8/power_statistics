@@ -25,7 +25,7 @@ similarities <- c('D2')
 # csvFilename <- 'PresentAbsentData-all.csv'
 # nullModel <- 'Uniform'
 
-dfFilename <- sprintf( "%s,32/PresentAbsentEC-Power+T1-%s,32-test.RDS", bs, bs)
+dfFilename <- sprintf( "%s,32/PresentAbsentEC-Power+T1-%s,32-4.RDS", bs, bs)
 csvFilename <- sprintf("%s,32/PresentAbsentECData-%s-32-4.csv", bs, bs)
 
 trsh <- sprintf("%s,32/Thresholds.csv", bs)

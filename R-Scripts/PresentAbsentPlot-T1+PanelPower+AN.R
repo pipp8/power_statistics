@@ -115,10 +115,9 @@ l3 <- c("Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
 l4 <- c("Anderberg", "Gower", "Yule", "Mash.distance.1000.", "Mash.distance.10000.", "Mash.distance.100000.")
 
 # riordina la lista delle misure
-sortedMeasures = c(l1, l2, l3)
-#measureNanesDF <- data.frame( ref = l1, g1 = l2, alt = l3, no = l4, stringsAsFactors = FALSE)
-
-
+# sortedMeasures <- c(l1, l2, l3)
+mainMeasures <- c(l1, "Jaccard", "Hamman")
+PAMeasures <- c(l2, l3)
 
 
 # finally load input dataframe
@@ -141,66 +140,60 @@ sortedMeasures = c(l1, l2, l3)
 # $ amDensity: num  0.912 0.96 0.912 0.96 0.912 ...
 # $ amSD     : num  0.0289 0.013 0.0289 0.013 0.0289 ...
 
-df <-readRDS( file = dfFilename)
-cat(sprintf("Dataset %s loaded. (%d rows).\n", dfFilename, nrow(df)))
+dfAll <-readRDS( file = dfFilename)
+cat(sprintf("Dataset %s loaded. (%d rows).\n", dfFilename, nrow(dfAll)))
+
+dfAll$Measure <- factor(dfAll$Measure)
+dfAll$Model <- factor(dfAll$Model)
+# df$len <- factor(df$len)
+dfAll$lenFac <- factor(dfAll$len)
+
+kValues <- levels(factor(dfAll$k))
+lengths <- levels(factor(dfAll$len))
+measures <- levels(factor(dfAll$Measure))
+altModels <- levels(dfAll$Model)[1:2]
+
+allMeasures <- levels(dfAll$Measure)
 
 # escludiamo le misure: euclidean norm, anderberg, gowel , phi e yule. 15120 -> 10800 observations
-df <- filter( df, Measure != "Anderberg" & Measure != "Gower" & Measure != "Phi" & Measure != "Yule" &
-  Measure != "Euclid_norm" & Measure != "Mash.Distance.1000." & Measure != "Mash.Distance.100000." &
-  Measure != "Mash" )
+# df <- filter( df, Measure != "Anderberg" & Measure != "Gower" & Measure != "Phi" & Measure != "Yule" &
+#  Measure != "Euclid_norm" & Measure != "Mash.Distance.1000." & Measure != "Mash.Distance.100000." &
+#  Measure != "Mash" )
 
-cat(sprintf("Filtered measures: Anderberg, Gower, Phi, Yule, Euclid_norm, Mash.Distance.1000, Mash.Distance.10000., Mash.Distance.100000., Euclidean (%d rows).\n",nrow(df)))
+df1 <- filter( dfAll, Measure %in% mainMeasures) # solo le 4 misure
+df2 <- filter( dfAll, Measure %in% PAMeasures) # solo le misure Present Absent
 
-# df$Measure <- replace( df$Measure, df$Measure == "Mash.Distance.10000.", "Mash")
-df$Measure <- factor(df$Measure)
-df$Model = factor(df$Model)
-# df$len = factor(df$len)
-df$lenFac = factor(df$len)
+cat(sprintf("4 misure: %s (%d rows).\n", str(mainMeasures),nrow(df1)))
+cat(sprintf("4 misure filtered: %s.\n", str(setdiff( allMeasures, levels(factor(df1$Measure))))))
 
-kValues = levels(factor(df$k))
-lengths = levels(factor(df$len))
-measures <- levels(factor(df$Measure))
-altModels = levels(df$Model)[1:2]
+cat(sprintf("PA measures: %s (%d rows).\n", str(PAMeasures),nrow(df2)))
+cat(sprintf("PA measures filtered: %s.\n", str(setdiff( allMeasures, levels(factor(df2$Measure))))))
 
 #
 # stampa 3 grafici per ciascun valore di alpha
 #
-AM = levels(df$Model)[1]
+AM <- levels(dfAll$Model)[1]
 totPrinted <- 0
 for( a in c( 0.01, 0.05, 0.10)) { # alpha values
 
   MaxT1 <- switch( sprintf("%.2f", a), "0.01" = 0.050, "0.05" = 0.150, "0.10" = 0.3) # fattore di amplificazione del valore di T1
   cat(sprintf("%.3f - %.3f\n", a, MaxT1))
 
-  dff <- filter(df, df$alpha == a & df$gamma == 0.10 & df$Model == AM) # T1 Error Check does not depend on gamma and Alternate Model
+  # grafico solo 4 misure
+  dff <- filter(df1, df1$alpha == a & df1$gamma == 0.10 & df1$Model == AM) # T1 Error Check does not depend on gamma and Alternate Model
 
-  # riordina le misure
-  # dff$measure2 <- factor(dff$Measure, levels = measure_names(levels(dff$Measure)))
-  dff$Measure <- factor(dff$Measure, levels = sortedMeasures)
+  # dff$Measure <- factor(dff$Measure, levels = mainMeasures)
   dff$k <- factor(dff$k)
 
-  # sp <- ggplot( dff, aes(x = Measure, y = T1)) +
-  #   geom_boxplot( aes( fill = k), alpha=0.7, outlier.size = 0.25, lwd = 0) +
-  #   # geom_boxplot( aes(fill = k), alpha=0.7, outlier.size = 0.25) +
-  #   scale_y_continuous(name = "T1 Value", limits = c(0, MaxT1)) +
-  #   geom_hline(yintercept = a, linetype="dashed", color = "black") +
-  #   theme( axis.text.x = element_text(size = 11, angle = 45, hjust = 1),  # increase al font sizes
-  #          axis.text.y = element_text(size = 12),
-  #          legend.title = element_text(size = 14),
-  #          legend.text = element_text(size = 13)) +
-  #   labs( x = "") +
-  #   # theme_light(base_size = 10) + labs(x = "") + # theme(legend.position = "none") +
-  #   scale_colour_brewer(palette = "Dark2")
-  # # scale_fill_grey(start = 0, end = .9)
-  # # ggtitle("Pannello risultati T1-Check")
+  # Grafico Type I 4 misure
   sp <- ggplot( dff, aes( x = len, y = T1, alpha=0.8)) +
-    geom_point( aes( color = k), alpha = 0.8, size = 1.1) +
+    geom_point( aes( color = k), alpha = 0.8, size = 1.5) +
     scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                  labels=c("10E3", "", "10E5", "", "10+E7"), limits = c(1000, 10000000)) +
+                  labels=c("1E+03", "1E+04", "1E+05", "1E+06", "1+E07"), limits = c(1000, 10000000)) +
     scale_y_continuous(name = "T1 Error", limits = c(0, MaxT1)) +
     geom_hline(yintercept = a, linetype="dashed", color = "black") +
     facet_grid( rows = vars( k), cols = vars( Measure),  labeller = plot_labeller) +
-    theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 70),
+    theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                        axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                        axis.text.y = element_text( size = rel( 0.7)),
                        legend.position = "none",
@@ -208,11 +201,35 @@ for( a in c( 0.01, 0.05, 0.10)) { # alpha values
     guides(colour = guide_legend(override.aes = list(size=3)))
   # ggtitle( am)
 
-  # dev.new(width = 9, height = 6)
-  # print(sp)
-  # stop("break")
-  # dev.new(width = 10, height = 5)
   outfname <- sprintf( "%s/T1Box-A=%.2f.pdf", dirname, a)
+  ggsave( outfname, width = 9, height = 6, device = pdf(), dpi = 300)
+  # print( sp)
+  dev.off() #only 129kb in size
+  totPrinted <- totPrinted + 1
+
+  # Grafico Type I solo misure present Absent
+  dff <- filter(df2, df2$alpha == a & df2$gamma == 0.10 & df2$Model == AM) # T1 Error Check does not depend on gamma and Alternate Model
+
+  # dff$Measure <- factor(dff$Measure, levels = PAMeasures)
+  dff$k <- factor(dff$k)
+
+  # Grafico Type I solo misure present Absent
+  sp <- ggplot( dff, aes( x = len, y = T1, alpha=0.8)) +
+    geom_point( aes( color = k), alpha = 0.8, size = 1.5) +
+    scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                  labels=c("10E3", "", "10E5", "", "10+E7"), limits = c(1000, 10000000)) +
+    scale_y_continuous(name = "T1 Error", limits = c(0, MaxT1)) +
+    geom_hline(yintercept = a, linetype="dashed", color = "black") +
+    facet_grid( rows = vars( k), cols = vars( Measure),  labeller = plot_labeller) +
+    theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                       axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                       axis.text.y = element_text( size = rel( 0.7)),
+                       legend.position = "none",
+                       panel.spacing=unit(0.1, "lines")) +
+    guides(colour = guide_legend(override.aes = list(size=3)))
+  # ggtitle( am)
+
+  outfname <- sprintf( "%s/T1Box-AllMeasures-A=%.2f.pdf", dirname, a)
   ggsave( outfname, width = 9, height = 6, device = pdf(), dpi = 300)
   # print( sp)
   dev.off() #only 129kb in size
@@ -221,46 +238,68 @@ for( a in c( 0.01, 0.05, 0.10)) { # alpha values
 
 
 # Plot 1 panel with power for each alternative model
-l <- levels(factor(df$alpha))
-alphaValues = unlist(lapply(l, as.numeric))
-alphaTgt = alphaValues[2]
+l <- levels(factor(df1$alpha))
+alphaValues <- unlist(lapply(l, as.numeric))
+alphaTgt <- alphaValues[2]
 
-l <- levels(factor(df$gamma))
-gammaValues = unlist(lapply(l, as.numeric))
-gammaTgt = 0.05
+l <- levels(factor(df1$gamma))
+gammaValues <- unlist(lapply(l, as.numeric))
+gammaTgt <- 0.05
 
 for (gammaTgt in gammaValues) {
 
   for (alphaTgt in alphaValues) {
     cat(sprintf("Power for alpha = %.2f - gamma = %.2f\n", alphaTgt, gammaTgt))
 
-    for (am in levels(df$Model)) {
+    for (am in levels(df1$Model)) {
 
-      dff <- filter(df, df$alpha == alphaTgt & df$Model == am & df$gamma == gammaTgt) # tutte le misure per uno specifico AM, un valore di alpha ed un valore di gamma
+      # grafico con 4 misure
+      dff <- filter(df1, df1$alpha == alphaTgt & df1$Model == am & df1$gamma == gammaTgt) # tutte le misure per uno specifico AM, un valore di alpha ed un valore di gamma
       dff$k <- factor(dff$k)
-      # riordina le misure
-      # dff$Measure <- factor(dff$Measure, levels = measure_names(levels(dff$Measure)))
-      dff$Measure <- factor(dff$Measure, levels = sortedMeasures)
 
+      dff$Measure <- factor(dff$Measure, levels = mainMeasures)
+
+      # grafico con 4 misure
       sp <- ggplot( dff, aes( x = len, y = power, alpha=0.8)) +
-        geom_point( aes( color = k), alpha = 0.8, size = 1.1) +
+        geom_point( aes( color = k), alpha = 0.8, size = 1.5) +
         scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                           labels=c("10E3", "", "10E5", "", "10E7"), limits = c(1000, 10000000)) +
+                      labels=c("1E+03", "1E+04", "1E+05", "1E+06", "1+E07"), limits = c(1000, 10000000)) +
         scale_y_continuous(name = "Power", limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
         facet_grid( rows = vars( k), cols = vars( Measure),  labeller = plot_labeller) +
-        theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 70),
+        theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                            axis.text.y = element_text( size = rel( 0.7)),
                            legend.position = "none",
                            panel.spacing=unit(0.1, "lines")) +
         guides(colour = guide_legend(override.aes = list(size=3)))
 
-      # ggtitle( am)
-
-      # dev.new(width = 9, height = 6)
-      # print(sp)
-      # stop("break")
       outfname <- sprintf( "%s/PanelPowerAnalysis-%s-A=%.2f-G=%.2f.pdf", dirname, str_replace(am, " ", ""), alphaTgt,gammaTgt)
+      ggsave( outfname, device = png(), width = 9, height = 4, units = "in", dpi = 300)
+      dev.off() #only 129kb in size
+      totPrinted <- totPrinted + 1
+
+
+      # grafico con tutte le misure Present Absent
+      dff <- filter(df2, df2$alpha == alphaTgt & df2$Model == am & df2$gamma == gammaTgt) # tutte le misure per uno specifico AM, un valore di alpha ed un valore di gamma
+      dff$k <- factor(dff$k)
+
+      dff$Measure <- factor(dff$Measure, levels = PAMeasures)
+
+      # grafico con tutte le misure Present Absent
+      sp <- ggplot( dff, aes( x = len, y = power, alpha=0.8)) +
+        geom_point( aes( color = k), alpha = 0.8, size = 1.5) +
+        scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                      labels=c("10E3", "", "10E5", "", "10E7"), limits = c(1000, 10000000)) +
+        scale_y_continuous(name = "Power", limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
+        facet_grid( rows = vars( k), cols = vars( Measure),  labeller = plot_labeller) +
+        theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                           axis.text.y = element_text( size = rel( 0.7)),
+                           legend.position = "none",
+                           panel.spacing=unit(0.1, "lines")) +
+        guides(colour = guide_legend(override.aes = list(size=3)))
+
+      outfname <- sprintf( "%s/PanelPowerAnalysis-%s-AllMeasures-A=%.2f-G=%.2f.pdf", dirname, str_replace(am, " ", ""), alphaTgt,gammaTgt)
       ggsave( outfname, device = png(), width = 9, height = 4, units = "in", dpi = 300)
       dev.off() #only 129kb in size
       totPrinted <- totPrinted + 1
@@ -272,14 +311,12 @@ for (alphaTgt in alphaValues) {
   cat(sprintf("Power for alpha = %.2f - alla values of gamma\n", alphaTgt))
   for (am in levels(df$Model)) {
 
-    dff <- filter(df, df$alpha == alphaTgt & df$Model == am) # tutte le misure per uno specifico AM, un valore di alpha ed un valore di gamma
+    dff <- filter(df1, df1$alpha == alphaTgt & df1$Model == am) # tutte le misure per uno specifico AM, un valore di alpha ed un valore di gamma
     dff$k <- factor(dff$k)
-    # riordina le misure
-    # dff$Measure <- factor(dff$Measure, levels = measure_names(levels(dff$Measure)))
-    dff$Measure <- factor(dff$Measure, levels = sortedMeasures)
+    # dff$Measure <- factor(dff$Measure, levels = mainMeasures)
 
     sp <- ggplot( dff, aes( x = len, y = power, alpha=0.8)) +
-      geom_point( aes( color = k), alpha = 0.8, size = 1.1) +
+      geom_point( aes( color = k), alpha = 0.8, size = 1.5) +
       scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
                     labels=c("10E3", "", "10E5", "", "10E7"), limits = c(1000, 10000000)) +
       scale_y_continuous(name = "Power", limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
@@ -316,7 +353,7 @@ for (alphaTgt in alphaValues) {
 # indipendente da alpha e da gamma fissati a piacere
 # indipendente dall'alternative model (scegliamo MotifRepl-U)
 # uguale per tutte le misure present absent (ne scegliamo una a caso == Jaccard)
-dff <- filter(df, Measure == "Jaccard" & Model == "MotifRepl-U" & alpha == 0.05 & gamma == 0.05)
+dff <- filter(dfAll, Measure == "Jaccard" & Model == "MotifRepl-U" & alpha == 0.05 & gamma == 0.05)
 #
 # ne restano 5 (len) x 8 (k) = 40 valori
 #

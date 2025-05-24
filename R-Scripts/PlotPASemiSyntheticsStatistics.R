@@ -24,7 +24,7 @@ similarities <- c('D2')
 df1Filename <- sprintf("%s/distanceAll.RDS", dirname )
 df2Filename <- sprintf("%s/cvAll.RDS", dirname )
 
-similarities = c('D2')
+similarities <- c('D2')
 # misure di riferimento
 sortedMeasures <- c("D2", "Euclidean", "Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel",
                     "Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
@@ -198,7 +198,7 @@ if (!file.exists(df1Filename) || !file.exists(df2Filename) ) {
       }
     }
 
-
+    stop("breakpoint")
     # escludiamo le misure: euclidean norm, anderberg, gowel , phi e yule. 864 -> 672 observations
     tgtDF <- filter(tgtDF, Measure %in% pltMeasures)
 
@@ -280,6 +280,7 @@ cvDF$type <-factor(cvDF$type)
 
 tgtDF$AD <- (tgtDF$A+tgtDF$D) / tgtDF$N
 
+stop("breakpoint line 283")
 for( sequenceName in genomes) {
 
   totPrinted <- 0
