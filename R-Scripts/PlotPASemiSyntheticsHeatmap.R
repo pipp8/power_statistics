@@ -4,6 +4,8 @@ library(ggplot2)
 library(hrbrthemes)
 library(r2r)
 library(stringr)
+library(tidyr)
+library(pheatmap)
 
 
 ###### DESCRIPTION
@@ -138,6 +140,7 @@ for( sequenceName in genomes) {
 
     #           0.0001%    0.01% 1%     95%   97%   99%
     beta <- c( 1e-40, 1e-20, 1e-10, 1e-5, 1e-3, 0.01, 0.1, 0.7, 0.9, 0.95, 0.96, 0.97, 0.98, 0.99, 1)
+    beta <- c( 0, 0.01, 0.99, 1)
     df2 <- select(df, k, Theta, density)               # seleziona le 3 colonne
     df2 <- df2 %>% distinct(k, Theta, .keep_all = TRUE)   # rimuove i duplicati tra diversi esperimenti
     df2 <- df2[order(df2$Theta), ]                        # ordina per Theta

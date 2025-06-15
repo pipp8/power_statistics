@@ -30,11 +30,11 @@ PAMeasures <- c("Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel",
                 "Hamman", "Hamming", "Matching", "Sneath", "Tanimoto") # solo alcune misure Present/Absent senza le count based
 pltMeasures <- c("D2", "Euclidean", "Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai", "Russel",
                  "Hamman", "Hamming", "Matching", "Sneath", "Tanimoto")
-mainMeasures <- c("Jaccard", "Hamman")
+mainMeasures <- c("Jaccard", "Russel", "Hamman")
 
 xWidth <- 2.5 # larghezza di una singola colonna del pannello
 yHeight <- 12 # altezza di tutti i grafici
-deltaWidth <- 0.5 # incremento width x misura per eventuali y-axis header
+deltaWidth <- 0.8 # incremento width x misura per eventuali y-axis header
 
 # modifica i fattori di scala per ciascuna riga del pannello
 TranslationTable  <- hashmap(default = 0)
@@ -75,6 +75,9 @@ zoom <- 5
 genomes <- c( "Yeast", "CElegans", "HomoSapiens", "PiceaAbies")
 sortedGenomes <- c("Yeast", "CElegans", "HomoSapiens", "PiceaAbies")
 restrictedGenomes <- c("HomoSapiens")
+restrictedGenomes2<- c("Yeast", "HomoSapiens")
+restrictedGenomes3 <- c("Yeast", "CElegans")
+
 
 types <- c("1:3", "4:6", "7:9", "9:11", "4:11", "all")
 elements <- c("1:3", "4:6", "7:9", "9:11", "4:11", "1:11")
@@ -285,12 +288,180 @@ cvDF$type <-factor(cvDF$type)
 
 tgtDF$AD <- (tgtDF$A+tgtDF$D) / tgtDF$N
 
-for( sequenceName in genomes) {
+totPrinted <- 0
+
+for( i in 1:3) {
+
+  #  grafico distanze per tutte le misura Present/Absent (Theta sull'asse delle x)
+  df <- switch(as.character(i),
+               "1" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure %in% PAMeasures & Theta <= 0.3 & (k == 12 | k == 16)),
+               "2" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure %in% PAMeasures & Theta > 0.3 & (k == 12 | k == 16)),
+               "3" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure %in% PAMeasures & (k == 12 | k == 16))
+  )
+
+  df$Measure <- factor( df$Measure, levels = PAMeasures)
+  # df$Genome <- factor( df$Genome, levels = restrictedGenomes3)
+
+  sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
+    geom_line(aes(color = k)) +
+    geom_point(size = 0.8) +
+    facet_grid( rows = vars(Genome, k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
+    scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
+    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                          panel.spacing=unit(0.1, "lines"),
+                          legend.position = "none",
+                          axis.text.y = element_blank(),
+                          axis.title.y = element_blank(),
+                          axis.title.x = element_blank())
+
+  # dev.new(width = 6, height = 6)
+  # print(sp1)
+  outfname <- sprintf( "%s/Panelk1216-all-%d.png", dirname, i)
+  ggsave( outfname, device = png(), width = length(PAMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
+  dev.off() # only 129kb in size
+  totPrinted <- totPrinted + 1
+
+  # grafico distanze per le 3 misure principali  Present/Absent (Theta sull'asse delle x)
+  df <- switch(as.character(i),
+               "1" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure %in% mainMeasures & Theta <= 0.3 & (k == 12 | k == 16)),
+               "2" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure %in% mainMeasures & Theta > 0.3 & (k == 12 | k == 16)),
+               "3" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure %in% mainMeasures & (k == 12 | k == 16))
+  )
+
+  df$Measure <- factor( df$Measure, levels = mainMeasures)
+  # df$Genome <- factor( df$Genome, levels = restrictedGenomes3)
+
+  sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
+    geom_line(aes(color = k)) +
+    geom_point(size = 0.8) +
+    facet_grid( rows = vars(Genome, k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
+    scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
+    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                          panel.spacing=unit(0.1, "lines"),
+                          legend.position = "none",
+                          axis.text.y = element_blank(),
+                          axis.title.y = element_blank(),
+                          axis.title.x = element_blank())
+
+  # dev.new(width = 6, height = 6)
+  # print(sp1)
+  outfname <- sprintf( "%s/Panelk1216-main-%d.png", dirname, i)
+  ggsave( outfname, device = png(), width = length(mainMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
+  dev.off() # only 129kb in size
+  totPrinted <- totPrinted + 1
+
+
+  #  grafico distanze per Euclidean (Theta sull'asse delle x)
+  df <- switch(as.character(i),
+               "1" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure == "Euclidean" & Theta <= 0.3 & (k == 12 | k == 16)),
+               "2" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure == "Euclidean" & Theta > 0.3 & (k == 12 | k == 16)),
+               "3" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure == "Euclidean" & (k == 12 | k == 16))
+  )
+
+  # df$Measure <- factor( df$Measure, levels = mainMeasures)
+  # df$Genome <- factor( df$Genome, levels = restrictedGenomes3)
+
+  sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
+    geom_line(aes(color = k)) +
+    geom_point(size = 0.8) +
+    facet_grid( rows = vars(Genome, k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) + #, scales = "free_y"
+    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                          strip.text.y = element_blank(),
+                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                          panel.spacing=unit(0.1, "lines"),
+                          legend.position = "none",
+                          axis.text.y = element_blank(),
+                          axis.title.y = element_blank(),
+                          axis.title.x = element_blank())
+
+  # dev.new(width = 6, height = 6)
+  # print(sp1)
+  outfname <- sprintf( "%s/Panelk1216-Euclidean-%d.png", dirname, i)
+  ggsave( outfname, device = png(), width = xWidth, height = yHeight, units = "cm", dpi = 300)
+  dev.off() # only 129kb in size
+  totPrinted <- totPrinted + 1
+
+
+  #  grafico distanze per D2 (Theta sull'asse delle x)
+  df <- switch(as.character(i),
+               "1" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure == "D2" & Theta <= 0.3 & (k == 12 | k == 16)),
+               "2" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure == "D2" & Theta > 0.3 & (k == 12 | k == 16)),
+               "3" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure == "D2" & (k == 12 | k == 16))
+  )
+
+  # df$Measure <- factor( df$Measure, levels = mainMeasures)
+  # df$Genome <- factor( df$Genome, levels = restrictedGenomes3)
+
+  sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
+    geom_line(aes(color = k)) +
+    geom_point(size = 0.8) +
+    facet_grid( rows = vars(Genome, k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) + #, scales = "free_y"
+    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                          axis.title.x = element_blank(),
+                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                          panel.spacing=unit(0.1, "lines"),
+                          legend.position = "none",
+                          strip.text.y = element_blank(),
+                          axis.text.y = element_blank(),
+                          axis.title.y = element_text( size = rel(1))) +
+    labs( y = "Distances")
+
+  # dev.new(width = 6, height = 6)
+  # print(sp1)
+  outfname <- sprintf( "%s/Panelk1216-D2-%d.png", dirname, i)
+  ggsave( outfname, device = png(), width = xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
+  dev.off() # only 129kb in size
+  totPrinted <- totPrinted + 1
+
+}
+
+
+
+
+
+
+
+
+
+  for( sequenceName in genomes) {
 
   totPrinted <- 0
 
   for( i in 1:3) {
 
+    # pannello con solo le principali misure
+    df <- switch(as.character(i),
+                 "1" = filter(tgtDF, Genome == sequenceName & Measure %in% mainMeasures & Theta <= 0.3),
+                 "2" = filter(tgtDF, Genome == sequenceName & Measure %in% mainMeasures & Theta > 0.3),
+                 "3" = filter(tgtDF, Genome == sequenceName & Measure %in% mainMeasures)
+    )
+
+    df$Measure <- factor( df$Measure, levels = mainMeasures)
+
+    #  grafico distanze per le principali misure Present/Absent (Theta sull'asse delle x)
+    sp1 <- ggplot(df, aes(x = Theta, y = distance, fill = k)) +
+      geom_line(aes(color = k)) +
+      geom_point(size = 0.8) +
+      facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
+      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                            panel.spacing=unit(0.1, "lines"),
+                            legend.position = "none",
+                            axis.text.y = element_blank(),
+                            axis.title.y = element_blank(),
+                            axis.title.x = element_blank())
+
+    # dev.new(width = 6, height = 6)
+    # print(sp1)
+    outfname <- sprintf( "%s/%s/PanelDistancesMain-%s-%d.png", dirname, sequenceName, sequenceName, i)
+    ggsave( outfname, device = png(), width = length(mainMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
+    dev.off() # only 129kb in size
+    totPrinted <- totPrinted + 1
+
+
+    # panel per tutte le misure Present/Absent
     df <- switch(as.character(i),
                  "1" = filter(tgtDF, Genome == sequenceName & Measure %in% PAMeasures & Theta <= 0.3),
                  "2" = filter(tgtDF, Genome == sequenceName & Measure %in% PAMeasures & Theta > 0.3),
@@ -315,7 +486,7 @@ for( sequenceName in genomes) {
     # dev.new(width = 6, height = 6)
     # print(sp1)
     outfname <- sprintf( "%s/%s/PanelDistances-%s-%d.png", dirname, sequenceName, sequenceName, i)
-    ggsave( outfname, device = png(), width = length(PAMeasures) * xWidth + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
+    ggsave( outfname, device = png(), width = length(PAMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
     dev.off() # only 129kb in size
     totPrinted <- totPrinted + 1
 
@@ -334,11 +505,12 @@ for( sequenceName in genomes) {
       facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
       theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                            axis.title.x = element_blank(),
                             panel.spacing=unit(0.1, "lines"),
                             legend.position = "none",
                             axis.text.y = element_blank(),
                             strip.text.y = element_blank(),
-                            axis.title.x = element_blank()) +
+                            axis.title.y = element_text( size = 1)) +
       labs( y = "Distances")
     # labs(y = "D2 Similarity")
     # guides(colour = guide_legend(override.aes = list(size=1)))
@@ -391,6 +563,7 @@ for( sequenceName in genomes) {
       geom_line(aes(color = k)) +
       geom_point(size = 0.8) +
       facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
+      scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
       theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                             panel.spacing=unit(0.1, "lines"),
@@ -407,7 +580,36 @@ for( sequenceName in genomes) {
     dev.off() # only 129kb in size
     totPrinted <- totPrinted + 1
 
-    # quinto grafico di riferimento solo Hamman (e valori di k sulla destra)
+    # quinto grafico di riferimento solo Russel (no Y-Axis no strip)
+    df <- switch(as.character(i),
+                 "1" = filter(tgtDF, Genome == sequenceName & Measure == "Russel" & Theta <= 0.3),
+                 "2" = filter(tgtDF, Genome == sequenceName & Measure == "Russel" & Theta > 0.3),
+                 "3" = filter(tgtDF, Genome == sequenceName & Measure == "Russel")
+    )
+
+
+    sp1 <- ggplot(df, aes(x = Theta, y = distance)) +
+      geom_line(aes(color = k)) +
+      geom_point(size = 0.8) +
+      facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
+      scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
+      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                            panel.spacing=unit(0.1, "lines"),
+                            legend.position = "none",
+                            axis.title.y = element_blank(),
+                            axis.text.y = element_blank(),
+                            strip.text.y = element_blank(),
+                            axis.title.x = element_blank())
+
+    # dev.new(width = 6, height = 9)
+    # print(sp1)
+    outfname <- sprintf( "%s/%s/PanelRussel-%s-%d.png", dirname, sequenceName, sequenceName, i)
+    ggsave( outfname, device = png(), width = xWidth, height = yHeight, units = "cm", dpi = 300)
+    dev.off() # only 129kb in size
+    totPrinted <- totPrinted + 1
+
+    # sesto grafico di riferimento solo Hamman (e valori di k sulla destra)
     df <- switch(as.character(i),
                  "1" = filter(tgtDF, Genome == sequenceName & Measure == "Hamman" & Theta <= 0.3),
                  "2" = filter(tgtDF, Genome == sequenceName & Measure == "Hamman" & Theta > 0.3),
@@ -419,6 +621,7 @@ for( sequenceName in genomes) {
       geom_line(aes(color = k)) +
       geom_point(size = 0.8) +
       facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
+      scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
       theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                             panel.spacing=unit(0.1, "lines"),
@@ -486,7 +689,7 @@ sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
   # labs(y = "CV 1:11")
 
 outfname <- sprintf( "%s/PanelCV-all.png", dirname)
-ggsave( outfname, device = png(), width = length(PAMeasures) * xWidth + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
+ggsave( outfname, device = png(), width = length(PAMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
@@ -531,68 +734,6 @@ ggsave( outfname, device = png(), width = xWidth + deltaWidth, height = yHeight,
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
-# # zooming ---------------------------------------------------------------------------
-#
-# for( i in 1:5) {
-#   df <- filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type == types[i])
-#   df$Measure = factor( df$Measure, levels = sortedMeasures)
-#
-#   sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
-#     geom_point(size = 0.8, aes(color = k)) +
-#     facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
-#     theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-#                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-#                           panel.spacing=unit(0.1, "lines"),
-#                           legend.position = "none") +
-#     #                       axis.text.y = element_blank(),
-#     #                       axis.title.y = element_blank()) +
-#     # scale_y_continuous(name = "CV")
-#     #                    breaks=c(0, 0.5, 1),
-#     #                    labels=c("0", "0.5", "1")) +
-#     labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
-#
-#   outfname <- sprintf( "%s/PanelCV-all-zoom%d.pdf", dirname,i)
-#   ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
-#   dev.off() # only 129kb in size
-#   totPrinted <- totPrinted + 1
-#
-#   df <- filter(cvDF, Measure == "Euclidean" & type == types[i])
-#
-#   sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
-#     geom_point(size = 0.8, aes(color = k)) +
-#     facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
-#     theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-#                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-#                           panel.spacing=unit(0.1, "lines"),
-#                           legend.position = "none") +
-#     #                      axis.title.y = element_blank(),
-#     #                      axis.text.y = element_blank(),
-#     #                      strip.text.y = element_blank()) +
-#     labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
-#
-#   outfname <- sprintf( "%s/PanelCVEuclid-zoom%d.pdf", dirname, i)
-#   ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
-#   dev.off() # only 129kb in size
-#   totPrinted <- totPrinted + 1
-#
-#   df <- filter(cvDF, Measure == "D2" & type == types[i])
-#
-#   sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
-#     geom_point(size = 0.8, aes(color = k)) +
-#     facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
-#     theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
-#                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
-#                           panel.spacing=unit(0.1, "lines"),
-#                           legend.position = "none") +
-#     #                      axis.text.y = element_blank(),
-#     #                      strip.text.y = element_blank()) +
-#     labs( x = " ", y = sprintf("Variability Index (%s)", elements[i]))
-#
-#   outfname <- sprintf( "%s/PanelCVD2-zoom%d.pdf", dirname,i)
-#   ggsave( outfname, device = pdf(), width = 1.1, height = 6, units = "in", dpi = 300)
-#   dev.off() # only 129kb in size
-#   totPrinted <- totPrinted + 1
-# }
 
 df <- filter(cvDF, Measure != "D2" & Measure != "Euclidean" & type != "all" & type != "4:11")
 df$Measure = factor( df$Measure, levels = PAMeasures)
@@ -620,12 +761,12 @@ totPrinted <- totPrinted + 1
 for( i in 1:3) {
 
   df <- switch(as.character(i),
-               "1" = filter(tgtDF, Genome %in% restrictedGenomes, Measure == "Jaccard" & Theta <= 0.3),
-               "2" = filter(tgtDF, Genome %in% restrictedGenomes, Measure == "Jaccard" & Theta > 0.3),
-               "3" = filter(tgtDF, Genome %in% restrictedGenomes, Measure == "Jaccard")
+               "1" = filter(tgtDF, Genome %in% restrictedGenomes2, Measure == "Jaccard" & Theta <= 0.3),
+               "2" = filter(tgtDF, Genome %in% restrictedGenomes2, Measure == "Jaccard" & Theta > 0.3),
+               "3" = filter(tgtDF, Genome %in% restrictedGenomes2, Measure == "Jaccard")
   )
   # grafico delle densità A/N x tutti i genomi
-  df$Genome <- factor(df$Genome, levels = sortedGenomes)
+  df$Genome <- factor(df$Genome, levels = restrictedGenomes2)
 
   sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
     geom_line(aes(color = k)) +
@@ -642,16 +783,16 @@ for( i in 1:3) {
   #                         axis.text.x=element_blank())
 
   outfname <- sprintf( "%s/PanelDensities-all-%d.png", dirname,i)
-  ggsave( outfname, device = png(),  width = (length(restrictedGenomes) + 1) * xWidth + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
+  ggsave( outfname, device = png(),  width = (length(restrictedGenomes2) + 1) * xWidth + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
   dev.off()
   totPrinted <- totPrinted + 1
 
   df <- switch(as.character(i),
-               "1" = filter(tgtDF, Genome %in% restrictedGenomes, Measure == "Jaccard" & Theta <= 0.3),
-               "2" = filter(tgtDF, Genome %in% restrictedGenomes, Measure == "Jaccard" & Theta > 0.3),
-               "3" = filter(tgtDF, Genome %in% restrictedGenomes, Measure == "Jaccard")
+               "1" = filter(tgtDF, Genome %in% restrictedGenomes2, Measure == "Jaccard" & Theta <= 0.3),
+               "2" = filter(tgtDF, Genome %in% restrictedGenomes2, Measure == "Jaccard" & Theta > 0.3),
+               "3" = filter(tgtDF, Genome %in% restrictedGenomes2, Measure == "Jaccard")
   )
-  df$Genome <- factor(df$Genome, levels = sortedGenomes)
+  df$Genome <- factor(df$Genome, levels = restrictedGenomes2)
 
   # grafico delle densità (A+D)/N x tutti i genomi
   sp1 <- ggplot(data=df, aes(x=Theta, y=AD, label=density)) +
@@ -669,7 +810,7 @@ for( i in 1:3) {
   #                         axis.text.x=element_blank())
 
   outfname <- sprintf( "%s/PanelRari-all-%d.png", dirname, i)
-  ggsave( outfname, device = png(), width = (length(restrictedGenomes)+1) * xWidth + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
+  ggsave( outfname, device = png(), width = (length(restrictedGenomes2)+1) * xWidth + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
   dev.off()
   totPrinted <- totPrinted + 1
 
