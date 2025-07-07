@@ -116,9 +116,12 @@ l4 <- c("Anderberg", "Gower", "Yule", "Mash.distance.1000.", "Mash.distance.1000
 
 # riordina la lista delle misure
 # sortedMeasures <- c(l1, l2, l3)
-mainMeasures <- c(l1, "Jaccard", "Hamman")
+mainMeasures <- c(l1, "Jaccard")
+restrictedMeasures <- c("D2", "Antidice", "Dice", "Jaccard", "Kulczynski", "Ochiai")
 PAMeasures <- c(l2, l3)
-
+xWidth <- 1.5 # larghezza di una singola colonna del pannello
+yHeight <- 13 # altezza di tutti i grafici
+deltaWidth <- 0.3 # incremento width x misura per eventuali y-axis header
 
 # finally load input dataframe
 
@@ -162,12 +165,16 @@ allMeasures <- levels(dfAll$Measure)
 
 df1 <- filter( dfAll, Measure %in% mainMeasures) # solo le 4 misure
 df2 <- filter( dfAll, Measure %in% PAMeasures) # solo le misure Present Absent
+df3 <- filter( dfAll, Measure %in% restrictedMeasures)
 
 cat(sprintf("4 misure: %s (%d rows).\n", str(mainMeasures),nrow(df1)))
 cat(sprintf("4 misure filtered: %s.\n", str(setdiff( allMeasures, levels(factor(df1$Measure))))))
 
 cat(sprintf("PA measures: %s (%d rows).\n", str(PAMeasures),nrow(df2)))
 cat(sprintf("PA measures filtered: %s.\n", str(setdiff( allMeasures, levels(factor(df2$Measure))))))
+
+cat(sprintf("Restricted measures: %s (%d rows).\n", str(restrictedMeasures),nrow(df3)))
+cat(sprintf("PA measures filtered: %s.\n", str(setdiff( allMeasures, levels(factor(df3$Measure))))))
 
 #
 # stampa 3 grafici per ciascun valore di alpha
@@ -180,16 +187,17 @@ for( a in c( 0.01, 0.05, 0.10)) { # alpha values
   cat(sprintf("%.3f - %.3f\n", a, MaxT1))
 
   # grafico solo 4 misure
-  dff <- filter(df1, df1$alpha == a & df1$gamma == 0.10 & df1$Model == AM) # T1 Error Check does not depend on gamma and Alternate Model
+  dff <- filter(df1, alpha == a & gamma == 0.10 & Model == AM) # T1 Error Check does not depend on gamma and Alternate Model
 
   # dff$Measure <- factor(dff$Measure, levels = mainMeasures)
   dff$k <- factor(dff$k)
+  dff$Measure <- factor(dff$Measure, levels = mainMeasures)
 
-  # Grafico Type I 4 misure
+  # Grafico Type I main misure
   sp <- ggplot( dff, aes( x = len, y = T1, alpha=0.8)) +
     geom_point( aes( color = k), alpha = 0.8, size = 1.5) +
     scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                  labels=c("1E+03", "1E+04", "1E+05", "1E+06", "1+E07"), limits = c(1000, 10000000)) +
+                  labels=c("10E3", "", "10E5", "", "10E7"), limits = c(1000, 10000000)) +
     scale_y_continuous(name = "T1 Error", limits = c(0, MaxT1)) +
     geom_hline(yintercept = a, linetype="dashed", color = "black") +
     facet_grid( rows = vars( k), cols = vars( Measure),  labeller = plot_labeller) +
@@ -199,10 +207,9 @@ for( a in c( 0.01, 0.05, 0.10)) { # alpha values
                        legend.position = "none",
                        panel.spacing=unit(0.1, "lines")) +
     guides(colour = guide_legend(override.aes = list(size=3)))
-  # ggtitle( am)
 
-  outfname <- sprintf( "%s/T1Box-A=%.2f.pdf", dirname, a)
-  ggsave( outfname, width = 9, height = 6, device = pdf(), dpi = 300)
+  outfname <- sprintf( "%s/T1Box-A=%.2f.png", dirname, a)
+  ggsave( outfname, device = png(), width = length(mainMeasures) * xWidth * 1.5  + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
   # print( sp)
   dev.off() #only 129kb in size
   totPrinted <- totPrinted + 1
@@ -213,7 +220,6 @@ for( a in c( 0.01, 0.05, 0.10)) { # alpha values
   # dff$Measure <- factor(dff$Measure, levels = PAMeasures)
   dff$k <- factor(dff$k)
 
-  # Grafico Type I solo misure present Absent
   sp <- ggplot( dff, aes( x = len, y = T1, alpha=0.8)) +
     geom_point( aes( color = k), alpha = 0.8, size = 1.5) +
     scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
@@ -230,7 +236,8 @@ for( a in c( 0.01, 0.05, 0.10)) { # alpha values
   # ggtitle( am)
 
   outfname <- sprintf( "%s/T1Box-AllMeasures-A=%.2f.pdf", dirname, a)
-  ggsave( outfname, width = 9, height = 6, device = pdf(), dpi = 300)
+  ggsave( outfname, device = png(), width = length(restrictedMeasures) * xWidth + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
+
   # print( sp)
   dev.off() #only 129kb in size
   totPrinted <- totPrinted + 1
@@ -308,10 +315,10 @@ for (gammaTgt in gammaValues) {
 }
 
 for (alphaTgt in alphaValues) {
-  cat(sprintf("Power for alpha = %.2f - alla values of gamma\n", alphaTgt))
-  for (am in levels(df$Model)) {
-
-    dff <- filter(df1, df1$alpha == alphaTgt & df1$Model == am) # tutte le misure per uno specifico AM, un valore di alpha ed un valore di gamma
+  cat(sprintf("Power for alpha = %.2f - all values of gamma\n", alphaTgt))
+  for (am in levels(df1$Model)) {
+    # tutte le misure per uno specifico AM, un valore di alpha ed un valore di gamma
+    dff <- filter(df1, df1$alpha == alphaTgt & df1$Model == am)
     dff$k <- factor(dff$k)
     # dff$Measure <- factor(dff$Measure, levels = mainMeasures)
 
@@ -325,7 +332,6 @@ for (alphaTgt in alphaValues) {
                          strip.text.y = element_text( size = 6),
                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                          axis.text.y = element_text( size = rel( 0.7)),
-                         legend.position = "none",
                          panel.spacing=unit(0.1, "lines")) +
       guides(colour = guide_legend(override.aes = list(size=3)))
     # ggtitle( am)
@@ -346,6 +352,45 @@ for (alphaTgt in alphaValues) {
   }
 }
 
+# grafici della power solo gamma = 0.05 e alpha = 0.05
+alphaTgt <- 0.05
+gammaTgt <- 0.05
+cat(sprintf("Power for alpha = %.2f - gamma = %.2f\n", alphaTgt, gammaTgt))
+for (am in levels(df1$Model)) {
+  # tutte le misure ristrette per uno specifico AM, un valore di alpha ed un valore di gamma
+  dff <- filter(df1, alpha == alphaTgt & gamma == gammaTgt & Model == am & Measure %in% mainMeasures)
+  dff$k <- factor(dff$k)
+  dff$Measure <- factor(dff$Measure, levels = mainMeasures)
+
+  sp <- ggplot( dff, aes( x = len, y = power, alpha=0.8)) +
+    geom_point( aes( color = k), alpha = 0.8, size = 1.5) +
+    scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                  labels=c("10E3", "", "10E5", "", "10E7"), limits = c(1000, 10000000)) +
+    scale_y_continuous(name = "Power", limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
+    facet_grid( rows = vars( k), cols = vars( Measure),  labeller = plot_labeller) +
+    theme_bw() + theme(strip.text.x = element_text( size = 8), # ,angle = 70),
+                       # strip.text.y = element_text( size = 6),
+                       axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
+                       axis.text.y = element_text( size = rel( 0.7)),
+                       panel.spacing=unit(0.1, "lines")) +
+    guides(colour = guide_legend(override.aes = list(size=3)))
+  # ggtitle( am)
+  if (alphaTgt == 0.05) {
+    if (as.character(am) == "MotifRepl-U") {
+      sp <- sp + theme( axis.title.y = element_blank(), legend.position = "none")
+      w <- length(mainMeasures) * xWidth * 1.5 # nessuno spzio per la legenda pari ad una colonna
+    } else {
+      sp <- sp + theme(legend.position = "none")
+      w <- length(mainMeasures) * xWidth *1.5 + deltaWidth # spazio per il titolo dell'asse (1/2 colonna)
+    }
+  }
+  # dev.new(width = 9, height = 6)
+  # print(sp)
+  outfname <- sprintf( "%s/PanelPowerAnalysisR-%s-A=%.2f-G=%.2f.png", dirname, str_replace(am, " ", ""), alphaTgt, 0.05)
+  ggsave( outfname, device = png(), width = w, height = yHeight, units = "cm", dpi = 300)
+  dev.off() #only 129kb in size
+  totPrinted <- totPrinted + 1
+}
 #
 # Grafico del rapport A/N per il null model
 #
@@ -385,10 +430,10 @@ dev.off() #only 129kb in size
 totPrinted <- totPrinted + 1
 
 
-for (am in levels(factor(df$Model))) {
+for (am in levels(factor(df1$Model))) {
   # indipendente da alpha ma prendiamo tutti i gamma
   # uguale per tutte le misure present absent (ne scegliamo una a caso == Jaccard)
-  dff <- filter(df, Measure == "Jaccard" & Model == am & alpha == 0.05 )
+  dff <- filter(df1, Measure == "Jaccard" & Model == am & alpha == 0.05 )
   #
   # ne restano 5 (len) x 8 (k) x 3 (gamma) = 120 valori
   #

@@ -114,6 +114,10 @@ if (!file.exists(dfFilename)) {
 }
 
 ###### CODE
+xWidth <- 1.5 # larghezza di una singola colonna del pannello
+yHeight <- 13 # altezza di tutti i grafici
+deltaWidth <- 0.3 # incremento width x misura per eventuali y-axis header
+
 altModels = levels(dati$model)[1:2]
 
 alphaValues <- c( 0.01, 0.05, 0.10)
@@ -188,8 +192,8 @@ sp <- ggplot( dff, aes(x = lf, y = A/N, alpha=0.8)) +
 
 # dev.new(width = 9, height = 6)
 # print(sp)
-outfname <- sprintf( "%s/PanelAN.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 9, height = 6, units = "in", dpi = 300)
+outfname <- sprintf( "%s/PanelAN.png", dirname)
+ggsave( outfname, device = png(), width = xWidth * 5 + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
 dev.off() #only 129kb in size
 
 NM$k = factor(NM$k)
@@ -213,8 +217,8 @@ sp <- ggplot( NM, aes(x = lf, y = A/N, alpha=0.8)) +
 
 # dev.new(width = 9, height = 6)
 # print(sp)
-outfname <- sprintf( "%s/PanelANNM.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
+outfname <- sprintf( "%s/PanelANNM.png", dirname)
+ggsave( outfname, device = png(), width = xWidth * 5 + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
 dev.off() #only 129kb in size
 
 # boxplot solo per il null model (A+D)/N
@@ -236,8 +240,8 @@ sp <- ggplot( NM, aes(x = lf, y = (A+D)/N, alpha=0.8)) +
 
 # dev.new(width = 9, height = 6)
 # print(sp)
-outfname <- sprintf( "%s/PanelADNM.pdf", dirname)
-ggsave( outfname, device = pdf(), width = 6, height = 6, units = "in", dpi = 300)
+outfname <- sprintf( "%s/PanelADNM.png", dirname)
+ggsave( outfname, device = png(), width = xWidth * 5 + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
 dev.off() #only 129kb in size
 
 # boxplot con le distanze per il null model
