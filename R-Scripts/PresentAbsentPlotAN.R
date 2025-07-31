@@ -135,26 +135,26 @@ dff <- rbind( dff, NM)
 NM$gamma <- 0.10
 dff <- rbind( dff, NM)
 
-md = levels(dff$model)
+md <- levels(dff$model)
 dff$model <- factor(dff$model, levels = c( md[3], md[1], md[2])) # riordina le labels
-dff$k = factor(dff$k)
-dff$AD = (dff$A+dff$D) / dff$N
+dff$k <- factor(dff$k)
+dff$AD <- (dff$A+dff$D) / dff$N
 
 # crea un nuovo dataframe per 3 misure per il grafico boxplot delle distanze
 distancesDF <- data.frame(seqLen = numeric(), pairId = numeric(), k = numeric(), gamma = double(), distance = double(),
                           model = character(), Measure = character(), stringsAsFactors=TRUE)
 
-pltMeasures = c("D2", "Euclidean", "Jaccard", "Hamman")
+pltMeasures <- c("D2", "Euclidean", "Jaccard", "Hamman")
 
 # filter model == "Uniform-T1"
 tt <- filter(dati, as.character(dati$model) != "Uniform-T1" ) # tutte le misure per NM, MR e PT
 tt$model <- factor(tt$model, levels = c( md[3], md[1], md[2])) # riordina le labels
 models <- levels(factor(tt$model))
-for( m in models ) {
-  gammas <- if (as.character(m) == "Uniform") c(0) else c(0.01, 0.05, 0.10)
+for( mv in models ) {
+  gammas <- if (as.character(mv) == "Uniform") c(0) else c(0.01, 0.05, 0.10)
   for(g in gammas) {
     for (mes in pltMeasures) { # per tutte le misure previste
-      t1 <- filter(tt, tt$model == m & tt$gamma == g ) # tutte le misure per il solo NM
+      t1 <- filter(tt, tt$model == mv & tt$gamma == g ) # tutte le misure per il solo NM
       df1 <- data.frame( t1$seqLen, t1$pairId, t1$k, t1$gamma, t1[[mes]])
       colnames(df1)[1] <- "seqLen"
       colnames(df1)[2] <- "pairId"
@@ -162,7 +162,7 @@ for( m in models ) {
       colnames(df1)[4] <- "gamma"
       colnames(df1)[5] <- "distance"
   
-      df1$model <- switch(as.character(m), "Uniform" = "NM", "MotifRepl-U" = "MR", "PatTransf-U" = "PT")
+      df1$model <- switch(as.character(mv), "Uniform" = "NM", "MotifRepl-U" = "MR", "PatTransf-U" = "PT")
       df1$Measure <- mes
   
       distancesDF <- rbind(distancesDF, df1)
@@ -170,9 +170,21 @@ for( m in models ) {
   }
 }
 
-distancesDF$lf = factor(distancesDF$seqLen)
-distancesDF$k = factor(distancesDF$k)
+distancesDF$lf <- factor(distancesDF$seqLen)
+distancesDF$k <- factor(distancesDF$k)
 distancesDF$model <- factor(distancesDF$model, levels = c( "NM", "MR", "PT"))# riordina le labels
+
+for( mv in levels(dff$model)) {
+  for( kv in levels(dff$k))  {
+    for( lv in levels(dff$lf)) {
+      tdf <- filter( dff, model == mv &  k == kv & lf == lv & gamma == 0.05)
+      v <- tdf$A / tdf$N
+      cat(sprintf("model: %s, k: %s, len: %s, min: %f, max: %f, std: %f\n",
+                  mv, kv, lv, min(v), max(v), sd(v)))
+    }
+  }
+}
+
 
 sp <- ggplot( dff, aes(x = lf, y = A/N, alpha=0.8)) +
       geom_boxplot( aes( color = model), alpha = 0.7, outlier.size = 0.3) +
@@ -180,13 +192,13 @@ sp <- ggplot( dff, aes(x = lf, y = A/N, alpha=0.8)) +
       # facet_grid_sc(rows = vars( gamma), scales = 'free') +
       scale_y_continuous(name = "A/N") +
       scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                            labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
+                            labels = c("10E3", "10E4", "10E5", "10E6", "10E7")) +
       # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
       #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
       theme_light() + theme(strip.text.x = element_text( size = 8),
                             axis.text.x = element_text( size = rel( 0.8)),
                             axis.text.y = element_text( size = rel( 0.8)),
-                            panel.spacing=unit(0.1, "lines")) +
+                            panel.spacing = unit(0.1, "lines")) +
       guides(colour = guide_legend(override.aes = list(size=1)))
       # ggtitle( am)
 
@@ -196,23 +208,23 @@ outfname <- sprintf( "%s/PanelAN.png", dirname)
 ggsave( outfname, device = png(), width = xWidth * 5 + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
 dev.off() #only 129kb in size
 
-NM$k = factor(NM$k)
+NM$k <- factor(NM$k)
 
 # boxplot A/N solo per il null model
 sp <- ggplot( NM, aes(x = lf, y = A/N, alpha=0.8)) +
-  geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
-  facet_grid(rows = vars(k)) +
-  scale_y_continuous(name = "Null Model A/N values") +
-  scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
-                   labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
-  # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
-  #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
-  theme_light() + theme(strip.text.x = element_text( size = 8),
-                        axis.text.x = element_text( size = rel( 0.8)),
-                        axis.text.y = element_text( size = rel( 0.8)),
-                        legend.position = "none",
-                        panel.spacing=unit(0.1, "lines")) +
-  guides(colour = guide_legend(override.aes = list(size=1)))
+      geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
+      facet_grid(rows = vars(k)) +
+      scale_y_continuous(name = "Null Model A/N values") +
+      scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
+                       labels = c("10E3", "10E4", "10E5", "10E6", "10E7")) +
+      # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
+      #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
+      theme_light() + theme(strip.text.x = element_text( size = 8),
+                            axis.text.x = element_text( size = rel( 0.8)),
+                            axis.text.y = element_text( size = rel( 0.8)),
+                            legend.position = "none",
+                            panel.spacing = unit(0.1, "lines")) +
+      guides(colour = guide_legend(override.aes = list(size=1)))
 # ggtitle( am)
 
 # dev.new(width = 9, height = 6)

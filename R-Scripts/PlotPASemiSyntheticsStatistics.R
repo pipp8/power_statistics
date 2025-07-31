@@ -420,12 +420,30 @@ for( i in 1:3) {
 
 
 
+df <- filter(tgtDF, Genome == "HomoSapiens" & Measure == "Jaccard")
+# riporta k in numeric anzichè factor
+df$k <- as.numeric(levels(df$k))
+
+cat(sprintf( " k\tmin\t\t\tmax\n"))
+for( kk in levels(factor(df$k))) {
+  d1 <- filter(df, k == as.numeric(kk))
+  d1 <- d1[order(d1$Theta),,drop=FALSE]
+  cat(sprintf( "%s\t%f\t%f\n", kk, min(d1$density), max(d1$density)))
+}
 
 
+for( sequenceName in genomes) {
 
+  df <- filter(tgtDF, Genome == sequenceName & Measure == "Jaccard")
+  # riporta k in numeric anzichè factor
+  df$k <- as.numeric(levels(df$k))
 
-
-  for( sequenceName in genomes) {
+  cat(sprintf( " sequence: %s\nk\tmin\t\t\tmax\n", sequenceName))
+  for( kk in levels(factor(df$k))) {
+    d1 <- filter(df, k == as.numeric(kk))
+    d1 <- d1[order(d1$Theta),,drop=FALSE]
+    cat(sprintf( "%s\t%f\t%f\n", kk, min(d1$density), max(d1$density)))
+  }
 
   totPrinted <- 0
 
