@@ -75,7 +75,7 @@ zoom <- 5
 genomes <- c( "Yeast", "CElegans", "HomoSapiens", "PiceaAbies")
 sortedGenomes <- c("Yeast", "CElegans", "HomoSapiens", "PiceaAbies")
 restrictedGenomes <- c("HomoSapiens")
-restrictedGenomes2<- c("Yeast", "HomoSapiens")
+restrictedGenomes2<- c("Yeast", "CElegans", "HomoSapiens")
 restrictedGenomes3 <- c("Yeast", "CElegans")
 
 
@@ -307,7 +307,7 @@ for( i in 1:3) {
     geom_point(size = 0.8) +
     facet_grid( rows = vars(Genome, k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
     scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+    theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                           panel.spacing=unit(0.1, "lines"),
                           legend.position = "none",
@@ -337,7 +337,7 @@ for( i in 1:3) {
     geom_point(size = 0.8) +
     facet_grid( rows = vars(Genome, k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
     scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+    theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                           panel.spacing=unit(0.1, "lines"),
                           legend.position = "none",
@@ -367,7 +367,7 @@ for( i in 1:3) {
     geom_line(aes(color = k)) +
     geom_point(size = 0.8) +
     facet_grid( rows = vars(Genome, k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) + #, scales = "free_y"
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+    theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                           strip.text.y = element_blank(),
                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                           panel.spacing=unit(0.1, "lines"),
@@ -398,15 +398,14 @@ for( i in 1:3) {
     geom_line(aes(color = k)) +
     geom_point(size = 0.8) +
     facet_grid( rows = vars(Genome, k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) + #, scales = "free_y"
-    theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+    theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                           axis.title.x = element_blank(),
                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                           panel.spacing=unit(0.1, "lines"),
                           legend.position = "none",
                           strip.text.y = element_blank(),
                           axis.text.y = element_blank(),
-                          axis.title.y = element_text( size = rel(1))) +
-    labs( y = "Distances")
+                          axis.title.y = element_text( size = 9)) + labs( y = "Distances")
 
   # dev.new(width = 6, height = 6)
   # print(sp1)
@@ -463,7 +462,7 @@ for( sequenceName in genomes) {
       geom_line(aes(color = k)) +
       geom_point(size = 0.8) +
       facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
-      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+      theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                             panel.spacing=unit(0.1, "lines"),
                             legend.position = "none",
@@ -493,7 +492,7 @@ for( sequenceName in genomes) {
         geom_line(aes(color = k)) +
         geom_point(size = 0.8) +
         facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
-        theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+        theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                                axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                                panel.spacing=unit(0.1, "lines"),
                                legend.position = "none",
@@ -521,16 +520,15 @@ for( sequenceName in genomes) {
       geom_line(aes(color = k)) +
       geom_point(size = 0.8) +
       facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
-      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+      theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                             axis.title.x = element_blank(),
                             panel.spacing=unit(0.1, "lines"),
                             legend.position = "none",
                             axis.text.y = element_blank(),
                             strip.text.y = element_blank(),
-                            axis.title.y = element_text( size = 1)) +
-      labs( y = "Distances")
-    # labs(y = "D2 Similarity")
+                            axis.title.y = element_text( size = 9)) + labs( y = "Distances")
+
     # guides(colour = guide_legend(override.aes = list(size=1)))
 
     # dev.new(width = 6, height = 9)
@@ -552,7 +550,7 @@ for( sequenceName in genomes) {
       geom_line(aes(color = k)) +
       geom_point(size = 0.8) +
       facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
-      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+      theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                             panel.spacing=unit(0.1, "lines"),
                             legend.position = "none",
@@ -582,7 +580,7 @@ for( sequenceName in genomes) {
       geom_point(size = 0.8) +
       facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
       scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
-      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+      theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                             panel.spacing=unit(0.1, "lines"),
                             legend.position = "none",
@@ -611,7 +609,7 @@ for( sequenceName in genomes) {
       geom_point(size = 0.8) +
       facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
       scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
-      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+      theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                             panel.spacing=unit(0.1, "lines"),
                             legend.position = "none",
@@ -640,7 +638,7 @@ for( sequenceName in genomes) {
       geom_point(size = 0.8) +
       facet_grid( rows = vars(k), cols = vars(Measure), scales = "free_y", labeller = labeller( k = label_both)) +
       scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
-      theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+      theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                             axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                             panel.spacing=unit(0.1, "lines"),
                             legend.position = "none",
@@ -671,7 +669,7 @@ for( sequenceName in genomes) {
       scale_y_continuous(name = "A/N",
                          breaks=c(0, 0.5, 1),
                          labels=c("0", "0.5", "1")) +
-      theme_light() + theme( panel.spacing=unit(0.2, "lines"),
+      theme_bw() + theme( panel.spacing=unit(0.2, "lines"),
                              legend.position = "none",
                              strip.text.x = element_text( size = 8, angle = 0),
                              axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
@@ -694,7 +692,7 @@ df$Measure <- factor( df$Measure, levels = PAMeasures)
 sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = k)) +
   geom_point(size = 0.8, aes(color = k)) +
   facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
-  theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+  theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                         axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                         panel.spacing=unit(0.1, "lines"),
                         legend.position = "none",
@@ -718,7 +716,7 @@ df <- filter(cvDF, Measure == "Euclidean" & type == "all")
 sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
   geom_point(size = 0.8, aes(color = k)) +
   facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
-  theme_light() + theme( legend.position = "none",
+  theme_bw() + theme( legend.position = "none",
                          panel.spacing = unit(0.1, "lines"),
                          axis.title.x = element_blank(),
                          axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
@@ -737,7 +735,7 @@ df = filter(cvDF, Measure == "D2" & type == "all")
 sp1 <- ggplot(df, aes(x = Genome, y = cv)) +
   geom_point(size = 0.8, aes(color = k)) +
   facet_grid( rows = vars(k), cols = vars(Measure), , labeller = labeller( k = label_both)) +
-  theme_light() + theme(panel.spacing=unit(0.1, "lines"),
+  theme_bw() + theme(panel.spacing=unit(0.1, "lines"),
                         legend.position = "none",
                         axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                         axis.title.x = element_blank(),
@@ -759,7 +757,7 @@ df$Measure = factor( df$Measure, levels = PAMeasures)
 sp1 <- ggplot(df, aes(x = Genome, y = cv, fill = type)) +
   geom_point(size = 0.8, aes(color = type)) +
   facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) +
-  theme_light() + theme(strip.text.x = element_text( size = 8, angle = 0),
+  theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
                         axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                         panel.spacing=unit(0.1, "lines")) +
   #                      legend.position = "none") +
@@ -793,7 +791,7 @@ for( i in 1:3) {
     scale_y_continuous(name = "Genome A/N Values",
                        breaks=c(0, 0.5, 1),
                        labels=c("0", "0.5", "1")) +
-    theme_light() + theme( panel.spacing=unit(0.2, "lines"),
+    theme_bw() + theme( panel.spacing=unit(0.2, "lines"),
                            legend.position = "none",
                            strip.text.x = element_text( size = 8, angle = 0),
                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
@@ -801,7 +799,7 @@ for( i in 1:3) {
   #                         axis.text.x=element_blank())
 
   outfname <- sprintf( "%s/PanelDensities-all-%d.png", dirname,i)
-  ggsave( outfname, device = png(),  width = (length(restrictedGenomes2) + 1) * xWidth + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
+  ggsave( outfname, device = png(),  width = length(restrictedGenomes2) * xWidth + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
   dev.off()
   totPrinted <- totPrinted + 1
 
@@ -820,7 +818,7 @@ for( i in 1:3) {
     scale_y_continuous(name = "Genome (A+D)/N Values",
                        breaks=c(0, 0.5, 1),
                        labels=c("0", "0.5", "1")) +
-    theme_light() + theme( panel.spacing=unit(0.2, "lines"),
+    theme_bw() + theme( panel.spacing=unit(0.2, "lines"),
                            legend.position = "none",
                            strip.text.x = element_text( size = 8, angle = 0),
                            axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
@@ -828,7 +826,7 @@ for( i in 1:3) {
   #                         axis.text.x=element_blank())
 
   outfname <- sprintf( "%s/PanelRari-all-%d.png", dirname, i)
-  ggsave( outfname, device = png(), width = (length(restrictedGenomes2)+1) * xWidth + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
+  ggsave( outfname, device = png(), width = length(restrictedGenomes2) * xWidth + 2 * deltaWidth, height = yHeight, units = "cm", dpi = 300)
   dev.off()
   totPrinted <- totPrinted + 1
 
@@ -848,7 +846,7 @@ for( i in 1:3) {
       geom_point() +
       facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both), scales = "free_y") +
       # scale_y_continuous(name = "Distance") +
-      theme_light() + theme( panel.spacing = unit(0.2, "lines"),
+      theme_bw() + theme( panel.spacing = unit(0.2, "lines"),
                              legend.position = "none",
                              strip.text.x = element_text( size = 8, angle = 0),
                              axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),

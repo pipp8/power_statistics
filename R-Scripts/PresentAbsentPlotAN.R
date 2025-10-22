@@ -195,7 +195,7 @@ sp <- ggplot( dff, aes(x = lf, y = A/N, alpha=0.8)) +
                             labels = c("10E3", "10E4", "10E5", "10E6", "10E7")) +
       # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
       #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
-      theme_light() + theme(strip.text.x = element_text( size = 8),
+      theme_bw() + theme(strip.text.x = element_text( size = 8),
                             axis.text.x = element_text( size = rel( 0.8)),
                             axis.text.y = element_text( size = rel( 0.8)),
                             panel.spacing = unit(0.1, "lines")) +
@@ -219,7 +219,7 @@ sp <- ggplot( NM, aes(x = lf, y = A/N, alpha=0.8)) +
                        labels = c("10E3", "10E4", "10E5", "10E6", "10E7")) +
       # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
       #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
-      theme_light() + theme(strip.text.x = element_text( size = 8),
+      theme_bw() + theme(strip.text.x = element_text( size = 8),
                             axis.text.x = element_text( size = rel( 0.8)),
                             axis.text.y = element_text( size = rel( 0.8)),
                             legend.position = "none",
@@ -242,7 +242,7 @@ sp <- ggplot( NM, aes(x = lf, y = (A+D)/N, alpha=0.8)) +
                    labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
   # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
   #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
-  theme_light() + theme(strip.text.x = element_text( size = 8),
+  theme_bw() + theme(strip.text.x = element_text( size = 8),
                         axis.text.x = element_text( size = rel( 0.8)),
                         axis.text.y = element_text( size = rel( 0.8)),
                         legend.position = "none",
@@ -269,7 +269,7 @@ sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
                    labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
   # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
   #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
-  theme_light() + theme(strip.text.x = element_text( size = 8),
+  theme_bw() + theme(strip.text.x = element_text( size = 8),
                         axis.text.x = element_text( size = rel( 0.8)),
                         axis.text.y = element_text( size = rel( 0.8)),
                         axis.title.y = element_blank(),
@@ -294,7 +294,7 @@ sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
                    labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
   # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
   #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
-  theme_light() + theme(strip.text.x = element_text( size = 8),
+  theme_bw() + theme(strip.text.x = element_text( size = 8),
                         axis.text.x = element_text( size = rel( 0.8)),
                         axis.text.y = element_text( size = rel( 0.8)),
                         axis.title.y = element_blank(),
@@ -316,7 +316,7 @@ sp <- ggplot( tt, aes(x = lf, y = distance, alpha=0.8)) +
                    labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
   # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
   #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
-  theme_light() + theme(strip.text.x = element_text( size = 8),
+  theme_bw() + theme(strip.text.x = element_text( size = 8),
                         axis.text.x = element_text( size = rel( 0.8)),
                         axis.text.y = element_text( size = rel( 0.8)),
                         axis.title.y = element_blank(),
@@ -340,7 +340,7 @@ for(mes in pltMeasures) {
                      labels=c("10E3", "10E4", "10E5", "10E6", "10E7")) +
     # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
     #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
-    theme_light() + theme(strip.text.x = element_text( size = 8),
+    theme_bw() + theme(strip.text.x = element_text( size = 8),
                           axis.text.x = element_text( size = rel( 0.6), angle = 45),
                           axis.text.y = element_text( size = rel( 0.8)),
                           legend.position = "none",
