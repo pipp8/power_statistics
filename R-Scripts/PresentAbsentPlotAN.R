@@ -213,14 +213,14 @@ NM$k <- factor(NM$k)
 # boxplot A/N solo per il null model
 sp <- ggplot( NM, aes(x = lf, y = A/N, alpha=0.8)) +
       geom_boxplot( aes( color = k), alpha = 0.7, outlier.size = 0.3, width=0.4) +
-      facet_grid(rows = vars(k)) +
+      facet_grid(rows = vars(k), labeller = labeller( k = label_both)) +
       scale_y_continuous(name = "Null Model A/N values") +
       scale_x_discrete(name = NULL, #breaks=c(1000, 10000, 100000, 1000000, 10000000),
                        labels = c("10E3", "10E4", "10E5", "10E6", "10E7")) +
       # scale_x_log10(name = NULL, breaks=c(1000, 10000, 100000, 1000000, 10000000),
       #          labels=c("10E3", "10E4", "10E5", "10E6", "10E7"), limits = c(1000, 10000000)) +
       theme_bw() + theme(strip.text.x = element_text( size = 8),
-                            axis.text.x = element_text( size = rel( 0.8)),
+                            axis.text.x = element_text( size = rel( 1.0)),
                             axis.text.y = element_text( size = rel( 0.8)),
                             legend.position = "none",
                             panel.spacing = unit(0.1, "lines")) +
