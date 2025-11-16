@@ -299,6 +299,7 @@ for( i in 1:3) {
                "3" = filter(tgtDF, Genome %in% restrictedGenomes3 & Measure %in% PAMeasures & (k == 12 | k == 16))
   )
 
+  ySize <- yHeight / 8 * length(restrictedGenomes3) * 2
   df$Measure <- factor( df$Measure, levels = PAMeasures)
   # df$Genome <- factor( df$Genome, levels = restrictedGenomes3)
 
@@ -318,7 +319,7 @@ for( i in 1:3) {
   # dev.new(width = 6, height = 6)
   # print(sp1)
   outfname <- sprintf( "%s/Panelk1216-all-%d.png", dirname, i)
-  ggsave( outfname, device = png(), width = length(PAMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
+  ggsave( outfname, device = png(), width = length(PAMeasures) * xWidth + deltaWidth, height = ySize, units = "cm", dpi = 300)
   dev.off() # only 129kb in size
   totPrinted <- totPrinted + 1
 
@@ -337,18 +338,19 @@ for( i in 1:3) {
     geom_point(size = 0.8) +
     facet_grid( rows = vars(Genome, k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
     scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
-    theme_bw() + theme(strip.text.x = element_text( size = 8, angle = 0),
+    theme_bw() + theme(   strip.text.x = element_text( size = 8, angle = 0),
                           axis.text.x = element_text( size = rel( 0.7), angle = 45, hjust=1),
                           panel.spacing=unit(0.1, "lines"),
                           legend.position = "none",
                           axis.text.y = element_blank(),
                           axis.title.y = element_blank(),
+                          strip.text.y = element_text( size = rel(0.7)),
                           axis.title.x = element_blank())
 
   # dev.new(width = 6, height = 6)
   # print(sp1)
   outfname <- sprintf( "%s/Panelk1216-main-%d.png", dirname, i)
-  ggsave( outfname, device = png(), width = length(mainMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
+  ggsave( outfname, device = png(), width = length(mainMeasures) * xWidth + deltaWidth, height = ySize, units = "cm", dpi = 300)
   dev.off() # only 129kb in size
   totPrinted <- totPrinted + 1
 
@@ -379,7 +381,7 @@ for( i in 1:3) {
   # dev.new(width = 6, height = 6)
   # print(sp1)
   outfname <- sprintf( "%s/Panelk1216-Euclidean-%d.png", dirname, i)
-  ggsave( outfname, device = png(), width = xWidth, height = yHeight, units = "cm", dpi = 300)
+  ggsave( outfname, device = png(), width = xWidth, height = ySize, units = "cm", dpi = 300)
   dev.off() # only 129kb in size
   totPrinted <- totPrinted + 1
 
@@ -410,7 +412,7 @@ for( i in 1:3) {
   # dev.new(width = 6, height = 6)
   # print(sp1)
   outfname <- sprintf( "%s/Panelk1216-D2-%d.png", dirname, i)
-  ggsave( outfname, device = png(), width = xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
+  ggsave( outfname, device = png(), width = xWidth + deltaWidth, height = ySize, units = "cm", dpi = 300)
   dev.off() # only 129kb in size
   totPrinted <- totPrinted + 1
 
@@ -664,7 +666,7 @@ for( sequenceName in genomes) {
 
     sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
       geom_line(aes(color = k)) +
-      geom_point() +
+      geom_point(size = 0.8) +
       facet_grid( rows = vars(k), labeller = labeller( k = label_both)) +
       scale_y_continuous(name = "A/N",
                          breaks=c(0, 0.5, 1),
@@ -786,7 +788,7 @@ for( i in 1:3) {
 
   sp1 <- ggplot(data=df, aes(x=Theta, y=density, label=density)) +
     geom_line(aes(color = k)) +
-    geom_point() +
+    geom_point(size = 0.8) +
     facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both)) +
     scale_y_continuous(name = "Genome A/N Values",
                        breaks=c(0, 0.5, 1),
@@ -813,7 +815,7 @@ for( i in 1:3) {
   # grafico delle densità (A+D)/N x tutti i genomi
   sp1 <- ggplot(data=df, aes(x=Theta, y=AD, label=density)) +
     geom_line(aes(color = k)) +
-    geom_point() +
+    geom_point(size = 0.8) +
     facet_grid( rows = vars(k), cols = vars( Genome), labeller = labeller( k = label_both)) +
     scale_y_continuous(name = "Genome (A+D)/N Values",
                        breaks=c(0, 0.5, 1),
