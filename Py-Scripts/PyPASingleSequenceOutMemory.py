@@ -334,7 +334,7 @@ def loadHistogramOnHDFS(histFile: str, destFile: str):
     os.remove(histFile +'.kmc_pre') # remove kmc output prefix file
     os.remove(histFile +'.kmc_suf') # remove kmc output suffix file
 
-    logFile.write(f"loadHistogramOnHDFS( {histFile}, k={k}): {(time.perf_counter()-start)/1000}")
+    logFile.write(f"loadHistogramOnHDFS( {histFile}): {(time.perf_counter()-start)/1000}")
     return
 
 
@@ -711,7 +711,7 @@ def main():
         .appName( f"{Path( sys.argv[0]).stem} {Path(seqFile1).stem} {Path(seqFile2).stem} {minK} <= k <= {maxK} theta = {thetaValue:.3f}") \
         .getOrCreate()
 
-    logFile = open("ProfileInfo.log", "w")
+    logFile = open(f"ProfileInfo-{int(time.time())}.log", "w")
 
     sc = spark.sparkContext
 
