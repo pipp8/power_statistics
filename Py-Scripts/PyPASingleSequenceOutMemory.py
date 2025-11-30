@@ -46,6 +46,7 @@ totKmerAAcc = []
 totKmerBAcc = []
 kmerStats = []
 
+logFile = []
 
 
 class EntropyData:
@@ -275,6 +276,7 @@ def runMash(inputDS1: str, inputDS2: str, k: int):
     mashValues = []
     for i in range(len(sketchSizes)):
         # extract mash sketch from the first sequence
+        start = time.perf_counter()
         mashout1 = f"{os.path.splitext(inputDS1)[0]}-k={k}"
         cmd = f"/usr/local/bin/mash sketch -s {sketchSizes[i]} -p 8 -k {k} -o {mashout1} {inputDS1}"
         p = subprocess.Popen(cmd.split())
@@ -289,6 +291,7 @@ def runMash(inputDS1: str, inputDS2: str, k: int):
         out = subprocess.check_output(cmd.split())
 
         mashValues.append( MashData( out))
+        logFile.write(f"runMash( {inputDS1}, {inputDS2}, k={k}, sketchSize={sketchSizes[i]}): {(time.perf_counter()-start)/1000}")
 
     # dati mash distance
     data2 = []
@@ -322,6 +325,7 @@ def loadHistogramOnHDFS(histFile: str, destFile: str):
     # p = subprocess.Popen(cmd.split())
     # p.wait()
     # os.remove(tmp) # remove kmc output suffix file
+    start = time.perf_counter()
 
     print(f"****** Dumping & Transferring to hdfs {histFile} -> {destFile} ******")
     cmd1 = f"/usr/local/bin/kmc_dump_x {histFile} stdout | hdfs dfs -put - {destFile}"
@@ -330,6 +334,7 @@ def loadHistogramOnHDFS(histFile: str, destFile: str):
     os.remove(histFile +'.kmc_pre') # remove kmc output prefix file
     os.remove(histFile +'.kmc_suf') # remove kmc output suffix file
 
+    logFile.write(f"loadHistogramOnHDFS( {histFile}, k={k}): {(time.perf_counter()-start)/1000}")
     return
 
 
@@ -355,6 +360,7 @@ def extractKmers( inputDataset: str, k: int, tempDir: str, kmcOutputPrefix: str)
     # -sp<value> - number of splitting threads
     # -sr<value> - number of threads for 2nd stage
     # -hp - hide percentage progress (default: false)
+    start = time.perf_counter()
 
     cmd = f"/usr/local/bin/kmc -b -hp -k{k} -m12 -fm -ci0 -cs1048575000 -cx2000000000 {inputDataset} {kmcOutputPrefix} {tempDir}"
 
@@ -369,6 +375,7 @@ def extractKmers( inputDataset: str, k: int, tempDir: str, kmcOutputPrefix: str)
     m = re.search(r'No. of unique k-mers[ \t]*:[ \t]*(\d+)', results)
     totalDistinctKmerNumber = 0 if (m is None) else int(m.group(1))
 
+    logFile.write(f"extractKmers( {inputDataset}, k={k}): {(time.perf_counter()-start)/1000}")
     return (totalDistinctKmerNumber, totalKmerNumber)
 
 
@@ -450,9 +457,9 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir
     global totDistinctKmerAAcc, totDistinctKmerBAcc, totKmerAAcc, totKmerBAcc, kmerStats
 
     start = time.time()
+    start2 = time.perf_counter()
 
     # first locally extract kmer statistics for both sequences
-
     baseSeq1 = Path(seqFile1).stem
     kmcOutputPrefixA = f"{tempDir}/{baseSeq1}-k={k}"
     destFilenameA = f"{hdfsDataDir}/{baseSeq1}-k={k}.txt"
@@ -479,6 +486,8 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir
         os.remove(kmcOutputPrefixB+'.kmc_pre')
         os.remove(kmcOutputPrefixB+'.kmc_suf')
 
+    logFile.write(f"processLocalPair1( {seqFile1}, {seqFile2}): {(time.perf_counter()-start2)/1000}")
+    start2 = time.perf_counter()
     #
     # inizio procedura Dataframe oriented (out of memory)
     #
@@ -590,7 +599,8 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir
     cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
     p = subprocess.Popen(cmd.split())
     p.wait()
-    
+    logFile.write(f"processLocalPair2( {seqFile1}, {seqFile2}): {(time.perf_counter()-start2)/1000}")
+
     return dati0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
 
 
@@ -625,6 +635,7 @@ def writeHeader( writer):#
 # processa localmente una coppia di sequenze seqFile1 e seqFile2
 def processPairs(seqFile1: str, seqFile2: str, theta: float):
     # process local sequence files in the same local directory (temporary named ttt)
+    start = time.perf_counter() # profiling info
     tempDir = os.path.dirname( seqFile1)+'/ttt'
     if (not os.path.isdir(tempDir)):
         os.mkdir(tempDir)
@@ -649,6 +660,7 @@ def processPairs(seqFile1: str, seqFile2: str, theta: float):
             csvWriter.writerow( res)
             file.flush()
 
+    logFile.write(f"processPairs( {seqFile1}, {seqFile2}): {(time.perf_counter()-start)/1000}")
             
     # clean up
     # do not remove dataset on hdfs
@@ -665,7 +677,7 @@ def processPairs(seqFile1: str, seqFile2: str, theta: float):
 
 
 def main():
-    global hdfsDataDir, hdfsPrefixPath, spark, sc, thetaValue, minK, maxK
+    global hdfsDataDir, hdfsPrefixPath, spark, sc, thetaValue, minK, maxK, logFile
 
 
     hdfsDataDir = hdfsPrefixPath
@@ -699,6 +711,8 @@ def main():
         .appName( f"{Path( sys.argv[0]).stem} {Path(seqFile1).stem} {Path(seqFile2).stem} {minK} <= k <= {maxK} theta = {thetaValue:.3f}") \
         .getOrCreate()
 
+    logFile = open("ProfileInfo.log", "w")
+
     sc = spark.sparkContext
 
     sc2 = spark._jsc.sc()
@@ -711,6 +725,8 @@ def main():
     print(f"****** {nWorkers} workers, hdfsDataDir: {hdfsDataDir} ******")
 
     processPairs(seqFile1, seqFile2, thetaValue)
+
+    logFile.close()
 
     spark.stop()
 
