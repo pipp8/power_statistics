@@ -291,7 +291,7 @@ def runMash(inputDS1: str, inputDS2: str, k: int):
         out = subprocess.check_output(cmd.split())
 
         mashValues.append( MashData( out))
-        logFile.write(f"runMash( {inputDS1}, {inputDS2}, k={k}, sketchSize={sketchSizes[i]}): {(time.perf_counter()-start)/1000}\n")
+        logFile.write(f"runMash( {Path(inputDS1).name}, {Path(inputDS2).name}, k={k}, sketchSize={sketchSizes[i]}): {(time.perf_counter()-start)/1000}\n")
 
     # dati mash distance
     data2 = []
@@ -331,10 +331,10 @@ def loadHistogramOnHDFS(histFile: str, destFile: str):
     cmd1 = f"/usr/local/bin/kmc_dump_x {histFile} stdout | hdfs dfs -put - {destFile}"
     p = subprocess.run( cmd1, shell=True, stdout=subprocess.PIPE)
 
-    os.remove(histFile +'.kmc_pre') # remove kmc output prefix file
+    os.remove(histFile +'.kmc_pre') # remove kmc output prefix filestem
     os.remove(histFile +'.kmc_suf') # remove kmc output suffix file
 
-    logFile.write(f"loadHistogramOnHDFS( {histFile}): {(time.perf_counter()-start)/1000}\n")
+    logFile.write(f"loadHistogramOnHDFS( {Path(histFile).name}): {(time.perf_counter()-start)/1000}\n")
     return
 
 
@@ -375,7 +375,7 @@ def extractKmers( inputDataset: str, k: int, tempDir: str, kmcOutputPrefix: str)
     m = re.search(r'No. of unique k-mers[ \t]*:[ \t]*(\d+)', results)
     totalDistinctKmerNumber = 0 if (m is None) else int(m.group(1))
 
-    logFile.write(f"extractKmers( {inputDataset}, k={k}): {(time.perf_counter()-start)/1000}\n")
+    logFile.write(f"extractKmers( {Path(inputDataset).name}, k={k}): {(time.perf_counter()-start)/1000}\n")
     return (totalDistinctKmerNumber, totalKmerNumber)
 
 
@@ -486,7 +486,7 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir
         os.remove(kmcOutputPrefixB+'.kmc_pre')
         os.remove(kmcOutputPrefixB+'.kmc_suf')
 
-    logFile.write(f"processLocalPair1( {seqFile1}, {seqFile2}): {(time.perf_counter()-start2)/1000}\n")
+    logFile.write(f"processLocalPair1( {Path(seqFile1).name}, {Path(seqFile2).name}): {(time.per<f_counter()-start2)/1000}\n")
     start2 = time.perf_counter()
     #
     # inizio procedura Dataframe oriented (out of memory)
@@ -599,7 +599,7 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir
     cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
     p = subprocess.Popen(cmd.split())
     p.wait()
-    logFile.write(f"processLocalPair2( {seqFile1}, {seqFile2}): {(time.perf_counter()-start2)/1000}\n")
+    logFile.write(f"processLocalPair2( {Path(seqFile1).name}, {Path(seqFile2).name}): {(time.perf_counter()-start2)/1000}\n")
 
     return dati0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
 
