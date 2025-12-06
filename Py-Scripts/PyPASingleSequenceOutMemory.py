@@ -486,7 +486,7 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir
         os.remove(kmcOutputPrefixB+'.kmc_pre')
         os.remove(kmcOutputPrefixB+'.kmc_suf')
 
-    logFile.write(f"processLocalPair1( {Path(seqFile1).name}, {Path(seqFile2).name}): {(time.per<f_counter()-start2)/1000}\n")
+    logFile.write(f"processLocalPair1( {Path(seqFile1).name}, {Path(seqFile2).name}): {(time.perf_counter()-start2)/1000}\n")
     start2 = time.perf_counter()
     #
     # inizio procedura Dataframe oriented (out of memory)
