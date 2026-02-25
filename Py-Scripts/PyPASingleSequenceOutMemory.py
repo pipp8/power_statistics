@@ -596,9 +596,11 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir
     # p.wait()
 
     # remove textual histogram files from hdfs
-    cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
-    p = subprocess.Popen(cmd.split())
-    p.wait()
+    # do not remove even destFilenameB quando si fa il confronto a coppie, sicuramente sarà riutilizzato
+    # cmd = f"hdfs dfs -rm -skipTrash {destFilenameB}"
+    # p = subprocess.Popen(cmd.split())
+    # p.wait()
+
     logFile.write(f"processLocalPair2( {Path(seqFile1).name}, {Path(seqFile2).name}): {(time.time()-start2)}\n")
 
     return dati0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
@@ -702,9 +704,9 @@ def main():
     # outFile = '%s/%s-%s.csv' % (hdfsDataDir, Path( seqFile1).stem, Path(seqFile2).stem )
 
     if (seqFile2 == "synthetic"):
-        print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} and Theta = {thetaValue:.3f} in hdfsDataDir = {hdfsDataDir} ******")
+        print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} and Theta = {thetaValue:.3f} using hdfsDataDir = {hdfsDataDir} ******")
     else:
-        print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} in hdfsDataDir = {hdfsDataDir} ******")
+        print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} using hdfsDataDir = {hdfsDataDir} ******")
 
     spark = SparkSession \
         .builder \
