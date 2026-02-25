@@ -11,6 +11,8 @@ import math
 import csv
 import time
 import makeDistance as mkd
+import argparse
+import logging
 
 import numpy as np
 
@@ -46,7 +48,6 @@ totKmerAAcc = []
 totKmerBAcc = []
 kmerStats = []
 
-logFile = []
 
 
 class EntropyData:
@@ -291,7 +292,7 @@ def runMash(inputDS1: str, inputDS2: str, k: int):
         out = subprocess.check_output(cmd.split())
 
         mashValues.append( MashData( out))
-        logFile.write(f"runMash( {Path(inputDS1).name}, {Path(inputDS2).name}, k={k}, sketchSize={sketchSizes[i]}): {(time.time()-start)}\n")
+        logger.debug(f"runMash( {Path(inputDS1).name}, {Path(inputDS2).name}, k={k}, sketchSize={sketchSizes[i]}): {(time.time()-start)}\n")
 
     # dati mash distance
     data2 = []
@@ -327,14 +328,14 @@ def loadHistogramOnHDFS(histFile: str, destFile: str):
     # os.remove(tmp) # remove kmc output suffix file
     start = time.time()
 
-    print(f"****** Dumping & Transferring to hdfs {histFile} -> {destFile} ******")
+    logger.info(f"****** Dumping & Transferring to hdfs {histFile} -> {destFile} ******")
     cmd1 = f"/usr/local/bin/kmc_dump_x {histFile} stdout | hdfs dfs -put - {destFile}"
     p = subprocess.run( cmd1, shell=True, stdout=subprocess.PIPE)
 
     os.remove(histFile +'.kmc_pre') # remove kmc output prefix filestem
     os.remove(histFile +'.kmc_suf') # remove kmc output suffix file
 
-    logFile.write(f"loadHistogramOnHDFS( {Path(histFile).name}): {(time.time()-start)}\n")
+    logger.debug(f"loadHistogramOnHDFS( {Path(histFile).name}): {(time.time()-start)}\n")
     return
 
 
@@ -364,7 +365,7 @@ def extractKmers( inputDataset: str, k: int, tempDir: str, kmcOutputPrefix: str)
 
     cmd = f"/usr/local/bin/kmc -b -hp -k{k} -m12 -fm -ci0 -cs1048575000 -cx2000000000 {inputDataset} {kmcOutputPrefix} {tempDir}"
 
-    print(f"****** (local) Kmer Counting {cmd} ******")
+    logger.info(f"****** (local) Kmer Counting {cmd} ******")
 
     out = subprocess.check_output(cmd.split())
     results = out.decode()
@@ -375,7 +376,7 @@ def extractKmers( inputDataset: str, k: int, tempDir: str, kmcOutputPrefix: str)
     m = re.search(r'No. of unique k-mers[ \t]*:[ \t]*(\d+)', results)
     totalDistinctKmerNumber = 0 if (m is None) else int(m.group(1))
 
-    logFile.write(f"extractKmers( {Path(inputDataset).name}, k={k}): {(time.time()-start)}\n")
+    logger.debug(f"extractKmers( {Path(inputDataset).name}, k={k}): {(time.time()-start)}\n")
     return (totalDistinctKmerNumber, totalKmerNumber)
 
 
@@ -486,7 +487,7 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir
         os.remove(kmcOutputPrefixB+'.kmc_pre')
         os.remove(kmcOutputPrefixB+'.kmc_suf')
 
-    logFile.write(f"processLocalPair1( {Path(seqFile1).name}, {Path(seqFile2).name}): {(time.time()-start2)}\n")
+    logger.debug(f"processLocalPair1( {Path(seqFile1).name}, {Path(seqFile2).name}): {(time.time()-start2)}\n")
     start2 = time.time()
     #
     # inizio procedura Dataframe oriented (out of memory)
@@ -536,26 +537,26 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir
     for t in allDist:
         vec = [ x[0] + x[1] for x in zip(vec, t) ]
 
-    print(f"****** {vec[0]}, {vec[1]}, {vec[2]}, {vec[3]}, {vec[4]}, {vec[5]}, {vec[6]}, {vec[7]}, {vec[8]} ******")
+    logger.info(f"****** {vec[0]}, {vec[1]}, {vec[2]}, {vec[3]}, {vec[4]}, {vec[5]}, {vec[6]}, {vec[7]}, {vec[8]} ******")
 
     if round(totalProbA,0) != 1.0:
         # raise ValueError("Somma(Pa = {round(totalProbA, 0):f} must be 1.0. Aborting")
-        print(f"****** Somma(Pa) = {round(totalProbA, 0):.2f} must be 1.0!!! ******")
+        logger.info(f"****** Somma(Pa) = {round(totalProbA, 0):.2f} must be 1.0!!! ******")
 
     entropySeqA = EntropyData( totDistinctKmerA, totKmerA, HkA)
 
     if round(totalProbB,0) != 1.0:
         # raise ValueError("Somma(Pb) = {round(totalProbB, 0):f} must be 1.0. Aborting")
-        print(f"****** Somma(Pb) = {round(totalProbB, 0):.2f} must be 1.0!!! ******")
+        logger.info(f"****** Somma(Pb) = {round(totalProbB, 0):.2f} must be 1.0!!! ******")
 
     entropySeqB = EntropyData( totDistinctKmerB, totKmerB, HkB)
 
     euclideanDistance = math.sqrt(totEuclid)
     euclideanDistanceZ = math.sqrt(totEuclidZ)
-    print(f"****** Euclidean = {euclideanDistance:.4f}, EuclideanZ = {euclideanDistanceZ:.4f} ******")
-    print(f"****** D2 = {totD2:,} D2Z = {totD2Z:.4f} ******")
-    print(f"****** Present/Absent = {Acnt:,}, {Bcnt:,}, {Ccnt:,} ******")
-    print(f"****** HkA: {entropySeqA.Hk:.5f} HkB: {entropySeqB.Hk:.5f}, totDistinctKmerA: {entropySeqA.totalKmerCnt:,}, totDistinctKmerB: {entropySeqB.totalKmerCnt:,} ******")
+    logger.info(f"****** Euclidean = {euclideanDistance:.4f}, EuclideanZ = {euclideanDistanceZ:.4f} ******")
+    logger.info(f"****** D2 = {totD2:,} D2Z = {totD2Z:.4f} ******")
+    logger.info(f"****** Present/Absent = {Acnt:,}, {Bcnt:,}, {Ccnt:,} ******")
+    logger.info(f"****** HkA: {entropySeqA.Hk:.5f} HkB: {entropySeqB.Hk:.5f}, totDistinctKmerA: {entropySeqA.totalKmerCnt:,}, totDistinctKmerB: {entropySeqB.totalKmerCnt:,} ******")
 
 # dati3 = runCountBasedMeasures(cnts, k)
     dati3 =  [totD2, totD2Z, euclideanDistance, euclideanDistanceZ]
@@ -601,7 +602,7 @@ def processLocalPair(seqFile1: str, seqFile2: str, k: int, theta: float, tempDir
     # p = subprocess.Popen(cmd.split())
     # p.wait()
 
-    logFile.write(f"processLocalPair2( {Path(seqFile1).name}, {Path(seqFile2).name}): {(time.time()-start2)}\n")
+    logger.debug(f"processLocalPair2( {Path(seqFile1).name}, {Path(seqFile2).name}): {(time.time()-start2)}\n")
 
     return dati0 + dati1 + dati2 + dati3 + dati4    # nuovo record output
 
@@ -657,21 +658,21 @@ def processPairs(seqFile1: str, seqFile2: str, theta: float):
 
         for k in range( minK, maxK+1, stepK):
             # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
-            print(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta:.3f} ******")
+            logger.info(f"****** Starting {Path(seqFile1).stem} vs {Path(seqFile2).stem} k = {k} T = {theta:.3f} ******")
             res = processLocalPair(seqFile1, seqFile2, k, theta, tempDir)
             csvWriter.writerow( res)
             file.flush()
 
-    logFile.write(f"processPairs( {seqFile1}, {seqFile2}): {(time.time()-start)}\n")
+    logger.debug(f"processPairs( {seqFile1}, {seqFile2}): {(time.time()-start)}\n")
             
     # clean up
     # do not remove dataset on hdfs
     # remove histogram files (A & B) + mash sketch file and kmc temporary files
     try:
-        print(f"****** Cleaning temporary directory {tempDir} ******")
+        logger.info(f"****** Cleaning temporary directory {tempDir} ******")
         shutil.rmtree(tempDir)
     except OSError as e:
-        print(f"Error removing: {tempDir}: {e.strerror}")
+        logger.error(f"Error removing: {tempDir}: {e.strerror}")
 
 
 
@@ -679,41 +680,72 @@ def processPairs(seqFile1: str, seqFile2: str, theta: float):
 
 
 def main():
-    global hdfsDataDir, hdfsPrefixPath, spark, sc, thetaValue, minK, maxK, logFile
+    global hdfsDataDir, hdfsPrefixPath, spark, sc, thetaValue, minK, maxK, logger
 
+#!/usr/bin/env python3
 
-    hdfsDataDir = hdfsPrefixPath
+    parser = argparse.ArgumentParser(description='Analisi misure Alignment Free')
+    parser.add_argument('sequence1', help='Path del file FASTA genoma sequenza 1 da confrontare')
+    parser.add_argument('sequence2', help='Path del file FASTA genoma sequenza 2 da confrontare')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Mostra dettagli (crea RunProfile.log')
+    parser.add_argument('-k', '--kmerSize', default=0, type=int, help='singola kmer size utilizzata per il test')
+    parser.add_argument('-f', '--fromSizeK', default=4, type=int, help='Valore di partenza della sequenza di k')
+    parser.add_argument('-m', '--toSizeK', default=32, type=int, help='Valore massimo della sequenza di k)')
+    parser.add_argument('-s', '--step', default=4, type=int, help='Step incremento valori di k')
+    parser.add_argument('-t', '--theta', default=0.0, type=float, help='distanza % dalla sequenza 1 (sintetica)')
+    parser.add_argument('-r', '--remoteDir', default='', help='Directory su HDFS su cui salvare i risultati intermedi (concatenata a hdfsPrefixPath')
 
-    argNum = len(sys.argv)
-    if (argNum < 5 or argNum > 6):
-        """
-            Usage: PySparkPASingleSequenceOutMemory Sequence1 Sequence2 theta dataDir [kValue]
-        """
+    args = parser.parse_args()
+
+    # Configurazione logger
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.WARNING,
+        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+        handlers=[
+            logging.FileHandler(f"ProfileInfo-{int(time.time())}.log"),
+            logging.StreamHandler()  # anche su console
+        ]
+    )
+    logger = logging.getLogger('genomica')
+
+    seqFile1 = args.sequence1 # le sequenze sono sul file system locale
+    seqFile2 = args.sequence2 # per eseguire localmente l'estrazione dei k-mers
+    logger.info(f"Analisi {seqFile1} vs {seqFile2}")
+
+    hdfsDataDir = f"{hdfsPrefixPath}/{args.remoteDir}" if len(args.remoteDir) > 0 else hdfsPrefixPath
+    # theta viene utilizzato SOLO se Sequence2 == "synthetic" altrimenti viene ignorato
+    thetaValue = float(args.theta)
+
+    if thetaValue == 0 and seqFile2 == "synthetic":
+        m = "per un confronto con sequenza sintetiche occorre specificare il parametro theta"
+        logger.error(m)
+        print(m)
+        exit(-1)
+
+    if args.kmerSize != 0 and (args.fromSizeK != 4 or args.toSizeK != 32):
+        m = f"Specificare o UNA kmerSize o un range di valore di k (k:{args.kmerSize}, from:{args.fromSizeK}, to:{args.toSizeK}"
+        logger.error(m)
+        print(m)
+        exit(-1)
     else:
-        # theta viene utilizzato SOLO se Sequence2 == "synthetic" altrimenti viene ignorato
-        thetaValue = float(sys.argv[3])
-        hdfsDataDir = f"{hdfsPrefixPath}/{sys.argv[4]}"
+        if (args.kmerSize > 0):
+            # use just one k value instead of all values from minK to maxK (step)
+            minK = args.kmerSize
+            maxK = args.kmerSize
+        else:
+            minK = args.fromSizeK
+            maxK = args.toSizeK
 
-    if (argNum == 6):
-        # use just one k value instead of all values from minK to maxK (step)
-        minK = int(sys.argv[5])
-        maxK = int(sys.argv[5])
-
-    seqFile1 = sys.argv[1] # le sequenze sono sul file system locale
-    seqFile2 = sys.argv[2] # per eseguire localmente l'estrazione dei k-mers
     # outFile = '%s/%s-%s.csv' % (hdfsDataDir, Path( seqFile1).stem, Path(seqFile2).stem )
-
     if (seqFile2 == "synthetic"):
-        print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} and Theta = {thetaValue:.3f} using hdfsDataDir = {hdfsDataDir} ******")
+        logger.info(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} and Theta = {thetaValue:.3f} using hdfsDataDir = {hdfsDataDir} ******")
     else:
-        print(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} using hdfsDataDir = {hdfsDataDir} ******")
+        logger.info(f"****** Comparing: {Path(seqFile1).stem} vs {Path(seqFile2).stem} with {minK} <= k <= {maxK} using hdfsDataDir = {hdfsDataDir} ******")
 
     spark = SparkSession \
         .builder \
         .appName( f"{Path( sys.argv[0]).stem} {Path(seqFile1).stem} {Path(seqFile2).stem} {minK} <= k <= {maxK} theta = {thetaValue:.3f}") \
         .getOrCreate()
-
-    logFile = open(f"ProfileInfo-{int(time.time())}.log", "w")
 
     sc = spark.sparkContext
 
@@ -721,14 +753,14 @@ def main():
     nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) - 1
 
     if (not checkPathExists( hdfsDataDir)):
-        print(f"****** Data dir: {hdfsDataDir} does not exist. Program terminated. ******")
+        m = f"****** Data dir: {hdfsDataDir} does not exist. Program terminated. ******"
+        logger.error(m)
+        print(m)
         exit( -1)
 
-    print(f"****** {nWorkers} workers, hdfsDataDir: {hdfsDataDir} ******")
+    logger.info(f"****** {nWorkers} workers, hdfsDataDir: {hdfsDataDir} ******")
 
     processPairs(seqFile1, seqFile2, thetaValue)
-
-    logFile.close()
 
     spark.stop()
 

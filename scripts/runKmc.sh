@@ -1,43 +1,62 @@
 #! /bin/bash
 
-scDir='/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/scripts'
-scDir='/home/cattaneo/spark/PowerStatistics/scripts'
 
-hist=hist
-tempDir=tmp.$$
-kmcOutputPrefix=$(mktemp ./tt.XXXXXXX)
+# runKMC [seqPath ['kVal list']]
 
-if [ "$#" -lt 1 ]; then
-    files=*.fasta
-else
-    files=$@
+seq=GCF_000002985.6_WBcel235_genomic.fna
+
+# kval=$(seq 4 4 32)
+kval="19 28 38 55"
+
+# discount.sh [[seqPath] kLen]
+case $# in
+    2)
+	seq=$1
+	kval=$2
+	;;
+    1)
+	seq=$1
+	;;
+    0)
+	;;
+    *)
+	echo "usage: $0 [seqPath ['kVal list']]"
+	exit -1
+esac
+
+format="%U user %S system %E elapsed %P CPU (%X text + %D data %M max)k %I inputs + %O outputs (%F major + %R minor)pagefaults %W swaps"
+
+tmpDir=./ttt
+if [ -d "$tmpDir" ]; then
+    rm -fr "$tmpDir"
 fi
+filename="${seq##*/}"     # elimina la path
+ext="${filename##*.}"     # prende l'estensione
+name="${filename%.*}"     # elimina l'estensione
 
-minK=4
-maxK=62
+suffix=$(date '+%s')
+logFile="run-$name-$suffix.log"
+times="times-$name-$suffix.txt"
 
-mkdir $tempDir
-mkdir $hist
+for k in $kval ; do
 
-for f in $files; do
-    k=$minK
-    while ((k <= maxK)); do
-      echo "dataset: $f k = $k"
-      kmc -b -v -k$k -m2 -fm -ci0 -cs1000000 $f $kmcOutputPrefix  $tempDir
-      base=$(basename $f .fasta)
-      outFile=$hist/distk=${k}_${base}.hist
-      kmc_dump $kmcOutputPrefix $outFile
+    mkdir "$tmpDir"
+    out="$tmpDir/${name}-k=$k"
+    dump="$out.txt"
 
-      $scDir/hist2delta-kmc.py $outFile
-      rm $outFile
-      
-      if (( k < 20)); then
-    	  ((k+=2))
-      elif (( k < 30)); then
-	      ((k+=3))
-      else
-	      ((k+=10))
-      fi
-    done
+    cmd1="kmc -b -hp -k$k -m20 -t8 -fm -ci0 -cs1048575000 -cx2000000000 \
+    	     $seq $out ttt"
+    cmd2="kmc_dump $out $dump"
+
+    echo $cmd1 >> $logFile
+    echo $seq, $k, $(date)
+    echo -n "$seq $k " >> $times
+    /usr/bin/time --format "$format" --output $times --append $cmd1 >> $logFile 2>&1 
+
+    echo $cmd2 >> $logFile
+    echo $seq, $k, $(date)
+    echo -n "$seq $k " >> $times
+    /usr/bin/time --format "$format" --output $times --append $cmd2 >> $logFile 2>&1
+
+    rm -fr "$tmDir"
 done
-
