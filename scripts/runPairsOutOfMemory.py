@@ -42,10 +42,11 @@ def main():
 
         cnt += 1
         print(f"Running test {cnt}/{tot}: {p[0]} vs {p[1]}")
-        
+        # theta = 0 (no synthetic sequences)
+        # tutti i k con 4 <= k <= 32
         cmd = f"spark-submit --master yarn --deploy-mode client --driver-memory 27g \
-	--num-executors 48 --executor-memory 27g --executor-cores 7 \
-	{scriptPath} {seq1} {seq2} 0 {remoteDataDir}"
+	        --num-executors 48 --executor-memory 27g --executor-cores 7 \
+	        {scriptPath} {seq1} {seq2} -r {remoteDataDir}"
 
         logFile = f"run-{int(time.time())}.log"
 
