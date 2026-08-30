@@ -698,15 +698,21 @@ def main():
     args = parser.parse_args()
 
     # Configurazione logger
+
+    handlers = []
+
+    if args.verbose:
+        handlers.append(logging.StreamHandler())
+        handlers.append(logging.FileHandler(f"ProfileInfo-{int(time.time())}.log"))
+
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.WARNING,
         format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
-        handlers=[
-            logging.FileHandler(f"ProfileInfo-{int(time.time())}.log"),
-            logging.StreamHandler()  # anche su console
-        ]
+        handlers=handlers if handlers else None
     )
-    logger = logging.getLogger('genomica')
+
+    logger = logging.getLogger("genomica")
+
 
     seqFile1 = args.sequence1 # le sequenze sono sul file system locale
     seqFile2 = args.sequence2 # per eseguire localmente l'estrazione dei k-mers
