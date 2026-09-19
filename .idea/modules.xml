@@ -2,9 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Py-Scripts/ComputingScripts.iml" filepath="$PROJECT_DIR$/Py-Scripts/ComputingScripts.iml" />
-      <module fileurl="file://$PROJECT_DIR$/PowerStatistics.iml" filepath="$PROJECT_DIR$/PowerStatistics.iml" />
-      <module fileurl="file://$PROJECT_DIR$/R-Scripts/R-Scripts.iml" filepath="$PROJECT_DIR$/R-Scripts/R-Scripts.iml" />
+      <module fileurl="file://$USER_HOME$/Library/CloudStorage/GoogleDrive-cattaneo@unisa.it/Il mio Drive/MacBook/Universita/Src/IdeaProjects/power_statistics/src/main/scala/scala.iml" filepath="$USER_HOME$/Library/CloudStorage/GoogleDrive-cattaneo@unisa.it/Il mio Drive/MacBook/Universita/Src/IdeaProjects/power_statistics/src/main/scala/scala.iml" />
     </modules>
   </component>
 </project>

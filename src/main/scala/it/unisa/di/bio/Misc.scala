@@ -30,20 +30,33 @@ package object Misc {
   class randomNumberGenerator() {
 
     // initialize the random source
-    val rng: scala.util.Random = new scala.util.Random(System.currentTimeMillis / 1000)
+    var rng: scala.util.Random = null
 
     var gValue: Double = 0.0
 
     // precompute the boundaries for the probabilities (must be 0 <= boundiries < 1.0
     val boundaries: Array[Double] = Array(0.0, 0.0, 0.0, 1.0)
 
-    def this( probG: Double) {
+    def this( randomSource: scala.util.Random, probG: Double) {
       this()
+      rng =  randomSource
       gValue = probG
     }
 
-    def this( probabilityDistribution: Array[Double]) {
+    def this (randomSource: scala.util.Random, probabilityDistribution: Array[Double]) = {
       this()
+      rng = randomSource
+      initRandomSource(probabilityDistribution)
+    }
+
+    // non usare altrimenti il generatore viene riinizializzato e compromette la replicabilità del processo.
+    private def this (probabilityDistribution: Array[Double]) = {
+      this()
+      rng =  new scala.util.Random(System.currentTimeMillis / 1000)
+      initRandomSource(probabilityDistribution)
+    }
+
+    private def initRandomSource(probabilityDistribution: Array[Double]) : Unit = {
       var tot: Double = 0
       for(i <- 0 to 2) {
         tot += probabilityDistribution(i)

@@ -24,11 +24,20 @@ similarities <- c('D2')
 dfFilename <- sprintf("%s/realDistanceAll.RDS", dirname )
 csvFilename <- sprintf("%s/%s", dirname, "RealSequencesPairs.csv")
 
+# experiment 1
+#genomesDF <- data.frame(
+#  genome =     c("Chimpanzee", "Bonobo",	"Gorilla",	"Orangutan",	"MacacaMulatta",	"GrayMouseLemur",	"SootyMangabey",	"Pig", "HouseMouse",	"Gallus"),
+#  divergence = c( 0.0120,       0.0130,    	0.0160,      0.0310,          0.0646,       	    0.0900,             0.0920,	         0.1063,  0.1500,        0.2500),
+#  mya =	       c( 5.40,	        6.00,	    9.00,   	 14.00,    	      25.00,    	        60.00,  	        10.50,	         88.00,	  75.00,	     320.00)
+# )
+
+# experiment 2
 genomesDF <- data.frame(
-  genome =     c("Chimpanzee", "Bonobo",	"Gorilla",	"Orangutan",	"MacacaMulatta",	"GrayMouseLemur",	"SootyMangabey",	"Pig", "HouseMouse",	"Gallus"),
-  divergence = c( 0.0120,       0.0130,    	0.0160,      0.0310,          0.0646,       	    0.0900,             0.0920,	         0.1063,  0.1500,        0.2500),
-  mya =	       c( 5.40,	        6.00,	    9.00,   	 14.00,    	      25.00,    	        60.00,  	        10.50,	         88.00,	  75.00,	     320.00)
+  genome =     c("Chimpanzee", "MacacaMulatta", "HouseMouse", "CElegans", "Yeast", "PiceaAbies"),
+  divergence = c( 0.9877,        0.9354,         0.4000,       0.693,      0.500,     0.400),
+  mya =	       c( 6.4,           28.8,             87,           686,        1275,    1530)
 )
+
 
 similarities <- c('D2')
 # misure di riferimento
@@ -166,7 +175,7 @@ if (!file.exists(dfFilename)) {
  # $ distance       : num  1 0 0 1 0 ...
 
   # calcola la trasposta ... un rigo per ogni misura
-  for(i in 1:nrow(df)) {
+  for(i in seq_len(nrow(df))) {
     r <- df[i,]
     for(m in measures) {
       MesName <- if (m == "Mash.Distance.10000.") "Mash" else m
@@ -218,7 +227,7 @@ df <- filter(tgtDF, Measure %in% mainMeasures)
 
 #  grafico distanze per le principali misure Present/Absent (Genome sull'asse delle x)
 sp1 <- ggplot(df, aes(x = Genome, y = distance, group = 1)) +
-  geom_line(data = genomesDF, aes(x = genome, y = divergence), color = "gray") +
+  # geom_line(data = genomesDF, aes(x = genome, y = divergence), color = "gray") +
   geom_line(aes(color = k)) +
   geom_point(size = 0.8) +
   facet_grid( rows = vars(k), cols = vars(Measure), labeller = labeller( k = label_both)) + #, scales = "free_y"
@@ -226,21 +235,22 @@ sp1 <- ggplot(df, aes(x = Genome, y = distance, group = 1)) +
   theme_bw() + theme( panel.spacing=unit(0.1, "lines"),
                       strip.text.x = element_text( size = 8, angle = 0),
                       legend.position = "none",
-                      # axis.text.y = element_blank(),
+                      axis.text.y = element_blank(),
                       axis.title.y = element_blank(),
-                      axis.text.x = element_text( size = rel( 0.5), angle = 60, hjust=1),
+                      axis.text.x = element_text( size = rel( 0.65), angle = 60, hjust=1),
                       axis.title.x = element_blank())
 
 # dev.new(width = 6, height = 6)
 # print(sp1)
-outfname <- sprintf( "%s/PanelMainPAMeasures.png", dirname)
-ggsave( outfname, device = png(), width = length(mainMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
+outfname <- sprintf( "%s/PanelRealGenomesMainPAMeasures.pdf", dirname)
+ggsave( outfname, device = pdf(), width = length(mainMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
 
 totPrinted <- totPrinted + 1
 
 # ---------------------------------------------------------------
 
 df <- filter(tgtDF, Measure %in% PAMeasures)
+df$Measure <- factor( df$Measure, levels = PAMeasures)
 
 sp1 <- ggplot(df, aes(x = Genome, y = distance, group = 2))+
   geom_line(aes(color = k)) +
@@ -250,15 +260,15 @@ sp1 <- ggplot(df, aes(x = Genome, y = distance, group = 2))+
   theme_bw() + theme(panel.spacing=unit(0.1, "lines"),
                      strip.text.x = element_text( size = 8, angle = 0),
                      legend.position = "none",
-                     # axis.text.y = element_blank(),
+                     axis.text.y = element_blank(),
                      axis.title.y = element_blank(),
-                     axis.text.x = element_text( size = rel( 0.5), angle = 60, hjust=1),
+                     axis.text.x = element_text( size = rel( 0.65), angle = 60, hjust=1),
                      axis.title.x = element_blank())
 
 # dev.new(width = 6, height = 6)
 # print(sp1)
-outfname <- sprintf( "%s/PanelAllPAMeasures.png", dirname)
-ggsave( outfname, device = png(), width = length(PAMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
+outfname <- sprintf( "%s/PanelRealGenomesAllPAMeasures.pdf", dirname)
+ggsave( outfname, device = pdf(), width = length(PAMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
 dev.off() # only 129kb in size
 totPrinted <- totPrinted + 1
 
@@ -275,16 +285,17 @@ for (seq in countMeasures) {
     # scale_y_continuous(limits = c(0, 1), labels=c("0", "0.5", "1"), breaks = c(0, 0.5, 1)) +
     theme_bw() + theme(panel.spacing=unit(0.1, "lines"),
                        strip.text.x = element_text( size = 8, angle = 0),
+                       strip.text.y = element_blank(),
                        legend.position = "none",
-                       # axis.text.y = element_blank(),
+                       axis.text.y = element_blank(),
                        axis.title.y = element_blank(),
-                       axis.text.x = element_text( size = rel( 0.5), angle = 60, hjust=1),
+                       axis.text.x = element_text( size = rel( 0.65), angle = 60, hjust=1),
                        axis.title.x = element_blank())
 
   #  dev.new(width = 6, height = 6)
   # print(sp1)
-  outfname <- sprintf( "%s/Panel%s.png", dirname, seq)
-  ggsave( outfname, device = png(), width = length(mainMeasures) * xWidth + deltaWidth, height = yHeight, units = "cm", dpi = 300)
+  outfname <- sprintf( "%s/PanelRealGenomes-%s.pdf", dirname, seq)
+  ggsave( outfname, device = pdf(), width = xWidth, height = yHeight, units = "cm", dpi = 300)
   dev.off() # only 129kb in size
   totPrinted <- totPrinted + 1
 }

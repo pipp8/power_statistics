@@ -57,7 +57,8 @@ object DatasetBuilder {
   var writer : BufferedWriter = null
   var reader : BufferedSource = null
   var inputIter : Iterator[String] = null
-  val rng: scala.util.Random = new scala.util.Random(System.currentTimeMillis / 1000)
+  val seed : Long = 1117  // seed fisso per ciascuna len for replicability
+  var rng: scala.util.Random = null  // sarà reinizializzato per ogni len
 
 
 
@@ -235,6 +236,8 @@ object DatasetBuilder {
     println(s"${st} *** Building EColi Derived Dataset (Null Model + Alternate Model) <- ${nullModelPrefix} #pairs: ${numberOfPairs} for len: ${targetLen} ***")
 
     seqLen = targetLen
+    rng.setSeed( seqLen * seed)   // for replicability
+
     // crea the NullModel
     buildDatasetWithShuffle(numberOfPairs, seqLen, geneSize, nullModelPrefix)
 
@@ -261,6 +264,8 @@ object DatasetBuilder {
     println(s"${st} *** Building Synthetic Dataset (Null Model + Alternate Model) <- ${nullModelPrefix} #pairs: ${numberOfPairs} for len: ${targetLen} ***")
 
     seqLen = targetLen
+    rng.setSeed( seqLen * seed)   // for replicability
+
     // crea il dataset uniform
     buildDatasetWithDistribution(numberOfPairs, seqLen, distribution, nullModelPrefix)
 
@@ -298,6 +303,7 @@ object DatasetBuilder {
         seqLen = bl * m / 100
 
         if (seqLen <= maxSeqLen) {
+          rng.setSeed( seqLen * seed)   // for replicability
           buildAlternateModelsOnly(seqLen: Int, nullModelPrefix)
         }
       }
@@ -335,6 +341,8 @@ object DatasetBuilder {
       // crea il dataset uniform
 
       println(s"*** Process starting for len: ${seqLen} ***")
+
+      rng.setSeed( seqLen * seed)   // for replicability
 
       buildDatasetWithDistribution(numberOfPairs, seqLen, uniformDist,
         appProperties.getProperty("powerstatistics.datasetBuilder.uniformPrefix"))
@@ -473,7 +481,7 @@ object DatasetBuilder {
     var n1 = 0
     var n2 = 0
 
-    val rg = new randomNumberGenerator(distribution)
+    val rg = new randomNumberGenerator(rng, distribution)
 
     for( i <- 1 to numberOfPairs) {
 
@@ -511,7 +519,7 @@ object DatasetBuilder {
   def buildDatasetMotifReplace(sequenceLen: Int, motif: Array[Char], probSubstitution: Double,
                                inPrefix: String, outPrefix: String): Unit = {
 
-    val rg = new randomNumberGenerator(probSubstitution)
+    val rg = new randomNumberGenerator(rng, probSubstitution)
 
     // motifLen variabile in funzione della lunghezza della sequenza
     // val motifLen = kValueFromSeqlen(sequenceLen)
@@ -608,7 +616,7 @@ object DatasetBuilder {
   def buildDatasetPatternTransfer(sequenceLen: Int, probSubstitution: Double,
                                   inPrefix: String, outPrefix: String): Unit = {
 
-    val rg = new randomNumberGenerator(probSubstitution)
+    val rg = new randomNumberGenerator(rng, probSubstitution)
 
 
     // len variabile in funzione della lunghezza della sequennza
