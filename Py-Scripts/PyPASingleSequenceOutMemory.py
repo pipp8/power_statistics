@@ -279,14 +279,24 @@ def runMash(inputDS1: str, inputDS2: str, k: int):
         # extract mash sketch from the first sequence
         start = time.time()
         mashout1 = f"{os.path.splitext(inputDS1)[0]}-k={k}"
-        cmd = f"/usr/local/bin/mash sketch -s {sketchSizes[i]} -p 8 -k {k} -o {mashout1} {inputDS1}"
-        p = subprocess.Popen(cmd.split())
-        p.wait()
+        p = Path(mashout1)
+        if not p.is_file() or p.stat().st_size == 0:
+            cmd = f"/usr/local/bin/mash sketch -s {sketchSizes[i]} -p 8 -k {k} -o {mashout1} {inputDS1}"
+            logger.info(f"****** Excuting cmd: {cmd} to sketch input {inputDS1}. ******")
+            p = subprocess.Popen(cmd.split())
+            p.wait()
+        else:
+            logger.info(f"****** File {mashout1} already present. Skipping. ******")
 
         mashout2 = f"{os.path.splitext(inputDS2)[0]}-k={k}"
-        cmd = f"/usr/local/bin/mash sketch -s {sketchSizes[i]} -p 8 -k {k} -o {mashout2} {inputDS2}"
-        p = subprocess.Popen(cmd.split())
-        p.wait()
+        p = Path(mashout2)
+        if not p.is_file() or p.stat().st_size == 0:
+            cmd = f"/usr/local/bin/mash sketch -s {sketchSizes[i]} -p 8 -k {k} -o {mashout2} {inputDS2}"
+            logger.info(f"****** Excuting cmd: {cmd} to sketch input {inputDS2}. ******")
+            p = subprocess.Popen(cmd.split())
+            p.wait()
+        else:
+            logger.info(f"****** File {mashout2} already present. Skipping. ******")
 
         cmd = f"/usr/local/bin/mash dist {mashout1}.msh {mashout2}.msh"
         out = subprocess.check_output(cmd.split())
@@ -300,7 +310,7 @@ def runMash(inputDS1: str, inputDS2: str, k: int):
         data2 = data2 + mashValues[i].toString()
 
     # clean up remove kmc temporary files
-    os.remove(mashout1 + '.msh')
+    # os.remove(mashout1 + '.msh') meglio rimuovere tutto alla fine nel caso dei confronti a coppie
     os.remove(mashout2 + '.msh')
 
     return data2
@@ -698,15 +708,21 @@ def main():
     args = parser.parse_args()
 
     # Configurazione logger
+
+    handlers = []
+
+    if args.verbose:
+        handlers.append(logging.StreamHandler())
+        handlers.append(logging.FileHandler(f"ProfileInfo-{int(time.time())}.log"))
+
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.WARNING,
         format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
-        handlers=[
-            logging.FileHandler(f"ProfileInfo-{int(time.time())}.log"),
-            logging.StreamHandler()  # anche su console
-        ]
+        handlers=handlers if handlers else None
     )
-    logger = logging.getLogger('genomica')
+
+    logger = logging.getLogger("genomica")
+
 
     seqFile1 = args.sequence1 # le sequenze sono sul file system locale
     seqFile2 = args.sequence2 # per eseguire localmente l'estrazione dei k-mers
