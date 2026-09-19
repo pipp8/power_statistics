@@ -13,34 +13,28 @@ import logging
 
 scriptPath = '/home/cattaneo/spark/power_statistics/Py-Scripts/PyPASingleSequenceOutMemory.py'
 # dataDir='/home/cattaneo/spark/power_statistics/Dataset'
-defDataDir = '/mnt/VolumeDati1/Dataset/PresentAbsentDatasets/ncbi_dataset/taxonomy-20260901'
-remoteDataDir = 'taxonomy-20260901'
+defDataDir = '/mnt/VolumeDati1/Dataset/PresentAbsentDatasets/ncbi_dataset/taxonomy'
+remoteDataDir = 'taxonomy'
 
-refSeq = 'HomoSapiens.fna'
 
-seqs = [ 
-    'CElegans.fna',  'Chimpanzee.fna', 'HouseMouse.fna', 'MacacaMulatta.fna',  'PiceaAbies.fna',  'Yeast.fna' ]
-
-# experioment 2 20260901
-# seqs = [ 
-#    'CElegans.fna',  'Chimpanzee.fna', 'HouseMouse.fna', 'MacacaMulatta.fna',  'PiceaAbies.fna',  'Yeast.fna ]
-
-# experiment 1 202608
-# seqs = [
-#    'Bonobo.fna',      'Gallus.fna',   'GrayMouseLemur.fna',  'HouseMouse.fna',
-#    'MacacaMulatta.fna',   'Orangutan.fna',  'SootyMangabey.fna', 'Chimpanzee.fna',
-#    'Gorilla.fna',     'MacacaMulatta.fna',  'Pig.fna']
-
+seqs = [
+    'GCA_000001405.29_GRCh38.p14_genomic.fna',
+    'GCA_000001515.5_Pan_tro_3.0_genomic.fna',
+    'GCA_000151905.3_gorGor4_genomic.fna',
+    'GCA_028885655.3_NHGRI_mPonAbe1-v2.1_pri_genomic.fna',
+    'GCA_029289425.3_NHGRI_mPanPan1-v2.1_pri_genomic.fna',
+    'GCF_000001635.27_GRCm39_genomic.fna',
+    'GCF_016699485.2_bGalGal1.mat.broiler.GRCg7b_genomic.fna'
+]
 
 
 
 def main():
-    global refSeq, seqs
-    
-    parser = argparse.ArgumentParser(description='Script per il calcolo delle distanze di refSeq con tutte le sequenze in seqs')
+
+    parser = argparse.ArgumentParser(description='Script per l\'esecuzione di tutte le coppie')
     parser.add_argument('-d', '--datadir', default=defDataDir, type=str, help='Path completa della directory contenente i file FASTA da confrontare')
     parser.add_argument('-v', '--dry', action='store_true', help='Disabilita l\'esecuzione mostrando solo i test da effettuare (default=false)')
-    parser.add_argument('-p', '--pattern', action='store_true', help='Global pattern to select input files')
+    parser.add_argument('-p', '--pattern', default='GC*.fna', action='store_true', help='Global pattern to select input files')
     
     args = parser.parse_args()
 
@@ -67,24 +61,22 @@ def main():
 
     cwd = os.getcwd()
     os.chdir(args.datadir)
-
-    if args.pattern:
-        seqs = glob.glob(args.pattern)
-        print(f"Using the following sequences: {seqs}")
+    seq = glob.glob(args.pattern)
 
     os.chdir(cwd)
     
     cnt = 0
-    tot = len(seqs)
+    tot = math.comb(len(seqs), 2)
+    # testList = list(itertools.combinations( seqs, 2))
+    testList = itertools.combinations( seqs, 2)
 
-
-    for p in seqs:
+    for p in testList:
  
-        seq1 = f"{args.datadir}/{refSeq}"
-        seq2 = f"{args.datadir}/{p}"
+        seq1 = f"{args.datadir}/{p[0]}"
+        seq2 = f"{args.datadir}/{p[1]}"
 
         cnt += 1
-        logger.info(f"Running test {cnt}/{tot}: {seq1} vs {seq2}")
+        logger.info(f"Running test {cnt}/{tot}: {p[0]} vs {p[1]}")
         # theta = 0 (no synthetic sequences)
         # tutti i k con 4 <= k <= 32
         cmd = f"spark-submit --master yarn --deploy-mode client --driver-memory 27g \
@@ -93,7 +85,6 @@ def main():
 
         
         if (not dryMode):
-            logger.info(f"Executing {cmd}")
             out_f = open(logFile, 'w')
             subprocess.run( cmd.split(), stdout = out_f, text = True, stderr = subprocess.STDOUT)
             logger.info("Done.")
