@@ -4,6 +4,7 @@ import re
 import os
 import sys
 import random
+import hashlib
 from pathlib import Path
 
 
@@ -21,21 +22,23 @@ def ModifySequence():
         inputFile = sys.argv[1]
         theta = int(sys.argv[2])
         baseName, ext = os.path.splitext( inputFile)
-        outFile = "%s-%02d%s" % (baseName, theta, ext)
+        outFile = f"{baseName}-{theta:02d}{ext}"
+        seed = int.from_bytes(hashlib.blake2s(baseName, digest_size=4).digest(), "big") * theta
+        random.seed(seed)
         MoveAwaySequence(inputFile, outFile, theta)
     else:
-        print("Errore nei parametri:\nUsage: %s InputSequence thetaProbability" % os.path.basename(sys.argv[0]))
+        print(f"Errore nei parametri:\nUsage: {os.path.basename(sys.argv[0])} InputSequence thetaProbability")
         exit(-1)
 
 
 def MoveAwaySequence(inputFile, outFile, theta):
 
     if (os.path.exists(outFile)):
-        print("Output File: %s already exists. Exiting." % outFile)
+        print(f"Output File: {outFile} already exists. Exiting.")
         return
 
     print( "*********************************************************")
-    print( "Creating sequence: %s from sequence: %s theta: %d" % (Path(outFile).stem, Path(inputFile).stem, theta))
+    print( f"Creating sequence: {Path(outFile).stem} from sequence: {Path(inputFile).stem} theta: {theta}")
     print( "*********************************************************")
 
     (written, subst, totLen) = (0, 0, 0)
@@ -84,7 +87,7 @@ def MoveAwaySequence(inputFile, outFile, theta):
                     sys.stdout.write('.')
                     sys.stdout.flush()
 
-    print("\n%s -> %d/%d substitutions" % (outFile, subst, totLen))
+    print(f"\n{outFile} -> {subst}/{totLen} substitutions")
 
 
 
