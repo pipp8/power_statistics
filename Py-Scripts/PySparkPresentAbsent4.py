@@ -12,6 +12,8 @@ import math
 import time
 from datetime import datetime as dt
 import numpy as np
+import logging
+
 import py_kmc_api as kmc
 
 sys.path.extend(['/usr/local/spark/python/lib/pyspark.zip', '/usr/local/spark/python/lib/py4j-0.10.9.5-src.zip'])
@@ -23,7 +25,9 @@ from pyspark import SparkFiles
 
 
 
+hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data'
 # hdfsPrefixPath = '/Users/pipp8/Universita/Src/IdeaProjects/PowerStatistics/data'
+hdfsDataDir = 'data/uniform-32-1000'
 
 inputRE = '*.fasta'
 spark = []
@@ -94,7 +98,7 @@ def loadHistogramFromKMC(kmerDict: dict, histFile: str, pairId: str):
     ndx = 0 if pairId == 'A' else 1
     kmcFile = kmc.KMCFile()
     if (kmcFile.OpenForListing(histFile)):
-        print("file: %s Opened." % histFile)
+        logger.info(f"file: {histFile} Opened.")
     else:
         raise IOError( "OpenForListing failed for %s DB." % histFile)
 
@@ -135,7 +139,7 @@ def loadHistogramFromTextFile(kmerDict: dict, histFile: str, pairId: str):
     cmd = f"/usr/local/bin/kmc_dump {histFile} {dumpFile}"
     p = subprocess.Popen(cmd.split())
     p.wait()
-    print(f"cmd: {cmd} returned: {p.returncode}")
+    logger.info(f"cmd: {cmd} returned: {p.returncode}")
     # load kmers from histogram file
 
     ndx = 0 if pairId == 'A' else 1
@@ -147,7 +151,7 @@ def loadHistogramFromTextFile(kmerDict: dict, histFile: str, pairId: str):
         for line in inFile:
             s = line.split()   # molto piu' veloce della re
             if (len(s) != 2):
-                print( "%sMalformed histogram file (%d token)" % (line, len(s)))
+                logger.error(f"{line} Malformed histogram file ({len(s)} token)")
                 exit()
             else:
                 strKmer = s[0]
@@ -181,7 +185,7 @@ def sequenceEntropy( seqDict, pairID, totalKmerCnt):
             prob = cnt / float(totalKmerCnt)
             totalProb = totalProb + prob
             Hk = Hk + prob * math.log(prob, 2)
-            # print( "prob(%s) = %f log(prob) = %f" % (key, prob, math.log(prob, 2)))
+            # logger.debug( f"prob({key}) = {prob} log(prob) = {math.log(prob, 2}")
 
     if (round(totalProb,0) != 1.0):
         raise ValueError("Somma(p) = %f must be 1.0. Aborting" % round(totalProb, 0))
@@ -239,13 +243,13 @@ def extractKmers( inputDataset, k, tempDir, kmcOutputPrefix):
     cmd = "/usr/local/bin/kmc -b -hp -k%d -m2 -fm -ci0 -cs1048575 -cx1000000 %s %s %s" % (k, inputDataset, kmcOutputPrefix, tempDir)
     p = subprocess.Popen(cmd.split())
     p.wait()
-    print("cmd: %s returned: %s" % (cmd, p.returncode))
+    logger.info(f"cmd: {cmd} returned: {p.returncode}")
 
     # dump the result -> kmer histogram (no longer needed)
     # cmd = "/usr/local/bin/kmc_dump %s %s" % ( kmcOutputPrefix, histFile)
     # p = subprocess.Popen(cmd.split())
     # p.wait()
-    # print("cmd: %s returned: %s" % (cmd, p.returncode))
+    # logger.info(f"cmd: {cmd} returned: {p.returncode}")
 
     return
 
@@ -288,16 +292,16 @@ def processLocalPair( ds, model, seqId, seqLen, gamma, k):
     entropySeqB = EntropyData( totalDistinctB, totalKmerCntB, HkB)
 
     if (not kmerDict == kmerDict2):
-        print("different dictionaris")
-        exit()
+        logger.error("different dictionaris")
+#        exit()
 
     if (totalDistinctA != totalDistinctA2 or totalDistinctB != totalDistinctB2 ):
-        print("different counters")
-        exit()
+        logger.error("different counters")
+#        exit()
 
     if (HkA != HkA2 or HkB != HkB2 ):
-        print(f"different entropy {HkA} vs {HkA2} or {HkB} vs {HkB2}")
-        exit()
+        logger.error(f"different entropy {HkA} vs {HkA2} or {HkB} vs {HkB2}")
+#        exit()
 
     i = 0
     cnts = np.empty( shape=(2, len( kmerDict.values())), dtype='int32')
@@ -437,9 +441,9 @@ def ZScoreNormalization( vector: np.ndarray, k: int):
         std0 = math.sqrt((sq0 - n * msqr0) / n)
         std1 = math.sqrt((sq1 - n * msqr1) / n)
     except ValueError:  # Square root of a negative number.
-        print(f"**** ValueError: Math domain error for k:{k} ****")
-        print(f"**** sq0:{sq0} nxmu0:{n * msqr0} ****")
-        print(f"**** sq1:{sq1} nxmu1:{n * msqr1} ****")
+        logger.error(f"**** ValueError: Math domain error for k:{k} ****")
+        logger.error(f"**** sq0:{sq0} nxmu0:{n * msqr0} ****")
+        logger.error(f"**** sq1:{sq1} nxmu1:{n * msqr1} ****")
         std0 = 1
         std1 = 1
 
@@ -448,7 +452,7 @@ def ZScoreNormalization( vector: np.ndarray, k: int):
 # run jaccard on sequence pair ds with kmer of length = k
 def runPresentAbsent(  bothCnt, leftCnt, rightCnt, k):
 
-    print("left: %d, right: %d" % (leftCnt, rightCnt))
+    logger.info(f"left: {leftCnt}, right:{rightCnt}")
     A = int(bothCnt)
     B = int(leftCnt)
     C = int(rightCnt)
@@ -653,7 +657,7 @@ def processPairs(seqPair):
 
     results = []
     for k in range( minK, maxK+1, stepK):
-        print("**** starting local computation for k = %d *****" % k)
+        logger.info(f"**** starting local computation for k = {d} *****")
         # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
         g = float(gamma[3:]) if (len(gamma) > 0) else 0.0
         results.append(processLocalPair(fileNamePrefix, model, seqId, seqLen, g, k))
@@ -662,10 +666,10 @@ def processPairs(seqPair):
     # do not remove dataset on hdfs
     # remove histogram files (A & B) + mash sketch file and kmc temporary files
     try:
-        print("Cleaning temporary directory %s" % (tempDir))
+        logger.info(f"Cleaning temporary directory {tempDir}")
         shutil.rmtree(tempDir)
     except OSError as e:
-        print("Error removing: %s: %s" % (tempDir, e.strerror))
+        logger.error(f"Error removing: {tempDir}: {e.strerror}")
 
     return results
 
@@ -683,7 +687,7 @@ def splitPairs(ds):
         seqLen = int(m.group(3))
         gamma = m.group(4)
 
-    # print("Splitting dataset: %s@%s" % (ds[0], os.uname()[1]))
+    # logger.info(f"Splitting dataset: {ds[0]}@{os.uname()[1]}")
 
     lines = ds[1].split()
     if (len(lines) != 4):
@@ -718,9 +722,23 @@ def splitPairs(ds):
 
 
 def main():
-    global hdfsDataDir, hdfsPrefixPath,  outFilePrefix, spark
+    global hdfsDataDir, hdfsPrefixPath,  outFilePrefix, spark, logger
 
-    use_local_mode = True
+    use_local_mode = False
+    verbose = True
+    handlers = []
+
+    if verbose:
+        handlers.append(logging.StreamHandler())
+        handlers.append(logging.FileHandler(f"ProfileInfo-{int(time.time())}.log"))
+
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.WARNING,
+        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+        handlers=handlers if handlers else None
+    )
+
+    logger = logging.getLogger("genomica")
 
     argNum = len(sys.argv)
     if (argNum < 2 or argNum > 3):
@@ -736,12 +754,12 @@ def main():
             dataDir = '%s/%s/len=%d' % (prefixPath, dataMode, seqLen)
             outFile = '%s/%s/%s-%s.%d-%s.csv' % (
             prefixPath, dataMode, outFilePrefix, dataMode, seqLen, dt.today().strftime("%Y%m%d-%H%M"))
-            print("dataDir = %s" % dataDir)
         else:
             hdfsPrefixPath = 'hdfs://master2:9000/user/cattaneo/data'
             dataDir = '%s/%s/len=%d' % (hdfsPrefixPath, dataMode, seqLen)
             outFile = '%s/%s/%s-%s.%d-%s.csv' % (hdfsPrefixPath, dataMode, outFilePrefix, dataMode, seqLen, dt.today().strftime("%Y%m%d-%H%M"))
-            print("hdfsDataDir = %s" % hdfsDataDir)
+
+        logger.info(f"dataDir: {dataDir}")
 
 
 
@@ -756,10 +774,10 @@ def main():
     nWorkers =  len([executor.host() for executor in sc2.statusTracker().getExecutorInfos()]) -1
 
     if (not checkPathExists(dataDir,use_local_mode)):
-        print(f"Data dir {dataDir} does not exist. Program terminated.")
+        logger.error(f"Data dir {dataDir} does not exist. Program terminated.")
         exit(-1)
 
-    print("%d workers, dataDir: %s, dataMode: %s" % (nWorkers, dataDir, dataMode))
+    logger.info(f"{nWorkers} workers, dataDir: {dataDir}, dataMode: {dataMode}")
 
 
     if use_local_mode:
@@ -769,18 +787,18 @@ def main():
         inputDataset = '%s/%s' % (dataDir, inputRE)
         rdd = sc.wholeTextFiles(inputDataset, minPartitions=48 * 100)  # 100 tasks per 48 executors
 
-    # print("Number of Partitions: " + str(rdd.getNumPartitions()))
+    # logger.info("Number of Partitions: " + str(rdd.getNumPartitions()))
     #
     # .map(lambda x: (x[0], x[1][0], x[1][1], x[2][0], x[2][1]))
     # columns = ['name', 'seqA', 'contentA', 'seqB', 'contentB']
 
-    print("**** RDD number of Partitions: %d" % rdd.getNumPartitions())
+    logger.info(f"**** RDD number of Partitions: {rdd.getNumPartitions()}")
 
     pairs = rdd.map(lambda x: splitPairs(x))
-    print("**** pairs number of Partitions: %d" % pairs.getNumPartitions())
+    logger.info(f"**** pairs number of Partitions: {pairs.getNumPartitions()}")
 
     counts = pairs.flatMap(lambda x: processPairs(x))
-    print("**** counts number of Partitions: %d" % counts.getNumPartitions())
+    logger.info(f"**** counts number of Partitions: {counts.getNumPartitions()}")
 
     columns0 = ['model', 'gamma', 'seqLen', 'pairId', 'k'] # dati 0
     columns1 = [ 'A', 'B', 'C', 'D', 'N',

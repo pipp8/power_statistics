@@ -58,7 +58,7 @@ object DatasetBuilder {
   var reader : BufferedSource = null
   var inputIter : Iterator[String] = null
   val seed : Long = 1117  // seed fisso per ciascuna len for replicability
-  var rng: scala.util.Random = null  // sarà reinizializzato per ogni len
+  var rng: scala.util.Random = new scala.util.Random(System.currentTimeMillis / 1000)  // sarà reinizializzato per ogni len
 
 
 
