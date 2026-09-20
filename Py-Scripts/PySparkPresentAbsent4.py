@@ -657,7 +657,7 @@ def processPairs(seqPair):
 
     results = []
     for k in range( minK, maxK+1, stepK):
-        logger.info(f"**** starting local computation for k = {d} *****")
+        logger.info(f"**** starting local computation for k = {k} *****")
         # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy
         g = float(gamma[3:]) if (len(gamma) > 0) else 0.0
         results.append(processLocalPair(fileNamePrefix, model, seqId, seqLen, g, k))
@@ -730,10 +730,10 @@ def main():
 
     if verbose:
         handlers.append(logging.StreamHandler())
-        handlers.append(logging.FileHandler(f"ProfileInfo-{int(time.time())}.log"))
+        # handlers.append(logging.FileHandler(f"ProfileInfo-{int(time.time())}.log"))
 
     logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.WARNING,
+        level=logging.INFO if verbose else logging.WARNING,
         format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
         handlers=handlers if handlers else None
     )
