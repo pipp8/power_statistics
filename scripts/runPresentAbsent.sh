@@ -19,7 +19,7 @@ cmd="spark-submit --master $executionMode --deploy-mode client --driver-memory 2
 
 # Configure executors only for yarn mode
 if [[ $executionMode == "yarn" ]]; then
-    cmd="$cmd --num-executors 48 --executor-memory 27g --executor-cores 7"
+    cmd="$cmd --num-executors 48 --executor-memory 27g --executor-cores 5"
 fi
 
 cmd="$cmd Py-Scripts/PySparkPresentAbsent4.py $seqLen $dataDir"

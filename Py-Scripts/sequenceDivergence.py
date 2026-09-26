@@ -16,31 +16,49 @@ ext = '.fna'
 
 # parametri sulla linea di comando
 # inputSeqence theta
-def ModifySequence():
+def ModifySequence(inputFile, outFile, theta):
 
-    if (len(sys.argv) == 3):
-        inputFile = sys.argv[1]
-        theta = int(sys.argv[2])
-        baseName, ext = os.path.splitext( inputFile)
-        outFile = f"{baseName}-{theta:02d}{ext}"
-        seed = int.from_bytes(hashlib.blake2s(baseName, digest_size=4).digest(), "big") * theta
-        random.seed(seed)
-        MoveAwaySequence(inputFile, outFile, theta)
-    else:
-        print(f"Errore nei parametri:\nUsage: {os.path.basename(sys.argv[0])} InputSequence thetaProbability")
-        exit(-1)
+    if (theta < 0 or theta > 1):
+        print(f"theta value: {theta}. theta is a probability and must be 0 <= theta <= 1")
+        return -1
 
-
-def MoveAwaySequence(inputFile, outFile, theta):
+    if not os.path.exists(inputFile) or os.path.getsize(inputFile) == 0:
+        print(f"input file: {inputFile} does not exist or is void")
+        return -1
 
     if (os.path.exists(outFile)):
         print(f"Output File: {outFile} already exists. Exiting.")
-        return
+        return -1
+
+    # in caso di link simbolico usa il real filename SOLO per calcolare l'hash
+    if os.path.islink(inputFile):
+        target = os.readlink(inputFile)
+        print(f"{inputFile} is a symbolic link using {target}.")
+    else:
+        target = inputFile
+
+    # usa solo il filename (con estensione) indipendentemente dalla path
+    target = Path(target).name
+    # inizializza in maniera replicabili il generatore di numeri casuali
+    target_bytes = target.encode("utf-8")
+    fnHash = int.from_bytes(hashlib.blake2s(target_bytes, digest_size=4).digest(), "big") 
+    seed = int(fnHash * int(theta * 0xA0A0A00))
+    
+    random.seed(seed)
 
     print( "*********************************************************")
     print( f"Creating sequence: {Path(outFile).stem} from sequence: {Path(inputFile).stem} theta: {theta}")
+    print( f"hash: {fnHash}, seed: {seed:X}")
     print( "*********************************************************")
 
+
+    sequenceDivergence(inputFile, outFile, theta)
+
+
+
+def sequenceDivergence(inputFile, outFile, theta):
+    # normalizza theta da 0 <= theta <= 1 a 0 <= theta <= 100
+    theta = int(theta * 100)
     (written, subst, totLen) = (0, 0, 0)
     newBase = ''
     out = []
@@ -92,4 +110,13 @@ def MoveAwaySequence(inputFile, outFile, theta):
 
 
 if __name__ == "__main__":
-    ModifySequence()
+    if (len(sys.argv) != 3):
+        print(f"Errore nei parametri:\nUsage: {os.path.basename(sys.argv[0])} InputSequence thetaProbability")
+        exit(-1)
+    else:
+        inputFile = sys.argv[1]
+        theta = float(sys.argv[2])
+        baseName, ext = os.path.splitext( inputFile)
+        outFile = f"{baseName}-T={theta:05.3f}{ext}"
+    
+        ModifySequence(inputFile, outFile, theta)

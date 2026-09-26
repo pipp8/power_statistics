@@ -2,11 +2,12 @@
 
 scriptDir='/home/cattaneo/spark/power_statistics/Py-Scripts'
 dataDir='/home/cattaneo/spark/power_statistics/Datasets'
+binCommand='/usr/local/bin/sequenceDivergence'
 # dataDir=/mnt/VolumeDati1/Dataset/PresentAbsentDatasets/ncbi_dataset
-remoteDataDir=Synthetics
-baseSeq=GCF_003339765.1_Mmul_1.0.fna
-baseSeq='GCF_000001405.40_GRCh38.p14_coding-all.fna' # homo-sapiens coding sequence
-baseSeq=fish1.fna
+remoteDataDir=data/semiSynthetics
+baseSeq=GCA_000146045.2_R64_genomic.fna
+# baseSeq='GCF_000001405.40_GRCh38.p14_coding-all.fna' # homo-sapiens coding sequence
+# baseSeq=fish1.fna
 
 
 if (( $# < 2)) || (($# > 4)); then
@@ -37,7 +38,7 @@ echo "Log file: $logFile"
 
 for i in $thetaValues ; do
 
-    /usr/local/bin/MoveAway  ${seq1} $i
+    $binCommand  ${seq1} $i
     seq2=$(printf "%s/%s-T=%.3f.fna" ${dataDir} $(basename $seq1 .fna) $i)
     
     cmd="spark-submit --master yarn --deploy-mode client --driver-memory 27g \
