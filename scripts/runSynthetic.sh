@@ -1,5 +1,8 @@
 #! /bin/bash
 
+# esegue lo script PyPASingleSequenceOutOfMemory.py solo per confrontare sequenze sintetiche
+# allontanate con lo script sequenceDistance.py per un fattore theta
+
 scriptDir='/home/cattaneo/spark/power_statistics/Py-Scripts'
 dataDir='/home/cattaneo/spark/power_statistics/Datasets'
 binCommand='/usr/local/bin/sequenceDivergence'
@@ -9,6 +12,7 @@ baseSeq=GCA_000146045.2_R64_genomic.fna
 # baseSeq='GCF_000001405.40_GRCh38.p14_coding-all.fna' # homo-sapiens coding sequence
 # baseSeq=fish1.fna
 
+seq2='synthetic'
 
 if (( $# < 2)) || (($# > 4)); then
     echo "Usage: $0 sequence remoteDataDir [theta [k]]"
@@ -38,15 +42,15 @@ echo "Log file: $logFile"
 
 for i in $thetaValues ; do
 
-    $binCommand  ${seq1} $i
-    seq2=$(printf "%s/%s-T=%.3f.fna" ${dataDir} $(basename $seq1 .fna) $i)
+    # $binCommand  ${seq1} $i
+    # seq2=$(printf "%s/%s-T=%.3f.fna" ${dataDir} $(basename $seq1 .fna) $i)
     
     cmd="spark-submit --master yarn --deploy-mode client --driver-memory 27g \
 	     --num-executors 48 --executor-memory 27g --executor-cores 7 \
-	     ${scriptDir}/PyPASingleSequenceOutMemory.py $seq1 $seq2 $i $remoteDataDir $kValue"
+	     ${scriptDir}/PyPASingleSequenceOutMemory.py $seq1 $seq2 --theta $i --remoteDir $remoteDataDir"
     
-    echo "$(date) Comparing $seq1 vs $seq2"
-    echo "$(date) Comparing $seq1 vs $seq2" >> $logFile
+    echo "$(date) Comparing $seq1 vs $seq2, Theta = $i, results: $remoteDataDir"
+    echo "$(date) Comparing $seq1 vs $seq2 Theta = $i" >> $logFile
     $cmd >> $logFile
 
 done

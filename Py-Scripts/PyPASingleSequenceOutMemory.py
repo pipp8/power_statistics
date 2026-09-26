@@ -646,7 +646,7 @@ def writeHeader( writer):#
 
 
 # processa localmente una coppia di sequenze seqFile1 e seqFile2
-def processPairs(seqFile1: str, seqFile2: str, thet: float):
+def processPairs(seqFile1: str, seqFile2: str, theta: float):
     # process local sequence files in the same local directory (temporary named ttt)
     start = time.time() # profiling info
     tempDir = os.path.dirname( seqFile1)+'/ttt'
@@ -663,8 +663,9 @@ def processPairs(seqFile1: str, seqFile2: str, thet: float):
         if (seqFile2 == "synthetic"):
             # produce il file allontanato da seqFile1 di un fattore theta
             (f, ext) = os.path.splitext(seqFile1)
-            seqFile2 = f"{f}-{theta:.3f}{ext}"
-            divergence.MoveAwaySequence(seqFile1, seqFile2, theta)
+            seqFile2 = f"{f}-T={theta:05.3f}{ext}"
+
+            divergence.ModifySequence(seqFile1, seqFile2, theta)
 
         for k in range( minK, maxK+1, stepK):
             # run kmc on both the sequences and eval A, B, C, D + Mash + Entropy

@@ -1,8 +1,8 @@
 #! /bin/bash
 
 dataDir='/home/cattaneo/spark/power_statistics/Dataset'
-dataDir=/mnt/VolumeDati1/Dataset/PresentAbsentDatasets/ncbi_dataset
-dataDir=/mnt/VolumeDati1/Dataset/PresentAbsentDatasets/tests
+# dataDir=/mnt/VolumeDati1/Dataset/PresentAbsentDatasets/ncbi_dataset
+# dataDir=/mnt/VolumeDati1/Dataset/PresentAbsentDatasets/tests
 # GCF_000165445.2_Mmur_3.0.fasta
 # GCF_000955945.1_Caty_1.0.fasta
 # GCF_003339765.1_Mmul_1.0.fasta
