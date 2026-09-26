@@ -682,6 +682,11 @@ def processPairs(seqFile1: str, seqFile2: str, theta: float):
     try:
         logger.info(f"****** Cleaning temporary directory {tempDir} ******")
         shutil.rmtree(tempDir)
+
+        if (seqFile2 == "synthetic"):
+            # remove synthetic sequence just generated
+            os.remove(seqFile2)
+
     except OSError as e:
         logger.error(f"Error removing: {tempDir}: {e.strerror}")
 
