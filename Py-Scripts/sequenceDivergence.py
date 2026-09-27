@@ -69,9 +69,9 @@ def sequenceDivergence(inputFile, outFile, theta, verbose=False):
     with open(outFile, "w") as outText:
         with open(inputFile) as inFile:
             for line in inFile:
-                if (line.startswith(">"):
+                if line.startswith(">"):
                     # si tratta di un commento
-                    if (headerLine):
+                    if headerLine:
                         out = line.rstrip() + f" theta = {theta}%\n"
                         # solo sulla prima linea aggiungiamo il commento sul valore di theta
                         # attenzione questo cambia la dimensione del file
