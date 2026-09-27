@@ -16,7 +16,7 @@ ext = '.fna'
 
 # parametri sulla linea di comando
 # inputSeqence theta
-def ModifySequence(inputFile, outFile, theta):
+def ModifySequence(inputFile, outFile, theta, verbose=False):
 
     if (theta < 0 or theta > 1):
         print(f"theta value: {theta}. theta is a probability and must be 0 <= theta <= 1")
@@ -52,22 +52,35 @@ def ModifySequence(inputFile, outFile, theta):
     print( "*********************************************************")
 
 
-    sequenceDivergence(inputFile, outFile, theta)
+    sequenceDivergence(inputFile, outFile, theta, verbose)
 
 
 
-def sequenceDivergence(inputFile, outFile, theta):
+def sequenceDivergence(inputFile, outFile, theta, verbose=False):
+    
     # normalizza theta da 0 <= theta <= 1 a 0 <= theta <= 100
     theta = int(theta * 100)
-    (written, subst, totLen) = (0, 0, 0)
+    mb = 2**20 # megabyte
+    totalSize = f"{os.path.getsize(inputFile) / mb:.3f}"
+    (written, subst, totLen) = (-1, 0, 0)
     newBase = ''
+    headerLine = True
     out = []
     with open(outFile, "w") as outText:
         with open(inputFile) as inFile:
             for line in inFile:
-                if (line.startswith(">")):
-                    out = line.rstrip() + ' theta = %d%%\n' % theta
+                if (line.startswith(">"):
+                    # si tratta di un commento
+                    if (headerLine):
+                        out = line.rstrip() + f" theta = {theta}%\n"
+                        # solo sulla prima linea aggiungiamo il commento sul valore di theta
+                        # attenzione questo cambia la dimensione del file
+                        headerLine = False
+                    else:
+                        # tutti gli altri commenti restano inalterati
+                        out = line
                 else:
+                    # e' una linea della sequenza su questa possiamo cambiare le basi
                     s = list(line)
                     for i in range(len(line)):
                         if (random.randrange(100) < theta):
@@ -90,22 +103,22 @@ def sequenceDivergence(inputFile, outFile, theta):
                             s[i] = newBase
                             subst += 1
 
-                        if (i > 0 and i % 1048576 == 0):
+                        if (verbose and i > 0 and i % mb == 0):
                             written += 1
-                            sys.stdout.write('.')
-                            sys.stdout.flush()
+                            print( f"{written} / {totalSize}\r", end="")
                             
                     out = "".join(s)
                     totLen += len(line) - 1
 
                 outText.write(out) # \n are in the original strings
-                m = totLen // 1048576
+                m = totLen // mb
                 if (m > written):
                     written = m
-                    sys.stdout.write('.')
-                    sys.stdout.flush()
+                    if (verbose):
+                        print( f"{written} / {totalSize}\r", end="")
 
-    print(f"\n{outFile} -> {subst}/{totLen} substitutions")
+    if (verbose):
+        print(f"\n{outFile} -> {subst}/{totLen} ({subst*100/totLen:5.3f}%) substitutions")
 
 
 
@@ -119,4 +132,4 @@ if __name__ == "__main__":
         baseName, ext = os.path.splitext( inputFile)
         outFile = f"{baseName}-T={theta:05.3f}{ext}"
     
-        ModifySequence(inputFile, outFile, theta)
+        ModifySequence(inputFile, outFile, theta, True)
