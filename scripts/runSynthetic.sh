@@ -12,13 +12,16 @@ baseSeq=GCA_000146045.2_R64_genomic.fna
 sequenceList='CElegans.fna HouseMouse.fna Yeast.fna  Chimpazee.fna HomoSapiens.fna MacacaMulatta.fna'
 sequenceList='HouseMouse.fna Chimpazee.fna MacacaMulatta.fna'
 thetaValues='0.005 0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.10 0.20 0.30 0.40 0.50 0.60 0.70 0.80 0.90 0.95'
-kValues=$(seq 4 32 4)
+fromK=4
+toK=32
+
 seq2='synthetic'
 
 if (($# > 4)); then
     echo "Usage: $0 sequence remoteDataDir [theta [k]]"
     exit -1
 else
+    # if zero parametri usa i valori di default assegnati alle variabili
     if (($# >= 1)) ; then
 	sequenceList=$1
     fi
@@ -29,13 +32,14 @@ else
 	thetaValues=$3
     fi
     if (($# >= 4)) ; then
-	kValue=$4
+	fromK=$4
+	toK=$4
     fi
 fi
 
 
 
-for s in sequenceList; do
+for s in $sequenceList; do
 
     seq1=${dataDir}/$s
 
@@ -52,7 +56,7 @@ for s in sequenceList; do
     
 	cmd="spark-submit --master yarn --deploy-mode client --driver-memory 27g \
 	     --num-executors 48 --executor-memory 27g --executor-cores 7 \
-	     ${scriptDir}/PyPASingleSequenceOutMemory.py $seq1 $seq2 --theta $i --remoteDir $remoteDataDir"
+	     ${scriptDir}/PyPASingleSequenceOutMemory.py $seq1 $seq2 --theta $i --fromSizeK $fromK --toSizeK $toK --remoteDir $remoteDataDir"
     
 	echo "$(date) Comparing $seq1 vs $seq2, Theta = $i, results: $remoteDataDir"
 	echo "$(date) Comparing $seq1 vs $seq2 Theta = $i" >> $logFile
@@ -86,7 +90,7 @@ for s in sequenceList; do
 	echo "wrong number of lines $l"
 	wc ${dataDir}/${base1}*.csv
     else
-	echo $base ok $l
+	echo $base1 ok $l
     fi
     
     final=${dataDir}/${base1}-$(date +%s).csv
