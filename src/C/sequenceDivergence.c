@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <libgen.h>
 #include <string.h>
@@ -39,7 +38,7 @@ int main(int argc, char *argv[]) {
   double theta;
     
   if (argc != 3) {
-    printf("Errore nei parametri:\nUsage: %s InputSequence thetaProbability", argv[0]);
+    printf("Errore nei parametri:\nUsage: %s InputSequence thetaProbability\n", argv[0]);
     exit(-1);
   }
 
@@ -96,7 +95,7 @@ int main(int argc, char *argv[]) {
   }
   
   if ((stat( outFile, &stat2) == 0) && (stat2.st_size == stat1.st_size)) {
-    fprintf(stderr, "Output file %s is already present and has the same size: %ld byte\nSkipping.\n", outFile, stat1.st_size);
+    fprintf(stderr, "Output file %s is already present and has the same size: %lld byte\nSkipping.\n", outFile, stat1.st_size);
     exit(0);
   }
 
@@ -184,7 +183,7 @@ int main(int argc, char *argv[]) {
 	exit(-1);
       }
       totLen += nr;
-      printf("%ld / %ld\r", totLen, expectedSize);
+      printf("%ld / %lld\r", totLen, expectedSize);
     } // while !eof
 
   printf("\n%s -> %'ld/%'ld substitutions\n", outFile, subst, totLen);

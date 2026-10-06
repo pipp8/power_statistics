@@ -14,11 +14,10 @@ library(stringr)
 ###### OPTIONS
 ###### CODE
 
-bs <- "uniform"
-wd <- sprintf("~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent/%s,32", bs)
+wd <- "~/Universita/Src/IdeaProjects/power_statistics/data/PresentAbsent/RealGenomes"
 setwd(wd)
 
-dirname <- "ReportSyntheticsV2"
+dirname <- "ReportSyntheticsV3"
 
 similarities <- c('D2')
 df1Filename <- sprintf("%s/distanceAll.RDS", dirname )
